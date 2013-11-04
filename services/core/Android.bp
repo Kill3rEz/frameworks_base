@@ -234,7 +234,6 @@ java_library_static {
         "overlayable_policy_aidl-java",
         "SettingsLibDisplayUtils",
         "SettingsLibDeviceStateRotationLock",
-        "SurfaceFlingerProperties",
         "com.android.sysprop.watchdog",
         "securebox",
         "vendor.qti.hardware.servicetracker-V1.0-java",
