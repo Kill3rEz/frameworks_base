@@ -268,6 +268,7 @@ import com.android.server.wm.DisplayRotation;
 import com.android.server.wm.WindowManagerInternal;
 import com.android.server.wm.WindowManagerInternal.AppTransitionListener;
 
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -717,6 +718,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
     private boolean mGlobalActionsOnLockEnable = true;
 
+    // Gesture key handler.
+    private KeyHandler mKeyHandler;
+
     private final DeferredKeyActionExecutor mDeferredKeyActionExecutor =
             new DeferredKeyActionExecutor();
 
@@ -737,6 +741,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
     // Whether or not the device supports interactive doze.
     private boolean mInteractiveDozeEnabled;
+
 
     private final boolean mVisibleBackgroundUsersEnabled = isVisibleBackgroundUsersEnabled();
 
@@ -2695,6 +2700,20 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 interactiveDozeExperience()
                         && mContext.getResources().getBoolean(
                                 com.android.internal.R.bool.config_enableInteractiveDoze);
+
+                com.android.internal.R.array.config_deviceKeyHandlerLibs);
+                com.android.internal.R.array.config_deviceKeyHandlerClasses);
+
+            try {
+            }
+        }
+        if (DEBUG_INPUT) {
+        }
+        boolean enableKeyHandler = mContext.getResources().
+                getBoolean(com.android.internal.R.bool.config_enableKeyHandler);
+        if (enableKeyHandler) {
+            mKeyHandler = new KeyHandler(mContext);
+        }
     }
 
     /**
@@ -3681,6 +3700,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 && mGlobalKeyManager.handleGlobalKey(mContext, keyCode, event)) {
             return true;
         }
+            return true;
+        }
         return false;
     }
 
@@ -4124,6 +4145,15 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         } catch (RemoteException e) {
             Slog.e(TAG, "Error taking bugreport", e);
         }
+    }
+
+            try {
+                }
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // TODO(b/117479243): handle it in InputPolicy
@@ -4722,6 +4752,15 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     + " policyFlags=" + Integer.toHexString(policyFlags));
         }
 
+        /**
+         * Handle gestures input earlier then anything when screen is off.
+         */
+        if (!interactive) {
+            if (mKeyHandler != null && mKeyHandler.handleKeyEvent(event)) {
+                return 0;
+            }
+        }
+
         // Basic policy based on interactive state.
         int result;
         if (interactive || (isInjected && !isWakeKey)) {
@@ -4814,6 +4853,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 && (!isNavBarVirtKey || mNavBarVirtualKeyHapticFeedbackEnabled ||
                         event.getDeviceId() > 0)
                 && event.getRepeatCount() == 0;
+
+            return 0;
+        }
 
         // Handle special keys.
         switch (keyCode) {
@@ -5059,7 +5101,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 notifyKeyGestureCompletedOnActionUp(event,
                         KeyGestureEvent.KEY_GESTURE_TYPE_WAKEUP);
                 result &= ~ACTION_PASS_TO_USER;
-                isWakeKey = true;
+                isWakeKey = false;  // We handle this in KeyHandler
                 break;
             }
 
@@ -6344,6 +6386,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
         mAutofillManagerInternal = LocalServices.getService(AutofillManagerInternal.class);
         mGestureLauncherService = LocalServices.getService(GestureLauncherService.class);
+        if (mKeyHandler != null) {
+            mKeyHandler.systemReady();
+        }
     }
 
     /** {@inheritDoc} */
