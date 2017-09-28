@@ -17,6 +17,7 @@
 package com.android.systemui.statusbar.notification.interruption
 
 import android.Manifest.permission.RECEIVE_EMERGENCY_BROADCAST
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.Notification.BubbleMetadata
 import android.app.Notification.CATEGORY_ALARM
@@ -39,11 +40,13 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.PowerManager
 import android.os.SystemProperties
+import android.os.UserHandle
 import android.provider.Settings
 import android.provider.Settings.Global.HEADS_UP_NOTIFICATIONS_ENABLED
 import android.provider.Settings.Global.HEADS_UP_OFF
 import android.provider.Settings.Global.HEADS_UP_ON
 import android.service.notification.Flags
+import android.text.TextUtils
 import com.android.internal.logging.UiEvent
 import com.android.internal.logging.UiEventLogger
 import com.android.internal.messages.nano.SystemMessageProto.SystemMessage
@@ -126,6 +129,95 @@ class PulseDisabledSuppressor(
 class PulseBatterySaverSuppressor(private val batteryController: BatteryController) :
     VisualInterruptionCondition(types = setOf(PULSE), reason = "pulse disabled by battery saver") {
     override fun shouldSuppress() = batteryController.isAodPowerSave()
+}
+
+class PeekHeadsUpStoplistSuppressor(
+    private val context: Context,
+    private val systemSettings: SystemSettings,
+    @Main private val mainHandler: Handler,
+) : VisualInterruptionFilter(types = setOf(PEEK), reason = "foreground app in heads-up stoplist") {
+    private val stoplist = ArrayList<String>()
+    private val activityManager = context.getSystemService(ActivityManager::class.java)
+
+    override fun start() {
+        val observer =
+            object : ContentObserver(mainHandler) {
+                override fun onChange(selfChange: Boolean) {
+                    updateList()
+                }
+            }
+        systemSettings.registerContentObserverForUserAsync(
+            Settings.System.HEADS_UP_STOPLIST_VALUES,
+            /* notifyForDescendants = */ false,
+            observer,
+            UserHandle.USER_ALL,
+        )
+        updateList()
+    }
+
+    private fun updateList() {
+        splitAndAddToArrayList(
+            stoplist,
+            systemSettings.getString(Settings.System.HEADS_UP_STOPLIST_VALUES),
+        )
+    }
+
+    override fun shouldSuppress(entry: NotificationEntry): Boolean {
+        if (stoplist.isEmpty() || activityManager == null) {
+            return false
+        }
+        if (isDialerApp(entry.sbn.packageName)) {
+            return false
+        }
+        @Suppress("DEPRECATION")
+        val topPackage = activityManager.getRunningTasks(1).firstOrNull()?.topActivity?.packageName
+        return topPackage != null && stoplist.contains(topPackage)
+    }
+}
+
+class PeekHeadsUpBlacklistSuppressor(
+    private val systemSettings: SystemSettings,
+    @Main private val mainHandler: Handler,
+) : VisualInterruptionFilter(types = setOf(PEEK), reason = "package blacklisted for heads-up") {
+    private val blacklist = ArrayList<String>()
+
+    override fun start() {
+        val observer =
+            object : ContentObserver(mainHandler) {
+                override fun onChange(selfChange: Boolean) {
+                    updateList()
+                }
+            }
+        systemSettings.registerContentObserverForUserAsync(
+            Settings.System.HEADS_UP_BLACKLIST_VALUES,
+            /* notifyForDescendants = */ false,
+            observer,
+            UserHandle.USER_ALL,
+        )
+        updateList()
+    }
+
+    private fun updateList() {
+        splitAndAddToArrayList(
+            blacklist,
+            systemSettings.getString(Settings.System.HEADS_UP_BLACKLIST_VALUES),
+        )
+    }
+
+    override fun shouldSuppress(entry: NotificationEntry) =
+        blacklist.contains(entry.sbn.packageName)
+}
+
+private fun isDialerApp(packageName: String) =
+    packageName == "com.android.dialer" || packageName == "com.google.android.dialer"
+
+private fun splitAndAddToArrayList(arrayList: ArrayList<String>, baseString: String?) {
+    arrayList.clear()
+    if (baseString != null) {
+        for (item in TextUtils.split(baseString, "\\|")) {
+            arrayList.add(item.trim())
+        }
+    }
 }
 
 class PeekPackageSnoozedSuppressor(private val headsUpManager: HeadsUpManager) :
