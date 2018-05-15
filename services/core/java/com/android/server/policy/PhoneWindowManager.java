@@ -165,6 +165,7 @@ import android.media.AudioManagerInternal;
 import android.media.AudioSystem;
 import android.media.IAudioService;
 import android.media.session.MediaSessionLegacyHelper;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.Bundle;
 import android.os.DeviceIdleManager;
@@ -197,6 +198,8 @@ import android.service.dreams.IDreamManager;
 import android.service.vr.IPersistentVrStateCallbacks;
 import android.speech.RecognizerIntent;
 import android.telecom.TelecomManager;
+import android.text.TextUtils;
+import android.util.ArraySet;
 import android.util.Log;
 import android.util.MathUtils;
 import android.util.MutableBoolean;
@@ -481,6 +484,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     SideFpsEventHandler mSideFpsEventHandler;
     LockPatternUtils mLockPatternUtils;
     private boolean mHasFeatureAuto;
+    AlertSliderObserver mAlertSliderObserver;
     private boolean mHasFeatureWatch;
     private boolean mHasFeatureLeanback;
     private boolean mHasFeatureHdmiCec;
@@ -749,6 +753,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private SwipeToScreenshotListener mSwipeToScreenshot;
     private ScreenshotHelper mScreenshotHelper;
 
+    private boolean mHasAlertSlider = false;
+
     private class PolicyHandler extends Handler {
 
         private PolicyHandler(Looper looper) {
@@ -870,6 +876,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     };
 
     class SettingsObserver extends ContentObserver {
+        private final Uri SWAP_ALERT_SLIDER_ORDER_URI =
+                Settings.System.getUriFor(Settings.System.ALERT_SLIDER_ORDER);
+
         SettingsObserver(Handler handler) {
             super(handler);
         }
@@ -954,12 +963,21 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.LOCKSCREEN_ENABLE_POWER_MENU), true, this,
-                    UserHandle.USER_ALL);                                
+                    UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.ALERT_SLIDER_ORDER), false, this,
+                    UserHandle.USER_ALL);                                        
             updateSettings();
         }
 
-        @Override public void onChange(boolean selfChange) {
-            updateSettings();
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            if (SWAP_ALERT_SLIDER_ORDER_URI.equals(uri)
+                    && mSystemReady && mAlertSliderObserver != null) {
+                mAlertSliderObserver.update();
+            } else {
+                updateSettings();
+            }
         }
     }
 
@@ -2384,6 +2402,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 res.getBoolean(com.android.internal.R.bool.config_wakeOnAssistKeyPress);
         mWakeOnBackKeyPress =
                 res.getBoolean(com.android.internal.R.bool.config_wakeOnBackKeyPress);
+
+        // Init alert slider
+        mHasAlertSlider = mContext.getResources().getBoolean(R.bool.config_hasAlertSlider)
+                && !TextUtils.isEmpty(mContext.getResources().getString(R.string.alert_slider_state_path))
+                && !TextUtils.isEmpty(mContext.getResources().getString(R.string.alert_slider_uevent_match_path));
 
         // Init display burn-in protection
         boolean burnInProtectionEnabled = mContext.getResources().getBoolean(
@@ -6106,6 +6129,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             // Get initial state from DockObserverInternal, DockObserver starts after WM.
             int dockMode = mDockObserverInternal.getActualDockState();
             mDefaultDisplayPolicy.setDockMode(dockMode);
+        }
+
+        if (mHasAlertSlider) {
+            mAlertSliderObserver = new AlertSliderObserver(mContext);
+            mAlertSliderObserver.startObserving(com.android.internal.R.string.alert_slider_uevent_match_path);
         }
 
         readCameraLensCoverState();
