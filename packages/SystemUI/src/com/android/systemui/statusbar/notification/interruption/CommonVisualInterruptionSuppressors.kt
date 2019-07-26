@@ -21,9 +21,11 @@ import android.app.ActivityManager
 import android.app.Notification
 import android.app.Notification.BubbleMetadata
 import android.app.Notification.CATEGORY_ALARM
+import android.app.Notification.CATEGORY_CALL
 import android.app.Notification.CATEGORY_CAR_EMERGENCY
 import android.app.Notification.CATEGORY_CAR_WARNING
 import android.app.Notification.CATEGORY_EVENT
+import android.app.Notification.CATEGORY_NAVIGATION
 import android.app.Notification.CATEGORY_REMINDER
 import android.app.Notification.VISIBILITY_PRIVATE
 import android.app.NotificationManager
@@ -45,7 +47,9 @@ import android.provider.Settings
 import android.provider.Settings.Global.HEADS_UP_NOTIFICATIONS_ENABLED
 import android.provider.Settings.Global.HEADS_UP_OFF
 import android.provider.Settings.Global.HEADS_UP_ON
+import android.provider.Telephony.Sms
 import android.service.notification.Flags
+import android.telecom.TelecomManager
 import android.text.TextUtils
 import com.android.internal.logging.UiEvent
 import com.android.internal.logging.UiEventLogger
@@ -217,6 +221,62 @@ private fun splitAndAddToArrayList(arrayList: ArrayList<String>, baseString: Str
         for (item in TextUtils.split(baseString, "\\|")) {
             arrayList.add(item.trim())
         }
+    }
+}
+
+class PeekLessBoringHeadsUpSuppressor(
+    private val context: Context,
+    private val systemSettings: SystemSettings,
+    @Main private val mainHandler: Handler,
+) : VisualInterruptionFilter(types = setOf(PEEK), reason = "boring notification") {
+    private var lessBoringHeadsUp = false
+    private val telecomManager = context.getSystemService(TelecomManager::class.java)
+
+    override fun start() {
+        val observer =
+            object : ContentObserver(mainHandler) {
+                override fun onChange(selfChange: Boolean) {
+                    updateSetting()
+                }
+            }
+        systemSettings.registerContentObserverForUserAsync(
+            Settings.System.LESS_BORING_HEADS_UP,
+            /* notifyForDescendants = */ true,
+            observer,
+            UserHandle.USER_CURRENT,
+        )
+        updateSetting()
+    }
+
+    private fun updateSetting() {
+        lessBoringHeadsUp =
+            systemSettings.getIntForUser(
+                Settings.System.LESS_BORING_HEADS_UP,
+                0,
+                UserHandle.USER_CURRENT,
+            ) == 1
+    }
+
+    override fun shouldSuppress(entry: NotificationEntry): Boolean {
+        if (!lessBoringHeadsUp) {
+            return false
+        }
+        return isBoringHeadsUp(entry)
+    }
+
+    private fun isBoringHeadsUp(entry: NotificationEntry): Boolean {
+        val packageName = entry.sbn.packageName
+        val category = entry.sbn.notification.category
+        val isCategoryAllowed =
+            category != null &&
+                category in
+                    setOf(CATEGORY_CALL, CATEGORY_ALARM, CATEGORY_REMINDER, CATEGORY_NAVIGATION)
+        val isLessBoring =
+            isCategoryAllowed ||
+                entry.channel?.isImportantConversation == true ||
+                packageName == telecomManager?.defaultDialerPackage ||
+                packageName == Sms.getDefaultSmsPackage(context)
+        return !isLessBoring
     }
 }
 

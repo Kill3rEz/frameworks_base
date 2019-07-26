@@ -167,6 +167,7 @@ constructor(
         addFilter(PeekPackageSnoozedSuppressor(headsUpManager))
         addFilter(PeekHeadsUpStoplistSuppressor(context, systemSettings, mainHandler))
         addFilter(PeekHeadsUpBlacklistSuppressor(systemSettings, mainHandler))
+        addFilter(PeekLessBoringHeadsUpSuppressor(context, systemSettings, mainHandler))
         addFilter(PeekAlreadyBubbledSuppressor(statusBarStateController, bubbles))
         addFilter(PeekDndSuppressor())
         addFilter(PeekNotImportantSuppressor())
