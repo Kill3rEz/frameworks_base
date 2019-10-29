@@ -81,4 +81,16 @@
    <java-symbol type="string" name="config_cpu_temp_path" />
    <java-symbol type="integer" name="config_sysCPUTempMultiplier" />
    <java-symbol type="integer" name="config_sysBatteryTempMultiplier" />
+   
+   <!-- Pocket Lock -->
+   <java-symbol type="layout" name="pocket_lock_view" />
+
+    <!-- Pocket bridge -->
+    <java-symbol type="string" name="config_pocketBridgeSysfsInpocket" />
+    <java-symbol type="bool" name="config_pocketModeSupported" />
+    <java-symbol type="bool" name="config_pocketUseLightSensor" />
+
+    <!-- Pocket Service -->
+    <java-symbol type="string" name="config_pocketJudgeVendorSensorName" />
+    <java-symbol type="string" name="config_pocketJudgeVendorProximitySensorName" />
 </resources>
