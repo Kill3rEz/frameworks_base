@@ -78,4 +78,7 @@
     <string name="global_action_restart_download_progress">Restarting to download mode\u2026</string>
     <!-- Button to restart SystemUI, within the Restart Options dialog -->
     <string name="global_action_restart_systemui">SystemUI</string>
+    
+    <!-- NFC -->
+    <string name="accessibility_status_bar_nfc">Nfc</string>
 </resources>
