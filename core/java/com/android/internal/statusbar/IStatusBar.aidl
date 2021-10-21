@@ -445,4 +445,9 @@ oneway interface IStatusBar
     void onConfigurationChanged();
 
     void restartSystemUI();
+
+    /**
+     * Toggles flashlight of the device
+     */
+    void toggleCameraFlash();
 }
