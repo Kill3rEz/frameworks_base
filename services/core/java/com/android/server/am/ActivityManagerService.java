@@ -21250,6 +21250,10 @@ public class ActivityManagerService extends IActivityManager.Stub
         mCachedAppOptimizer.binderError(debugPid, app, code, flags, err);
     }
 
+    public boolean shouldForceCutoutFullscreen(String packageName) {
+        return mActivityTaskManager.shouldForceCutoutFullscreen(packageName);
+    }
+
     @GuardedBy("this")
     void clearPendingTopAppLocked() {
         mPendingStartActivityUids.clear();
