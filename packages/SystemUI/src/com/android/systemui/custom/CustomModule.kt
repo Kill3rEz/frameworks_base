@@ -26,6 +26,7 @@ import com.android.systemui.qs.tiles.AutoBrightnessTile
 import com.android.systemui.qs.tiles.CaffeineTile
 import com.android.systemui.qs.tiles.DataSwitchTile
 import com.android.systemui.qs.tiles.HeadsUpTile
+import com.android.systemui.qs.tiles.PreferredNetworkTile
 import com.android.systemui.qs.tiles.SleepModeTile
 import com.android.systemui.qs.tiles.SyncTile
 import com.android.systemui.qs.tiles.UsbTetherTile
@@ -78,6 +79,12 @@ interface CustomModule {
     @StringKey(HeadsUpTile.TILE_SPEC)
     fun bindHeadsUpTile(headsUpTile: HeadsUpTile): QSTileImpl<*>
 
+    /** Inject PreferredNetworkTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(PreferredNetworkTile.TILE_SPEC)
+    fun bindPreferredNetworkTile(preferredNetworkTile: PreferredNetworkTile): QSTileImpl<*>
+
     /** Inject SleepModeTile into tileMap in QSModule */
     @Binds  
     @IntoMap
@@ -109,6 +116,7 @@ interface CustomModule {
         const val CAFFEINE_TILE_SPEC = "caffeine"
         const val DATA_SWITCH_TILE_SPEC = "data_switch"
         const val HEADS_UP_TILE_SPEC = "heads_up"
+        const val PREFERRED_NETWORK_TILE_SPEC = "preferred_network"
         const val SLEEP_MODE_TILE_SPEC = "sleep_mode"
         const val SYNC_TILE_SPEC = "sync"
         const val USB_TETHER_TILE_SPEC = "usb_tether"
@@ -263,5 +271,20 @@ interface CustomModule {
                 instanceId = uiEventLogger.getNewInstanceId(),
                 category = TileCategory.CONNECTIVITY,
             )
+
+        @Provides
+        @IntoMap
+        @StringKey(PREFERRED_NETWORK_TILE_SPEC)
+        fun providePreferredNetworkTile(uiEventLogger: QsEventLogger): QSTileConfig =
+            QSTileConfig(
+                tileSpec = TileSpec.create(PREFERRED_NETWORK_TILE_SPEC),
+                uiConfig =
+                    QSTileUIConfig.Resource(
+                        iconRes = R.drawable.ic_preferred_network,
+                        labelRes = R.string.quick_settings_preferred_network_label
+                    ),
+                instanceId = uiEventLogger.getNewInstanceId(),
+                category = TileCategory.CONNECTIVITY,
+            )    
     }
 }
