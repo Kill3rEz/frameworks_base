@@ -14630,6 +14630,51 @@ public final class Settings {
         public static final String SYSTEM_BLACK_THEME = "system_black_theme";
 
         /**
+         * User selectable PIF data.
+         * @hide
+         */
+        @Readable
+        public static final String PIF_DATA = "pif_data";
+
+        /**
+         * User selectable PIF data.
+         * @hide
+         */
+        @Readable
+        public static final String PIF_DATA_TIMESTAMP = "pif_data_timestamp";
+
+        /**
+         * PIF data fetched from our repo.
+         * @hide
+         */
+        @Readable
+        public static final String FETCHED_PIF = "fetched_pif";
+
+        /**
+         * Whether to automatically update PIF props from remote server.
+         * @hide
+         */
+        @Readable
+        public static final String AUTO_UPDATE_PIF = "auto_update_pif";
+
+        /**
+         * Whether to use Tensor spoof for google apps
+         * @hide
+         */
+        @Readable
+        public static final String PI_TENSOR_SPOOF = "pi_tensor_spoof";
+
+        /**
+          * Which navigation bar layout to use
+          * 0 = Normal (Default)
+          * 1 = Compact
+          * 2 = Left-leaning
+          * 3 = Right-leaning
+          * @hide
+          */
+        public static final String NAVBAR_LAYOUT_MODE = "navbar_layout_mode";
+
+        /**
          * Per-apps device spoofing
          * @hide
          */

@@ -286,8 +286,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -3085,6 +3087,17 @@ public final class ActiveServices {
             @ForegroundServiceType int type,
             @ForegroundServiceType int defaultToType,
             @ForegroundServiceType int startType) {
+        // Whitelist of package names to bypass FGS type validation
+        final Set<String> whitelistPackages = new HashSet<>(Arrays.asList(
+            "com.google.android.as",         // Google Device Personalization services
+            "com.google.android.gms",        // Google Play Services
+            "com.android.vending",           // Google Play Store
+            "com.google.android.gsf"         // Google Services Framework
+        ));
+        if (whitelistPackages.contains(r.packageName)) {
+            return Pair.create(FGS_TYPE_POLICY_CHECK_OK, null);
+        }
+
         final ForegroundServiceTypePolicy policy = ForegroundServiceTypePolicy.getDefaultPolicy();
         final ForegroundServiceTypePolicyInfo policyInfo =
                 policy.getForegroundServiceTypePolicyInfo(type, defaultToType);

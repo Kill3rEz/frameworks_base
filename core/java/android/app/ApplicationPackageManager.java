@@ -38,6 +38,7 @@ import android.annotation.Nullable;
 import android.annotation.StringRes;
 import android.annotation.UserIdInt;
 import android.annotation.XmlRes;
+import android.app.ActivityThread;
 import android.app.admin.DevicePolicyManager;
 import android.app.role.RoleManager;
 import android.compat.annotation.UnsupportedAppUsage;
@@ -143,6 +144,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.os.ApplicationSharedMemory;
 import com.android.internal.os.SomeArgs;
 import com.android.internal.pm.RoSystemFeatures;
+import com.android.internal.util.PropImitationHooks;
 import com.android.internal.util.UserIcons;
 
 import dalvik.system.VMRuntime;
@@ -791,12 +793,38 @@ public class ApplicationPackageManager extends PackageManager {
             if (parceledList == null) {
                 return new FeatureInfo[0];
             }
-            final List<FeatureInfo> list = parceledList.getList();
-            final FeatureInfo[] res = new FeatureInfo[list.size()];
-            for (int i = 0; i < res.length; i++) {
-                res[i] = list.get(i);
+            final List<FeatureInfo> list = new ArrayList<>(parceledList.getList());
+
+            // Inject Tensor features when toggle is enabled
+            boolean forceTensorResult = false;
+            try {
+                forceTensorResult = !Process.isIsolated() && Settings.Secure.getInt(
+                        mContext.getContentResolver(), Settings.Secure.PI_TENSOR_SPOOF, 0) == 1;
+            } catch (Exception e) {
+                // Ignore
             }
-            return res;
+            final boolean forceTensor = forceTensorResult;
+
+            if (forceTensor && !IS_TENSOR_DEVICE) {
+                for (String feature : FEATURES_TENSOR) {
+                    boolean exists = false;
+
+                    for (FeatureInfo fi : list) {
+                        if (feature.equals(fi.name)) {
+                            exists = true;
+                            break;
+                        }
+                    }
+
+                    if (!exists) {
+                        FeatureInfo fi = new FeatureInfo();
+                        fi.name = feature;
+                        fi.version = 0;
+                        list.add(fi);
+                    }
+                }
+            }
+            return list.toArray(new FeatureInfo[0]);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
@@ -838,9 +866,137 @@ public class ApplicationPackageManager extends PackageManager {
                 }
             };
 
+    private static final ArraySet<String> PRIV_PKGS = new ArraySet<>();
+    private static final ArraySet<String> FEATURES_PIXEL = new ArraySet<>();
+    private static final ArraySet<String> FEATURES_PIXEL_OTHERS = new ArraySet<>();
+    private static final ArraySet<String> FEATURES_TENSOR = new ArraySet<>();
+    private static final ArraySet<String> FEATURES_NEXUS = new ArraySet<>();
+    private static final ArraySet<String> TENSOR_CODENAMES = new ArraySet<>();
+    private static final boolean IS_TENSOR_DEVICE;
+
+    static {
+        Collections.addAll(FEATURES_PIXEL,
+                "com.google.android.apps.photos.PIXEL_2019_PRELOAD",
+                "com.google.android.apps.photos.PIXEL_2019_MIDYEAR_PRELOAD",
+                "com.google.android.apps.photos.PIXEL_2018_PRELOAD",
+                "com.google.android.apps.photos.PIXEL_2017_PRELOAD",
+                "com.google.android.feature.PIXEL_2021_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2020_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2020_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2019_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2019_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2018_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2017_EXPERIENCE",
+                "com.google.android.feature.PIXEL_EXPERIENCE",
+                "com.google.android.feature.GOOGLE_BUILD",
+                "com.google.android.feature.GOOGLE_EXPERIENCE"
+        );
+
+        Collections.addAll(FEATURES_PIXEL_OTHERS,
+                "com.google.android.feature.ASI",
+                "com.google.android.feature.ANDROID_ONE_EXPERIENCE",
+                "com.google.android.feature.GOOGLE_FI_BUNDLED",
+                "com.google.android.feature.LILY_EXPERIENCE",
+                "com.google.android.feature.TURBO_PRELOAD",
+                "com.google.android.feature.WELLBEING",
+                "com.google.lens.feature.IMAGE_INTEGRATION",
+                "com.google.lens.feature.CAMERA_INTEGRATION",
+                "com.google.photos.trust_debug_certs",
+                "com.google.android.feature.AER_OPTIMIZED",
+                "com.google.android.feature.NEXT_GENERATION_ASSISTANT",
+                "android.software.game_service",
+                "com.google.android.feature.EXCHANGE_6_2",
+                "com.google.android.apps.dialer.call_recording_audio",
+                "com.google.android.apps.dialer.SUPPORTED"
+        );
+
+        Collections.addAll(FEATURES_TENSOR,
+                "com.google.android.feature.PIXEL_2026_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2026_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2025_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2025_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2024_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2024_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2023_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2023_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2022_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2022_MIDYEAR_EXPERIENCE",
+                "com.google.android.feature.PIXEL_2021_EXPERIENCE"
+        );
+
+        Collections.addAll(FEATURES_NEXUS,
+                "com.google.android.apps.photos.NEXUS_PRELOAD",
+                "com.google.android.apps.photos.nexus_preload",
+                "com.google.android.feature.PIXEL_EXPERIENCE",
+                "com.google.android.feature.GOOGLE_BUILD",
+                "com.google.android.feature.GOOGLE_EXPERIENCE"
+        );
+
+        Collections.addAll(TENSOR_CODENAMES,
+                "stallion","blazer","frankel","mustang","tegu","comet","komodo","caiman","tokay",
+                "akita","husky","shiba","felix","tangorpro","lynx","cheetah","panther",
+                "bluejay","oriole","raven"
+        );
+
+        Collections.addAll(PRIV_PKGS,
+                "com.google.android.googlequicksearchbox",
+                "com.google.android.apps.photos",
+                "com.google.android.apps.pixel.agent",
+                "com.google.android.apps.pixel.creativeassistant"
+        );
+
+        IS_TENSOR_DEVICE = TENSOR_CODENAMES.contains(Build.DEVICE);
+    }
+
     @Override
     @RavenwoodRedirect
     public boolean hasSystemFeature(String name, int version) {
+        final String pkg = ActivityThread.currentPackageName();
+
+        if (name != null && pkg != null && PRIV_PKGS.contains(pkg)) {
+            boolean photosSpoof = false;
+            try {
+                photosSpoof = !Process.isIsolated()
+                    && "com.google.android.apps.photos".equals(pkg);
+            } catch (Exception e) {}
+
+            if (photosSpoof) {
+                if (FEATURES_PIXEL.contains(name)) return false;
+                if (FEATURES_PIXEL_OTHERS.contains(name)) return true;
+                if (FEATURES_TENSOR.contains(name)) return false;
+                if (FEATURES_NEXUS.contains(name)) return true;
+            } else {
+                if (FEATURES_PIXEL.contains(name)) return true;
+                if (FEATURES_PIXEL_OTHERS.contains(name)) return true;
+                if (FEATURES_TENSOR.contains(name)) return true;
+                if (FEATURES_NEXUS.contains(name)) return true;
+            }
+        }
+
+        if (name != null && FEATURES_TENSOR.contains(name)) {
+            boolean forceTensorResult = false;
+            try {
+                forceTensorResult = !Process.isIsolated() && Settings.Secure.getInt(
+                        mContext.getContentResolver(), Settings.Secure.PI_TENSOR_SPOOF, 0) == 1;
+            } catch (Exception e) {}
+            final boolean forceTensor = forceTensorResult;
+
+            // Do not interfere with real Tensor devices
+            if (IS_TENSOR_DEVICE) {
+                return mHasSystemFeatureCache.query(
+                        new HasSystemFeatureQuery(name, version));
+            }
+
+            // Only override if user explicitly enabled the toggle
+            if (forceTensor) {
+                return true;
+            }
+
+            // Otherwise, behave like stock
+            return mHasSystemFeatureCache.query(
+                    new HasSystemFeatureQuery(name, version));
+        }
+
         // We check for system features in the following order:
         //    * Build time-defined system features (constant, very efficient)
         //    * SDK-defined system features (cached at process start, very efficient)
@@ -858,7 +1014,8 @@ public class ApplicationPackageManager extends PackageManager {
                 return maybeHasSystemFeature;
             }
         }
-        return mHasSystemFeatureCache.query(new HasSystemFeatureQuery(name, version));
+        return PropImitationHooks.hasSystemFeature(name,
+                mHasSystemFeatureCache.query(new HasSystemFeatureQuery(name, version)));
     }
 
     /** @hide */
