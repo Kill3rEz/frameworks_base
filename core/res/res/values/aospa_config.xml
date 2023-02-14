@@ -59,4 +59,7 @@
     <!-- KeaHandler to intercept inputs on screen off. -->
     <bool name="config_enableKeyHandler">false</bool>
 
+    <!-- Whether to use Richtap vibration -->
+    <bool name="config_usesRichtapVibration">false</bool>
+
 </resources>

@@ -279,6 +279,7 @@ java_library_static {
         "trust_token",
         "ambientcontext_flags_lib",
         "vendor.aospa.biometrics.face",
+        "vendor.aac.hardware.richtap.vibrator-V1-java",
     ],
     javac_shard_size: 50,
     javacflags: [
