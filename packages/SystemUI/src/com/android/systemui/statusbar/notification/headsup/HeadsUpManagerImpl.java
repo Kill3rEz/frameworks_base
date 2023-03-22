@@ -148,6 +148,8 @@ public class HeadsUpManagerImpl
     private AnimationStateHandler mAnimationStateHandler;
     private int mHeadsUpInset;
     private int mAutoDismissTime;
+    private int mPulseDurationTime;
+    private boolean mDozing;
 
     // Used for determining the region for touch interaction
     private final Region mTouchableRegion = new Region();
@@ -206,6 +208,7 @@ public class HeadsUpManagerImpl
                 R.integer.heads_up_notification_minimum_time_for_user_initiated);
         mStickyForSomeTimeAutoDismissTime = resources.getInteger(
                 R.integer.sticky_heads_up_notification_time);
+        mPulseDurationTime = resources.getInteger(R.integer.heads_up_notification_decay);
         mAutoDismissTime = Settings.System.getInt(
                 context.getContentResolver(),
                 Settings.System.HEADS_UP_TIMEOUT,
@@ -1251,6 +1254,7 @@ public class HeadsUpManagerImpl
 
         @Override
         public void onDozingChanged(boolean isDozing) {
+            mDozing = isDozing;
             if (!isDozing) {
                 // Let's make sure all huns we got while dozing time out within the normal timeout
                 // duration. Otherwise they could get stuck for a very long time
@@ -1423,7 +1427,7 @@ public class HeadsUpManagerImpl
 
             FinishTimeUpdater finishTimeCalculator = () -> {
                 RemainingDuration remainingDuration =
-                        mAvalancheController.getDuration(this, mAutoDismissTime);
+                        mAvalancheController.getDuration(this, getDecayDuration());
 
                 if (remainingDuration instanceof RemainingDuration.HideImmediately) {
                     if (AvalancheReplaceHunWhenCritical.isEnabled()) {
@@ -1747,6 +1751,14 @@ public class HeadsUpManagerImpl
                     AccessibilityManager.FLAG_CONTENT_CONTROLS
                             | AccessibilityManager.FLAG_CONTENT_ICONS
                             | AccessibilityManager.FLAG_CONTENT_TEXT);
+        }
+
+        private int getDecayDuration() {
+            if (mDozing) {
+                return mPulseDurationTime;
+            } else {
+                return mAutoDismissTime;
+            }
         }
     }
 }
