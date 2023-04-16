@@ -11,8 +11,13 @@
 
     <!-- Cycle through ringer modes -->
     <string name="volume_dialog_ringer_guidance_normal">Calls and notifications will ring</string>
-    
+
     <!-- Alert slider proc nodes paths. -->
     <string name="alert_slider_state_path"></string>
     <string name="alert_slider_uevent_match_path"></string>
+
+    <!-- PowerOffAlarmService -->
+    <string name="notification_channel_poweroff_alarm">Power off alarm</string>
+    <string name="poweroff_alarm_title">Power off alarm set</string>
+    <string name="poweroff_alarm_body">An alarm was detected and the device will power on 2 minutes before it\'s due</string>
 </resources>
