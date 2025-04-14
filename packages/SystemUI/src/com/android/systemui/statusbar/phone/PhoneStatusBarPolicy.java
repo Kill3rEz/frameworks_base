@@ -36,16 +36,23 @@ import android.net.wifi.ScanResult;
 // QTI_END: 2020-04-22: WLAN: wifi: refactor Wi-Fi generation UI enhancements
 import android.net.wifi.WifiManager;
 import android.nfc.NfcAdapter;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Process;
 import android.os.RemoteException;
+import android.os.UserHandle;
 import android.os.UserManager;
+import android.provider.Settings;
 import android.provider.Settings.Global;
 import android.service.notification.ZenModeConfig;
 import android.telecom.TelecomManager;
 import android.text.format.DateFormat;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.lifecycle.Observer;
 
 import com.android.internal.statusbar.StatusBarIcon;
@@ -721,6 +728,11 @@ public class PhoneStatusBarPolicy
         } else {
             mIconController.setIconVisibility(mSlotRotate, false);
         }
+    }
+
+    @Override
+    public void restartSystemUI() {
+        Process.killProcess(Process.myPid());
     }
 
     private void updateHeadsetPlug(Intent intent) {
