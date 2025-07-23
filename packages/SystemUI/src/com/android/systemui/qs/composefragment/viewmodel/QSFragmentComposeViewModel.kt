@@ -420,7 +420,7 @@ constructor(
                     .onStart { emit(sysuiStatusBarStateController.state) },
         )
 
-    private val isKeyguardState: Boolean
+    val isKeyguardState: Boolean
         get() = statusBarState == StatusBarState.KEYGUARD
 
     private val isBypassEnabled by

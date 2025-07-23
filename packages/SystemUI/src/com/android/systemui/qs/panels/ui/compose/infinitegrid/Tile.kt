@@ -515,6 +515,7 @@ data class TileColors(
     val label: Color,
     val secondaryLabel: Color,
     val icon: Color,
+    val circleAroundIcon: Color = Color.Transparent,
 )
 
 @VisibleForTesting
@@ -545,6 +546,7 @@ private object TileDefaults {
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
             icon = MaterialTheme.colorScheme.onPrimary,
+            circleAroundIcon = MaterialTheme.colorScheme.primary,
         )
 
     @Composable
@@ -556,6 +558,7 @@ private object TileDefaults {
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
             icon = MaterialTheme.colorScheme.onSurface,
+            circleAroundIcon = LocalAndroidColorScheme.current.surfaceEffect2,
         )
 
     @Composable

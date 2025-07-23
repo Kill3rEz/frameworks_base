@@ -40,6 +40,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -69,6 +70,13 @@ constructor(
             // Create eagerly only if supported
             brightnessMirrorShowingInteractorLazy.get()
         }
+    }
+
+    private val _sliderPosition = MutableStateFlow(0f)
+    val sliderPosition: StateFlow<Float> = _sliderPosition
+
+    fun setSliderPosition(position: Float) {
+        _sliderPosition.value = position
     }
 
     val currentBrightness by
