@@ -128,4 +128,6 @@
 
     <!-- Dream / Screen saver -->
     <string name="quick_settings_screensaver_label">Screen saver</string>
+
+    <string name="default_user_name">ASCP OS</string>
 </resources>
