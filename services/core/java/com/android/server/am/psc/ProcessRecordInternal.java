@@ -1723,6 +1723,14 @@ public abstract class ProcessRecordInternal {
         mRenderThreadTid = renderThreadTid;
     }
 
+    public String getProcessName() {
+        return this.processName;
+    }
+
+    public int getUid() {
+        return this.uid;
+    }
+
     @GuardedBy("mServiceLock")
     public boolean isZramWrittenBack() {
         return mIsZramWrittenBack;
