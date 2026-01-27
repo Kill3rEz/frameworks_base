@@ -58,6 +58,7 @@ public final class ThemeStyle {
             CLOCK,
             CLOCK_VIBRANT,
             CMF,
+            FIDELITY
     })
     @Retention(SOURCE)
     @Target({PARAMETER, METHOD, LOCAL_VARIABLE, FIELD})
@@ -108,6 +109,10 @@ public final class ThemeStyle {
      * Represents the CMF style.
      */
     public static final int CMF = 10;
+    /**
+     * Represents the FIDELITY style.
+     */
+    public static final int FIDELITY = 11;
 
 
     /**
@@ -132,6 +137,7 @@ public final class ThemeStyle {
             case CLOCK -> "CLOCK";
             case CLOCK_VIBRANT -> "CLOCK_VIBRANT";
             case CMF -> "CMF";
+            case FIDELITY -> "FIDELITY";
             default -> throw new IllegalArgumentException("Invalid style value: " + style);
         };
     }
@@ -158,6 +164,7 @@ public final class ThemeStyle {
             case "CLOCK" -> CLOCK;
             case "CLOCK_VIBRANT" -> CLOCK_VIBRANT;
             case "CMF" -> CMF;
+            case "FIDELITY" -> FIDELITY;
             default -> throw new IllegalArgumentException("Invalid style name: " + styleName);
         };
     }
@@ -190,7 +197,9 @@ public final class ThemeStyle {
                 CONTENT,
                 MONOCHROMATIC,
                 CLOCK,
-                CLOCK_VIBRANT
+                CLOCK_VIBRANT,
+                CMF,
+                FIDELITY
         };
     }
 }
