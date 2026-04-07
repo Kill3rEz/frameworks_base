@@ -132,6 +132,7 @@ public final class ColorDisplayService extends SystemService {
     private static final int MSG_APPLY_DISPLAY_HUE = 10;
     private static final int MSG_APPLY_DISPLAY_CONTRAST = 11;
     private static final int MSG_APPLY_DISPLAY_PICTURE_BRIGHTNESS = 12;
+    private static final int MSG_APPLY_UPDATE_DISPLAY_ENGINE = 13;
 
     /**
      * Return value if a setting has not been set.
@@ -198,6 +199,8 @@ public final class ColorDisplayService extends SystemService {
     private final DisplayPictureBrightnessTintController mDisplayPictureBrightnessTintController =
             new DisplayPictureBrightnessTintController();
     private final ReduceBrightColorsTintController mReduceBrightColorsTintController;
+    private final DisplayEngineController mDisplayEngineController =
+            new DisplayEngineController();
 
     @VisibleForTesting
     final Handler mHandler;
@@ -536,6 +539,9 @@ public final class ColorDisplayService extends SystemService {
                                 onReduceBrightColorsStrengthLevelChanged();
                                 mHandler.sendEmptyMessage(MSG_APPLY_REDUCE_BRIGHT_COLORS);
                                 break;
+                            case Secure.DISPLAY_ENGINE_MODE:
+                                mHandler.sendEmptyMessage(MSG_APPLY_UPDATE_DISPLAY_ENGINE);
+                                break;    
                             case Secure.UI_NIGHT_LIGHT_DIM_WALL:
                                 updateWallDimEnabledValue();
                                 maybeDimWall(mNightDisplayTintController.isActivated());
@@ -603,6 +609,8 @@ public final class ColorDisplayService extends SystemService {
                     Secure.getUriFor(Secure.ACCESSIBILITY_DISPLAY_DALTONIZER_SATURATION_LEVEL),
                     false /* notifyForDescendants */, mContentObserver, mCurrentUser);
         }
+        cr.registerContentObserver(Secure.getUriFor(Secure.DISPLAY_ENGINE_MODE),
+                false /* notifyForDescendants */, mContentObserver, mCurrentUser);
         cr.registerContentObserver(Secure.getUriFor(Secure.UI_NIGHT_LIGHT_DIM_WALL),
                 false /* notifyForDescendants */, mContentObserver, mCurrentUser);
         cr.registerContentObserver(Secure.getUriFor(Secure.UI_NIGHT_LIGHT_DIM_WALL_AMOUNT),
@@ -687,6 +695,10 @@ public final class ColorDisplayService extends SystemService {
 
         if (mDisplayPictureBrightnessTintController.isAvailable(getContext())) {
             mHandler.sendEmptyMessage(MSG_APPLY_DISPLAY_PICTURE_BRIGHTNESS);
+        }
+
+        if (mDisplayEngineController.isAvailable(getContext())) {
+            mHandler.sendEmptyMessage(MSG_APPLY_UPDATE_DISPLAY_ENGINE);
         }
     }
 
@@ -2292,6 +2304,10 @@ public final class ColorDisplayService extends SystemService {
                 case MSG_APPLY_DISPLAY_PICTURE_BRIGHTNESS:
                     mDisplayPictureBrightnessTintController.setMatrix(getColorBrightnessInternal());
                     applyTint(mDisplayPictureBrightnessTintController, true);
+                    break;
+                case MSG_APPLY_UPDATE_DISPLAY_ENGINE:
+                    mDisplayEngineController.updateBalance(getContext(), mCurrentUser);
+                    applyTint(mDisplayEngineController, true);
                     break;
             }
         }
