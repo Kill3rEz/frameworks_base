@@ -14868,6 +14868,11 @@ public final class Settings {
         public static final String PULSE_CAPTURE_MODE = "pulse_capture_mode";
 
         /**
+         * @hide
+         */
+        public static final String PULSE_BASS_HAPTICS = "pulse_bass_haptics";
+
+        /**
          * Lockscreen custom clock face
          * @hide
          */

@@ -69,10 +69,19 @@ class PulseAudioProcessor(
         fun onAudioData(heights: FloatArray)
     }
 
+    fun interface FftDataListener {
+        fun onFftData(fft: ByteArray)
+    }
+
+    private var fftListener: FftDataListener? = null
     private var isCapturingRequested = false
 
     fun setDataListener(listener: AudioDataListener?) {
         dataListener = listener
+    }
+
+    fun setFftListener(listener: FftDataListener?) {
+        fftListener = listener
     }
 
     fun startCapture() {
@@ -100,6 +109,7 @@ class PulseAudioProcessor(
     fun cleanup() {
         stopCapture()
         dataListener = null
+        fftListener = null
     }
 
     private fun registerPlaybackCallback() {
@@ -289,6 +299,8 @@ class PulseAudioProcessor(
             dbValue = averages[i].average(dbValue)
             output[i] = dbValue * fudgeFactor * heightMultiplier
         }
+
+        fftListener?.onFftData(data)
 
         mainHandler.post {
             dataListener?.onAudioData(output)

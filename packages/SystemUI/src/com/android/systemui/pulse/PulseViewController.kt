@@ -44,7 +44,15 @@ class PulseViewController @Inject constructor(
                     view.updateHeights(heights)
                 }
             }
+            setFftListener { fft ->
+                if (isHapticsEnabled) {
+                    bassHaptics.process(fft)
+                }
+            }
         }
+
+    private val bassHaptics: PulseBassHaptics =
+        PulseBassHaptics(context)
 
     val pulseEnabled: Boolean
         get() = settingsRepository.isPulseEnabled()
@@ -54,6 +62,9 @@ class PulseViewController @Inject constructor(
 
     private val isCollapsed: Boolean
         get() = ScrimUtils.get().isPanelFullyCollapsed()
+
+    private val isHapticsEnabled: Boolean
+        get() = settingsRepository.isPulseHapticsEnabled()
 
     var pulseRunning: Boolean = false
         set(value) {
@@ -109,10 +120,11 @@ class PulseViewController @Inject constructor(
     private fun updatePulse(show: Boolean) {
         mainScope.launch {
             view.setVisibility(show)
-            if (pulseEnabled && show) {
+            if (pulseEnabled && (show || isHapticsEnabled)) {
                 audioProcessor.startCapture()
             } else {
                 audioProcessor.stopCapture()
+                bassHaptics.reset()
             }
         }
     }
@@ -179,6 +191,7 @@ class PulseViewController @Inject constructor(
 
     override fun onUserChanged() {
         settingsRepository.invalidateCache()
+        bassHaptics.reset()
         updateState()
     }
 
@@ -191,6 +204,7 @@ class PulseViewController @Inject constructor(
             listenersRegistered = false
         }
         audioProcessor.cleanup()
+        bassHaptics.reset()
         mainScope.cancel()
         if (INSTANCE === this) {
             INSTANCE = null
