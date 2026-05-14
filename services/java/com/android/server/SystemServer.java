@@ -1514,6 +1514,8 @@ public final class SystemServer implements Dumpable {
         mSystemServiceManager.startService(BatteryService.class);
         t.traceEnd();
 
+        t.traceEnd();
+
         // Tracks application usage stats.
         t.traceBegin("StartUsageService");
         mSystemServiceManager.startService(UsageStatsService.class);
@@ -1716,6 +1718,15 @@ public final class SystemServer implements Dumpable {
                 mSystemServiceManager.startService(NPU_MANAGER_SERVICE_CLASS);
                 t.traceEnd();
             }
+
+            t.traceBegin("StartPowerInsightService");
+            try {
+                ServiceManager.addService(Context.POWER_INSIGHT_SERVICE,
+                        new com.android.server.powerinsight.PowerInsightService(mSystemContext));
+            } catch (Throwable e) {
+                reportWtf("starting PowerInsightService", e);
+            }
+            t.traceEnd();
 
             // Records errors and logs, for example wtf()
             // Currently this service indirectly depends on SettingsProvider so do this after
