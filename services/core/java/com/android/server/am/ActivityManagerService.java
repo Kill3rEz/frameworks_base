@@ -3442,6 +3442,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             // ContentCaptureOptions listener with the ContentCaptureManager service. Seeding
             // applications with the service handle avoids an unnecessary ServiceManager hop.
             addServiceToMap(mAppBindArgs, Context.CONTENT_CAPTURE_MANAGER_SERVICE);
+            addServiceToMap(mAppBindArgs, "game_space");
         }
         return mAppBindArgs;
     }
