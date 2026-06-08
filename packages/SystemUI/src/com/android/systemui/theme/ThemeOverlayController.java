@@ -170,6 +170,7 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
     private FabricatedOverlay mDynamicOverlay;
     // If wallpaper color event will be accepted and change the UI colors.
     private boolean mAcceptColorEvents = true;
+    private boolean mIsBlackTheme;
     // If non-null (per user), colors that were sent to the framework, and processing was deferred
     // until the next time the screen is off.
     private final SparseArray<WallpaperColors> mDeferredWallpaperColors = new SparseArray<>();
@@ -711,6 +712,11 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
     }
 
     private void createOverlays(int color) {
+        boolean nightMode = (mContext.getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        mIsBlackTheme = mSecureSettings.getInt(Settings.Secure.SYSTEM_BLACK_THEME, 0) == 1
+                                && nightMode;
+
         mDarkColorScheme = new ColorScheme(color, true /* isDark */, mThemeStyle, mContrast);
         mLightColorScheme = new ColorScheme(color, false /* isDark */, mThemeStyle, mContrast);
         mColorScheme = isNightMode() ? mDarkColorScheme : mLightColorScheme;
@@ -735,10 +741,30 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
         colors.forEach(p -> {
             String prefix = "android:color/system_" + p.first;
 
+            int darkColor = p.second.getArgb(mDarkColorScheme.getMaterialScheme());
+            if (mIsBlackTheme) {
+                if (p.first.equals("background") || p.first.equals("surface")
+                        || p.first.equals("surface_container")) {
+                    darkColor = 0xFF000000;
+                } else if (p.first.equals("surface_container_lowest")) {
+                    darkColor = 0xFF080808;
+                } else if (p.first.equals("surface_dim")) {
+                    darkColor = 0xFF0C0C0C;
+                } else if (p.first.equals("surface_container_low")) {
+                    darkColor = 0xFF0F0F0F;
+                } else if (p.first.equals("surface_container_high")) {
+                    darkColor = 0xFF171717;
+                } else if (p.first.equals("surface_container_highest")) {
+                    darkColor = 0xFF1B1B1B;
+                } else if (p.first.equals("surface_bright")) {
+                    darkColor = 0xFF212121;
+                }
+            }
+
             overlay.setResourceValue(prefix + "_light", TYPE_INT_COLOR_ARGB8,
                     p.second.getArgb(mLightColorScheme.getMaterialScheme()), null);
             overlay.setResourceValue(prefix + "_dark", TYPE_INT_COLOR_ARGB8,
-                    p.second.getArgb(mDarkColorScheme.getMaterialScheme()), null);
+                    darkColor, null);
         });
     }
 
