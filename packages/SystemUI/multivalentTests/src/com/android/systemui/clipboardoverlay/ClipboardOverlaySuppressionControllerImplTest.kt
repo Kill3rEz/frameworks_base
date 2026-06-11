@@ -48,8 +48,10 @@ class ClipboardOverlaySuppressionControllerImplTest : SysuiTestCase() {
     }
 
     @Test
-    fun shouldSuppressOverlay_notEmulatorOrShellPackage_returnFalse() {
-        Assert.assertFalse(
+    fun shouldSuppressOverlay_notEmulatorOrShellPackage_returnTrue() {
+        // The extra alone suppresses the overlay, so that SystemUI can copy a screenshot to the
+        // clipboard without the clipboard overlay showing up over the screenshot UI.
+        Assert.assertTrue(
             mClipboardOverlaySuppressionControllerImpl.shouldSuppressOverlay(
                 mSuppressableClipData,
                 EXAMPLE_PACKAGE,
@@ -70,8 +72,8 @@ class ClipboardOverlaySuppressionControllerImplTest : SysuiTestCase() {
     }
 
     @Test
-    fun shouldSuppressOverlay_nullClipSource_returnFalse() {
-        Assert.assertFalse(
+    fun shouldSuppressOverlay_nullClipSource_returnTrue() {
+        Assert.assertTrue(
             mClipboardOverlaySuppressionControllerImpl.shouldSuppressOverlay(
                 mSuppressableClipData,
                 null,
@@ -101,8 +103,7 @@ class ClipboardOverlaySuppressionControllerImplTest : SysuiTestCase() {
 
     @Test
     fun shouldSuppressOverlay_hasSuppressOverlayExtra_returnTrue() {
-        // Clip data with the suppression extra is only honored in the emulator or with the shell
-        // package.
+        // Clip data with the suppression extra is honored whichever package it came from.
         Assert.assertTrue(
             mClipboardOverlaySuppressionControllerImpl.shouldSuppressOverlay(
                 mSuppressableClipData,

@@ -24,20 +24,15 @@ import javax.inject.Inject
 open class ClipboardOverlaySuppressionControllerImpl @Inject constructor() :
     ClipboardOverlaySuppressionController {
 
-    // The overlay is suppressed if EXTRA_SUPPRESS_OVERLAY is true and the device is an emulator or
-    // the source package is SHELL_PACKAGE. This is meant to suppress the overlay when the emulator
-    // or a mirrored device is syncing the clipboard.
+    // The overlay is suppressed whenever EXTRA_SUPPRESS_OVERLAY is true, whichever package set it.
+    // That covers the emulator or a mirrored device syncing the clipboard, and SystemUI copying a
+    // screenshot to the clipboard itself, which would otherwise pop the clipboard overlay on top of
+    // the screenshot UI.
     override fun shouldSuppressOverlay(
         clipData: ClipData?,
         clipSource: String?,
         isEmulator: Boolean,
     ): Boolean {
-        if (
-            !(isEmulator ||
-                (clipSource != null && ClipboardListener.ALLOWED_PACKAGES.contains(clipSource)))
-        ) {
-            return false
-        }
         if (clipData == null || clipData.description.extras == null) {
             return false
         }

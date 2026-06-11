@@ -7203,6 +7203,7 @@ public final class Settings {
          * Whether a screenshot is copied to the clipboard instead of being saved to storage.
          * @hide
          */
+        public static final String SCREENSHOT_CLIPBOARD_ONLY = "screenshot_clipboard_only";
 
         /**
          * What to show at the bottom of the Ambient display

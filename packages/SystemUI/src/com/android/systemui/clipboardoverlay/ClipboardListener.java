@@ -176,16 +176,12 @@ public class ClipboardListener implements
         });
     }
 
-    // The overlay is suppressed the device is an emulator or if the source package is SHELL_PACKAGE
-    // or SYSTEMUI_PACKAGE. It can also must have the EXTRA_SUPPRESS_OVERLAY be true. This is meant
-    // to suppress the overlay when the emulator or a mirrored device is syncing the clipboard, or
-    // when copying a screenshot via the post-screenshot UI.
+    // The overlay is suppressed whenever the clip carries EXTRA_SUPPRESS_OVERLAY, no matter which
+    // package set it, so that a screenshot copied to the clipboard by SystemUI itself does not pop
+    // the clipboard overlay on top of the screenshot UI. Otherwise it is only suppressed on an
+    // emulator or for ALLOWED_PACKAGES, which is the emulator/mirrored device clipboard sync case.
     @VisibleForTesting
     static boolean shouldSuppressOverlay(ClipData clipData, String clipSource, boolean isEmulator) {
-        if (!(isEmulator || (clipSource != null && ALLOWED_PACKAGES.contains(clipSource)))) {
-            return false;
-        }
-
         if (clipData == null) {
             return false;
         }

@@ -275,7 +275,9 @@ public class ClipboardListenerTest extends SysuiTestCase {
         desc.setExtras(bundle);
         ClipData suppressableClipData = new ClipData(desc, new ClipData.Item("Test Item"));
 
-        assertFalse(ClipboardListener.shouldSuppressOverlay(suppressableClipData, mSampleSource,
+        // The extra alone suppresses the overlay, whichever package set it, so that SystemUI can
+        // copy a screenshot to the clipboard without the overlay showing over the screenshot UI.
+        assertTrue(ClipboardListener.shouldSuppressOverlay(suppressableClipData, mSampleSource,
                 false));
         assertTrue(ClipboardListener.shouldSuppressOverlay(suppressableClipData, mSampleSource,
                 true));
@@ -309,14 +311,14 @@ public class ClipboardListenerTest extends SysuiTestCase {
 
     @Test
     @DisableFlags(Flags.FLAG_OVERRIDE_SUPPRESS_OVERLAY_CONDITION)
-    public void test_shouldSuppressOverlay_withNullClipSource_returnsFalse() {
+    public void test_shouldSuppressOverlay_withNullClipSource_returnsTrue() {
         ClipDescription desc = new ClipDescription("Test", new String[]{"text/plain"});
         PersistableBundle bundle = new PersistableBundle();
         bundle.putBoolean(ClipboardListener.EXTRA_SUPPRESS_OVERLAY, true);
         desc.setExtras(bundle);
         ClipData suppressableClipData = new ClipData(desc, new ClipData.Item("Test Item"));
 
-        assertFalse(ClipboardListener.shouldSuppressOverlay(suppressableClipData, null, false));
+        assertTrue(ClipboardListener.shouldSuppressOverlay(suppressableClipData, null, false));
     }
 
     @Test
