@@ -80,6 +80,9 @@ import android.os.UserManager;
 import android.provider.Settings;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
+import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
 import android.text.format.Formatter;
 import android.text.style.ImageSpan;
 import android.util.Pair;
@@ -245,6 +248,7 @@ public class KeyguardIndicationController {
     protected long mChargingTimeRemaining;
     private float mChargingCurrent;
     private float mChargingVoltage;
+    private int mOemRatedWatts;
     private float mTemperature;
     private Pair<String, BiometricSourceType> mBiometricErrorMessageToShowOnScreenOn;
     private Set<Integer> mCoExFaceAcquisitionMsgIdsToShow;
@@ -1466,25 +1470,32 @@ public class KeyguardIndicationController {
         boolean showbatteryInfo = Settings.System.getIntForUser(mContext.getContentResolver(),
             Settings.System.LOCKSCREEN_BATTERY_INFO, 1, UserHandle.USER_CURRENT) == 1;
          if (showbatteryInfo) {
-            if (mChargingCurrent >= mCurrentDivider * 1000) {
-                batteryInfo = String.format("%.1f" , (mChargingCurrent / mCurrentDivider / 1000)) + "A";
-            } else if (mChargingCurrent > 0) {
-                batteryInfo = String.format("%.0f" , (mChargingCurrent / mCurrentDivider)) + "mA";
+            List<String> chargingDetails = new ArrayList<>();
+            // mChargingCurrent is in uA and mChargingVoltage in uV (adapter-side values
+            // injected by BatteryService). Compute wattage directly from A * V instead of
+            // relying on the pre-scaled mChargingWattage, which a single divider can't
+            // reconcile with current (linear) and wattage (quadratic) at once.
+            float amps = mChargingCurrent / 1000000f;
+            float volts = mChargingVoltage / 1000000f;
+            float watts = amps * volts;
+            if (mChargingCurrent > 0) {
+                if (amps >= 1f) {
+                    chargingDetails.add(String.format(Locale.US, "%.1f", amps) + "A");
+                } else {
+                    chargingDetails.add(String.format(Locale.US, "%.0f", amps * 1000f) + "mA");
+                }
             }
-            if (mChargingWattage > 0) {
-                batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
-                        String.format("%.1f" , (mChargingWattage / mCurrentDivider / 1000)) + "W";
+            if (watts > 0f) {
+                chargingDetails.add(String.format(Locale.US, "%.1f", watts) + "W");
             }
             if (mChargingVoltage > 0) {
-                batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
-                        String.format("%.1f", (mChargingVoltage / 1000 / 1000)) + "V";
+                chargingDetails.add(String.format(Locale.US, "%.1f", volts) + "V");
             }
             if (mTemperature > 0) {
-                batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
-                        String.format("%.1f", (mTemperature / 10)) + "°C";
+                chargingDetails.add(String.format(Locale.US, "%.1f", (mTemperature / 10f)) + "°C");
             }
-            if (batteryInfo != "") {
-                batteryInfo = "\n" + batteryInfo;
+            if (!chargingDetails.isEmpty()) {
+                batteryInfo = "\n" + TextUtils.join(" · ", chargingDetails);
             }
         }
 
@@ -1493,11 +1504,26 @@ public class KeyguardIndicationController {
                     mContext, mChargingTimeRemaining);
             String chargingText = mContext.getResources().getString(chargingId, chargingTimeFormatted,
                     percentage);
-            return chargingText + batteryInfo;
+            return applyOemRatedWatts(chargingText) + batteryInfo;
         } else {
             String chargingText =  mContext.getResources().getString(chargingId, percentage);
-            return chargingText + batteryInfo;
+            return applyOemRatedWatts(chargingText) + batteryInfo;
         }
+    }
+
+    /**
+     * Stock-OOS-style headline: turn "VOOC Charging" into e.g. "100W SuperVOOC Charging"
+     * when the adapter's rated wattage is known. The real input current is never exposed
+     * during VOOC, so like stock this shows the adapter rating as part of the label while
+     * the live battery-side details remain on the line below. No-op for other languages
+     * or chargers (string untouched when the marker or rating is absent).
+     */
+    private String applyOemRatedWatts(String chargingText) {
+        if (mOemRatedWatts > 0 && chargingText.contains("VOOC Charging")) {
+            return chargingText.replaceFirst("VOOC Charging",
+                    mOemRatedWatts + "W SuperVOOC Charging");
+        }
+        return chargingText;
     }
 
     public void setStatusBarKeyguardViewManager(
@@ -1663,6 +1689,10 @@ public class KeyguardIndicationController {
             mBatteryLevel = status.level;
             mBatteryPresent = status.present;
             mTemperature = status.temperature;
+            final Intent stickyBattery = mContext.registerReceiver(null,
+                    new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            mOemRatedWatts = stickyBattery != null
+                    ? stickyBattery.getIntExtra("oem_charger_watts", 0) : 0;
             mBatteryDefender = isBatteryDefender(status);
             mBatteryDead = status.isDead();
             // when the battery is overheated, device doesn't charge so only guard on pluggedIn:
