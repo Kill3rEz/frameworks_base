@@ -19,6 +19,9 @@ package com.android.systemui.keyguard.ui.binder
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.annotation.SuppressLint
+import android.content.Context
+import android.os.UserHandle
+import android.provider.Settings
 import android.graphics.Point
 import android.graphics.Rect
 import android.view.HapticFeedbackConstants
@@ -37,7 +40,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.keyguard.AuthInteractionProperties
 import com.android.systemui.Flags
-import com.android.systemui.Flags.msdlFeedback
 import com.android.systemui.common.ui.ConfigurationState
 import com.android.systemui.common.ui.view.onApplyWindowInsets
 import com.android.systemui.common.ui.view.onLayoutChanged
@@ -88,6 +90,7 @@ object KeyguardRootViewBinder {
         viewModel: KeyguardRootViewModel,
         blueprintViewModel: KeyguardBlueprintViewModel,
         configuration: ConfigurationState,
+        context: Context,
         shadeInteractor: ShadeInteractor,
         smartspaceViewModel: KeyguardSmartspaceViewModel,
         deviceEntryHapticsInteractor: DeviceEntryHapticsInteractor?,
@@ -138,33 +141,25 @@ object KeyguardRootViewBinder {
                     if (deviceEntryHapticsInteractor != null && vibratorHelper != null) {
                         launch {
                             deviceEntryHapticsInteractor.playSuccessHapticOnDeviceEntry.collect {
-                                if (msdlFeedback()) {
-                                    msdlPlayer?.playToken(
-                                        MSDLToken.UNLOCK,
-                                        authInteractionProperties,
-                                    )
-                                } else {
-                                    vibratorHelper.performHapticFeedback(
-                                        view,
-                                        HapticFeedbackConstants.BIOMETRIC_CONFIRM,
-                                    )
-                                }
+                                if (!isFpHapticEnabled(context, Settings.System.FP_SUCCESS_VIBRATE)) return@collect
+
+                                vibratorHelper.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstants.BIOMETRIC_CONFIRM,
+                                    HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+                                )
                             }
                         }
 
                         launch {
                             deviceEntryHapticsInteractor.playErrorHaptic.collect {
-                                if (msdlFeedback()) {
-                                    msdlPlayer?.playToken(
-                                        MSDLToken.FAILURE,
-                                        authInteractionProperties,
-                                    )
-                                } else {
-                                    vibratorHelper.performHapticFeedback(
-                                        view,
-                                        HapticFeedbackConstants.BIOMETRIC_REJECT,
-                                    )
-                                }
+                                if (!isFpHapticEnabled(context, Settings.System.FP_ERROR_VIBRATE)) return@collect
+
+                                vibratorHelper.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstants.BIOMETRIC_REJECT,
+                                    HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+                                )
                             }
                         }
                     }
@@ -399,6 +394,11 @@ object KeyguardRootViewBinder {
             }
 
         return disposables
+    }
+
+    private fun isFpHapticEnabled(context: Context, key: String): Boolean {
+        return Settings.System.getIntForUser(
+            context.contentResolver, key, 1, UserHandle.USER_CURRENT) == 1
     }
 
     private class OnLayoutChange(
