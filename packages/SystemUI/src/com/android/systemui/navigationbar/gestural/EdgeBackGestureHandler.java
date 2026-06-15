@@ -49,12 +49,19 @@ import android.graphics.Region;
 import android.hardware.display.DisplayManager;
 import android.hardware.input.InputManager;
 import android.icu.text.SimpleDateFormat;
+import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.Trace;
+import android.os.UserHandle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.provider.DeviceConfig;
+import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -77,6 +84,7 @@ import androidx.annotation.DimenRes;
 
 import com.android.internal.config.sysui.SystemUiDeviceConfigFlags;
 import com.android.internal.policy.GestureNavigationSettingsObserver;
+import com.android.internal.util.custom.CustomUtils;
 import com.android.systemui.LauncherProxyService;
 import com.android.systemui.contextualeducation.GestureType;
 import com.android.systemui.dagger.qualifiers.Background;
@@ -267,6 +275,16 @@ public class EdgeBackGestureHandler {
     private boolean mIsOnLeftEdge;
     private boolean mDeferSetIsOnLeftEdge;
 
+    private int mLeftLongSwipeAction;
+    private int mRightLongSwipeAction;
+    private boolean mIsExtendedSwipe;
+    private int mLeftVerticalSwipeAction;
+    private int mRightVerticalSwipeAction;
+    private Handler mHandler;
+    private boolean mImeVisible;
+    private float mStartX;
+    private float mStartY;
+
     private boolean mIsAttached;
     private boolean mIsGestureHandlingEnabled;
     private final Set<Integer> mTrackpadsConnected = new ArraySet<>();
@@ -314,6 +332,8 @@ public class EdgeBackGestureHandler {
 
     private final GestureNavigationSettingsObserver mGestureNavigationSettingsObserver;
     private final TopUiController mTopUiController;
+
+    private final Vibrator mVibrator;
 
     private final NavigationEdgeBackPlugin.BackCallback mBackCallback =
             new NavigationEdgeBackPlugin.BackCallback() {
@@ -473,6 +493,7 @@ public class EdgeBackGestureHandler {
             DesktopState desktopState) {
         mContext = context;
         mMainDisplayId = context.getDisplayId();
+        mVibrator = context.getSystemService(Vibrator.class);
         mUiThreadContext = uiThreadContext;
         mBackgroundExecutor = backgroundExecutor;
         mBgHandler = bgHandler;
@@ -539,6 +560,7 @@ public class EdgeBackGestureHandler {
                 mUiThreadContext.getHandler(), bgHandler, mContext,
                 this::onNavigationSettingsChanged);
 
+        mHandler = new Handler();
         updateCurrentUserResources();
         mTopUiController = topUiController;
     }
@@ -572,6 +594,15 @@ public class EdgeBackGestureHandler {
         if (previousForcedVisible != mIsButtonForcedVisible
                 && mButtonForcedVisibleCallback != null) {
             mButtonForcedVisibleCallback.accept(mIsButtonForcedVisible);
+        }
+
+        mLeftLongSwipeAction = mGestureNavigationSettingsObserver.getLeftLongSwipeAction();
+        mRightLongSwipeAction = mGestureNavigationSettingsObserver.getRightLongSwipeAction();
+        mIsExtendedSwipe = mGestureNavigationSettingsObserver.getIsExtendedSwipe();
+        mLeftVerticalSwipeAction = mGestureNavigationSettingsObserver.getLeftLSwipeAction();
+        mRightVerticalSwipeAction = mGestureNavigationSettingsObserver.getRightLSwipeAction();
+        for (DisplayBackGestureHandler handler : mDisplayBackGestureHandlers.values()) {
+            handler.setLongSwipeEnabled(mIsExtendedSwipe);
         }
 
         final DisplayMetrics dm = res.getDisplayMetrics();
@@ -672,6 +703,16 @@ public class EdgeBackGestureHandler {
         mIsNavBarShownTransiently = isTransient;
     }
 
+    private void vibrateBack(boolean light) {
+        AsyncTask.execute(() ->
+            mVibrator.vibrate(VibrationEffect.get(VibrationEffect.EFFECT_DOUBLE_CLICK,
+                    true /* fallback */)));
+    }
+
+    public void setImeVisible(boolean visible) {
+        mImeVisible = visible;
+    }
+
     /**
      * Called when a new display gets connected
      *
@@ -737,11 +778,13 @@ public class EdgeBackGestureHandler {
                 displayWindowManager = mDefaultWindowManager;
             }
         }
-        return mDisplayBackGestureHandlerFactory.create(windowContext, displayWindowManager,
+        DisplayBackGestureHandler handler = mDisplayBackGestureHandlerFactory.create(windowContext, displayWindowManager,
                 mBackCallback, (ev) -> {
                     onInputEvent(ev);
                     return Unit.INSTANCE;
                 });
+        handler.setLongSwipeEnabled(mIsExtendedSwipe);
+        return handler;
     }
 
     private void removeAndDisposeDisplayResource(int displayId) {
@@ -838,9 +881,6 @@ public class EdgeBackGestureHandler {
             Trace.endSection();
         }
     }
-
-
-
 
     public boolean isHandlingGestures() {
         return mIsEnabled && mIsBackGestureAllowed;
@@ -1044,7 +1084,20 @@ public class EdgeBackGestureHandler {
             return withinRange;
         }
 
-        if (mExcludeRegion.contains(x, y)) {
+        /* If Launcher is showing and wants to block back gesture, let's still trigger our
+           custom swipe actions at the very bottom of the screen. */
+        boolean isInExcludedRegion;
+        // Still block extended swipe if keyboard is showing, to avoid conflicts with IME gestures
+        if (!mImeVisible && (
+                mIsExtendedSwipe
+                || (mLeftLongSwipeAction != 0 && mIsOnLeftEdge)
+                || (mRightLongSwipeAction != 0 && !mIsOnLeftEdge))) {
+            isInExcludedRegion = mExcludeRegion.contains(x, y)
+                    && y < ((mDisplaySize.y / 4) * 3);
+        } else {
+            isInExcludedRegion = mExcludeRegion.contains(x, y);
+        }
+        if (isInExcludedRegion) {
             if (withinRange) {
                 // We don't have the end point for logging purposes.
                 mEndPoint.x = -1;
@@ -1062,6 +1115,7 @@ public class EdgeBackGestureHandler {
 
     private void cancelGesture(MotionEvent ev) {
         // Send action cancel to reset all the touch events
+        mHandler.removeCallbacksAndMessages(null);
         mAllowGesture = false;
         mLogGesture = false;
         mInRejectedExclusion = false;
@@ -1155,6 +1209,8 @@ public class EdgeBackGestureHandler {
                 mEndPoint.set(-1, -1);
                 mThresholdCrossed = false;
             }
+            mStartX = ev.getX();
+            mStartY = ev.getY();
 
             // For debugging purposes, only log edge points
             long curTime = System.currentTimeMillis();
@@ -1196,7 +1252,8 @@ public class EdgeBackGestureHandler {
                         mDeferSetIsOnLeftEdge = false;
                     }
 
-                    if ((ev.getEventTime() - ev.getDownTime()) > mLongPressTimeout) {
+                    int elapsedTime = (int)(ev.getEventTime() - ev.getDownTime());
+                    if (elapsedTime > mLongPressTimeout) {
                         if (mAllowGesture) {
                             logGesture(SysUiStatsLog.BACK_GESTURE__TYPE__INCOMPLETE_LONG_PRESS);
                             cancelGesture(ev);
@@ -1225,6 +1282,12 @@ public class EdgeBackGestureHandler {
                         return;
                     } else if (dx > dy && dx > mTouchSlop) {
                         if (mAllowGesture) {
+                            if (!mIsExtendedSwipe && ((mLeftLongSwipeAction != 0 && mIsOnLeftEdge)
+                                    || (mRightLongSwipeAction != 0 && !mIsOnLeftEdge))) {
+                                mLongSwipeAction.setIsVertical(false);
+                                mHandler.postDelayed(mLongSwipeAction,
+                                        (mLongPressTimeout - elapsedTime));
+                            }
                             if (mBackAnimation == null) {
                                 pilferPointers(ev.getDisplayId());
                             }
@@ -1236,6 +1299,30 @@ public class EdgeBackGestureHandler {
                 }
             }
 
+            boolean isUp = action == MotionEvent.ACTION_UP;
+            boolean isCancel = action == MotionEvent.ACTION_CANCEL;
+            boolean isMove = action == MotionEvent.ACTION_MOVE;
+            float longSwipeThreshold = mDisplaySize.x * 0.45f;
+            float touchTranslation = Math.abs(ev.getX() - mStartX);
+            boolean almostLongSwipe = mIsExtendedSwipe && (touchTranslation > longSwipeThreshold);
+            if (isMove && almostLongSwipe) {
+                float deltaX = Math.abs(ev.getX() - mDownPoint.x);
+                float deltaY = Math.abs(ev.getY() - mDownPoint.y);
+                // Give priority to horizontal (X) swipe
+                if (deltaX > (int) ((mDisplaySize.x / 4) * 2.5f)) {
+                    mLongSwipeAction.setIsVertical(false);
+                }
+                if (deltaY > (mDisplaySize.y / 4)) {
+                    mLongSwipeAction.setIsVertical(true);
+                }
+            }
+            if (isUp && almostLongSwipe) {
+                mLongSwipeAction.run();
+                mHandler.removeCallbacksAndMessages(null);
+            } else if (isUp || isCancel) {
+                mHandler.removeCallbacksAndMessages(null);
+            }
+
             if (mAllowGesture) {
                 // forward touch
                 displayBackGestureHandler.onMotionEvent(ev);
@@ -1244,6 +1331,128 @@ public class EdgeBackGestureHandler {
                     mBackAnimation.onThresholdCrossed();
                 }
             }
+        }
+    }
+
+    private final SwipeRunnable mLongSwipeAction = new SwipeRunnable();
+    private class SwipeRunnable implements Runnable {
+        private boolean mIsVertical;
+
+        public void setIsVertical(boolean vertical) {
+            mIsVertical = vertical;
+        }
+
+        @Override
+        public void run() {
+            triggerAction(mIsVertical);
+        }
+    }
+
+    private void prepareForAction() {
+        // Cancel touch event then trigger the action
+        final long now = SystemClock.uptimeMillis();
+        final MotionEvent ev = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0);
+        cancelGesture(ev);
+        ev.recycle();
+        vibrateBack(false);
+    }
+
+    private void triggerAction(boolean isVertical) {
+        int action = mIsOnLeftEdge
+                ? (isVertical ? mLeftVerticalSwipeAction : mLeftLongSwipeAction)
+                : (isVertical ? mRightVerticalSwipeAction : mRightLongSwipeAction);
+
+        if (action == 0) return;
+
+        prepareForAction();
+
+        switch (action) {
+            case 0: // No action
+            default:
+                break;
+            case 1: // Voice search
+                CustomUtils.launchVoiceSearch(mContext);
+                break;
+            case 2: // Camera
+                CustomUtils.launchCamera(mContext);
+                break;
+            case 3: // Flashlight
+                CustomUtils.toggleCameraFlash();
+                break;
+            case 4: // Application
+                launchApp(mContext, mIsOnLeftEdge, isVertical);
+                break;
+            case 5: // Volume panel
+                CustomUtils.toggleVolumePanel(mContext);
+                break;
+            case 6: // Screen off
+                CustomUtils.switchScreenOff(mContext);
+                break;
+            case 7: // Screenshot
+                CustomUtils.takeScreenshot(mContext);
+                break;
+            case 8: // Notification panel
+                CustomUtils.toggleNotifications(mContext);
+                break;
+            case 9: // QS panel
+                CustomUtils.toggleQsPanel(mContext);
+                break;
+            case 10: // Clear notifications
+                CustomUtils.clearAllNotifications();
+                break;
+            case 11: // Ringer modes
+                CustomUtils.toggleRingerModes(mContext);
+                break;
+            case 12: // Kill foreground app
+                CustomUtils.killForegroundApp(mContext);
+                break;
+            case 13: // Switch to recent app
+                CustomUtils.switchToLastApp(mContext);
+                break;
+            case 14: // Powermenu
+                CustomUtils.showPowerMenu();
+                break;
+            case 15: // Recents
+                CustomUtils.sendKeycode(mContext, KeyEvent.KEYCODE_APP_SWITCH);
+                break;
+            case 16: // Go forward
+                CustomUtils.sendKeycode(mContext, KeyEvent.KEYCODE_FORWARD);
+                break;
+            case 17: // Menu
+                CustomUtils.sendKeycode(mContext, KeyEvent.KEYCODE_MENU);
+                break;
+        }
+    }
+
+    private void launchApp(Context context, boolean isLeftEdge, boolean isVertical) {
+        String packageSetting = isLeftEdge
+                ? (isVertical ? Settings.System.LEFT_VERTICAL_BACK_SWIPE_APP_ACTION
+                              : Settings.System.LEFT_LONG_BACK_SWIPE_APP_ACTION)
+                : (isVertical ? Settings.System.RIGHT_VERTICAL_BACK_SWIPE_APP_ACTION
+                              : Settings.System.RIGHT_LONG_BACK_SWIPE_APP_ACTION);
+        String activitySetting = isLeftEdge
+                ? (isVertical ? Settings.System.LEFT_VERTICAL_BACK_SWIPE_APP_ACTIVITY_ACTION
+                              : Settings.System.LEFT_LONG_BACK_SWIPE_APP_ACTIVITY_ACTION)
+                : (isVertical ? Settings.System.RIGHT_VERTICAL_BACK_SWIPE_APP_ACTIVITY_ACTION
+                              : Settings.System.RIGHT_LONG_BACK_SWIPE_APP_ACTIVITY_ACTION);
+
+        String packageName = Settings.System.getStringForUser(context.getContentResolver(),
+                packageSetting, UserHandle.USER_CURRENT);
+        String activity = Settings.System.getStringForUser(context.getContentResolver(),
+                activitySetting, UserHandle.USER_CURRENT);
+        boolean launchActivity = activity != null && !TextUtils.equals("NONE", activity);
+        try {
+            Intent intent;
+            if (launchActivity) {
+                intent = new Intent(Intent.ACTION_MAIN);
+                intent.setClassName(packageName, activity);
+            } else {
+                intent = context.getPackageManager().getLaunchIntentForPackage(packageName);
+            }
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            context.startActivity(intent);
+        } catch (Exception e) {
+            // Ignore launch failures
         }
     }
 
