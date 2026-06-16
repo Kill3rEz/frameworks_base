@@ -5161,6 +5161,9 @@ public final class Settings {
         @Readable
         public static final String END_BUTTON_BEHAVIOR = "end_button_behavior";
 
+        /** @hide */
+        public static final String BACK_GESTURE_HEIGHT = "back_gesture_height";
+
         /**
          * END_BUTTON_BEHAVIOR value for "go home".
          * @hide
