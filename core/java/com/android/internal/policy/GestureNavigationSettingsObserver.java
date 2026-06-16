@@ -124,6 +124,12 @@ public class GestureNavigationSettingsObserver extends ContentObserver {
                     Settings.Secure.getUriFor(Settings.Secure.BACK_GESTURE_INSET_SCALE_RIGHT),
                     false, this, UserHandle.USER_ALL);
             r.registerContentObserver(
+                    Settings.Secure.getUriFor(Settings.Secure.BACK_GESTURE_ARROW),
+                    false, this, UserHandle.USER_ALL);
+            r.registerContentObserver(
+                    Settings.Secure.getUriFor(Settings.Secure.BACK_GESTURE_HAPTIC),
+                    false, this, UserHandle.USER_ALL);
+            r.registerContentObserver(
                     Settings.Secure.getUriFor(Settings.Secure.USER_SETUP_COMPLETE),
                     false, this, UserHandle.USER_ALL);
             registerAdvancedGestureObservers(r, UserHandle.USER_ALL);
@@ -146,6 +152,12 @@ public class GestureNavigationSettingsObserver extends ContentObserver {
                     false, this);
             r.registerContentObserver(
                     Settings.Secure.getUriFor(Settings.Secure.BACK_GESTURE_INSET_SCALE_RIGHT),
+                    false, this);
+            r.registerContentObserver(
+                    Settings.Secure.getUriFor(Settings.Secure.BACK_GESTURE_ARROW),
+                    false, this);
+            r.registerContentObserver(
+                    Settings.Secure.getUriFor(Settings.Secure.BACK_GESTURE_HAPTIC),
                     false, this);
             r.registerContentObserver(
                     Settings.Secure.getUriFor(Settings.Secure.USER_SETUP_COMPLETE),
@@ -235,6 +247,16 @@ public class GestureNavigationSettingsObserver extends ContentObserver {
         final float scale = Settings.Secure.getFloat(mContext.getContentResolver(),
                 Settings.Secure.BACK_GESTURE_INSET_SCALE_RIGHT, 1.0f);
         return (int) (getUnscaledInset(userRes) * scale);
+    }
+
+    public boolean getBackArrowGesture() {
+        return Settings.Secure.getIntForUser(mContext.getContentResolver(),
+                Settings.Secure.BACK_GESTURE_ARROW, 1, UserHandle.USER_CURRENT) != 0;
+    }
+
+    public boolean getEdgeHapticEnabled() {
+        return Settings.Secure.getIntForUser(mContext.getContentResolver(),
+                Settings.Secure.BACK_GESTURE_HAPTIC, 1, UserHandle.USER_CURRENT) != 0;
     }
 
     public boolean areNavigationButtonForcedVisible() {
