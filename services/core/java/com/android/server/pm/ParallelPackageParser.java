@@ -50,7 +50,10 @@ class ParallelPackageParser {
     private final BlockingQueue<ParseResult> mQueue = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
 
     static ExecutorService makeExecutorService() {
-        return ConcurrentUtils.newFixedThreadPool(MAX_THREADS, "package-parsing-thread",
+        final int cpus = Runtime.getRuntime().availableProcessors();
+        // We use at least MAX_THREADS, or more if the device has more CPUs.
+        int threads = Math.max(MAX_THREADS, cpus);
+        return ConcurrentUtils.newFixedThreadPool(threads, "package-parsing-thread",
                 Process.THREAD_PRIORITY_FOREGROUND);
     }
 
