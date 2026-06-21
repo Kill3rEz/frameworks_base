@@ -33,7 +33,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.systemui.brightness.domain.interactor.BrightnessMirrorShowingInteractor
 import com.android.systemui.lifecycle.repeatWhenAttached
-import com.android.systemui.settings.brightness.domain.interactor.BrightnessMirrorShowingInteractor
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

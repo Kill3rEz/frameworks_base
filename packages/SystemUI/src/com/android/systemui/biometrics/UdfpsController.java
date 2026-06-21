@@ -104,7 +104,6 @@ import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.power.domain.interactor.PowerInteractor;
 import com.android.systemui.scene.domain.interactor.SceneInteractor;
-import com.android.systemui.settings.brightness.domain.interactor.BrightnessMirrorShowingInteractor;
 import com.android.systemui.shade.domain.interactor.ShadeInteractor;
 import com.android.systemui.shared.system.SysUiStatsLog;
 import com.android.systemui.statusbar.VibratorHelper;
