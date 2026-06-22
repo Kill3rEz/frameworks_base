@@ -2557,6 +2557,7 @@ class Task extends TaskFragment {
     void updateSurfaceSize(SurfaceControl.Transaction transaction) {
         final boolean inSync = mSyncState != SYNC_STATE_NONE;
         if (mSurfaceControl == null
+                || !mSurfaceControl.isValid()
                 // Organized tasks are controlled by shell, so only manipulate those surfaces
                 // during syncs
                 || (isOrganized() && !inSync)) {
