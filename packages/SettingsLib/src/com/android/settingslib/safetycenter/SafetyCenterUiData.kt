@@ -193,25 +193,35 @@ data class SafetyCenterUiEntry(
     companion object {
         /** Creates a [SafetyCenterUiEntry] from a [SafetyCenterEntry]. */
         fun fromSafetyCenterEntry(entry: SafetyCenterEntry): SafetyCenterUiEntry {
+            val userHandle = try {
+                entry.user
+            } catch (e: NoSuchMethodError) {
+                android.os.Process.myUserHandle()
+            }
             return SafetyCenterUiEntry(
                 title = entry.title,
                 summary = entry.summary,
                 severityLevel = entry.severityLevel,
                 safetySourceId = entry.safetySourceId,
-                user = entry.user,
+                user = userHandle,
                 pendingIntent = entry.pendingIntent,
             )
         }
 
         /** Creates a [SafetyCenterUiEntry] from a [SafetyCenterStaticEntry]. */
         fun fromSafetyCenterStaticEntry(entry: SafetyCenterStaticEntry): SafetyCenterUiEntry {
+            val userHandle = try {
+                entry.user
+            } catch (e: NoSuchMethodError) {
+                android.os.Process.myUserHandle()
+            }
             return SafetyCenterUiEntry(
                 title = entry.title,
                 summary = entry.summary,
                 // Set the severity level to UNSPECIFIED for static entries
                 severityLevel = ENTRY_SEVERITY_LEVEL_UNSPECIFIED,
                 safetySourceId = entry.safetySourceId,
-                user = entry.user,
+                user = userHandle,
                 pendingIntent = entry.pendingIntent,
             )
         }
