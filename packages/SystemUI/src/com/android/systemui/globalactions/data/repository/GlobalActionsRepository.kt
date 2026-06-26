@@ -17,6 +17,7 @@
 package com.android.systemui.globalactions.data.repository
 
 import com.android.systemui.globalactions.shared.model.GlobalActionType
+import com.android.systemui.globalactions.shared.model.RestartActionType
 import kotlinx.coroutines.flow.StateFlow
 
 /** Encapsulates application state for global actions. */
@@ -39,4 +40,11 @@ interface GlobalActionsRepository {
 
     /** The list of global actions that should be blocked when the device is locked. */
     val lockedDeviceStateBlockList: List<GlobalActionType>
+
+    /**
+     * The ordered list of restart submenu actions read from config_restartActionsList.
+     * Unknown keys are silently skipped.
+     */
+    val possibleRestartActions: List<RestartActionType>
 }
+

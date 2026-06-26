@@ -76,7 +76,6 @@ import android.telecom.TelecomManager;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyManager;
-import android.util.ArraySet;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.GestureDetector;
@@ -135,6 +134,7 @@ import com.android.systemui.display.data.repository.DisplayWindowPropertiesRepos
 import com.android.systemui.display.shared.model.DisplayWindowProperties;
 import com.android.systemui.globalactions.domain.interactor.GlobalActionsInteractor;
 import com.android.systemui.globalactions.shared.model.GlobalActionType;
+import com.android.systemui.globalactions.shared.model.RestartActionType;
 import com.android.systemui.globalactions.shared.model.GlobalActionsEvent;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryInteractor;
@@ -202,14 +202,6 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
 
     private static final boolean SHOW_SILENT_TOGGLE = true;
 
-    /* Valid settings for global actions keys.
-     * see config.xml config_globalActionList */
-    @VisibleForTesting
-    private static final String GLOBAL_ACTION_KEY_RESTART = "restart";
-    private static final String GLOBAL_ACTION_KEY_RESTART_RECOVERY = "restart_recovery";
-    private static final String GLOBAL_ACTION_KEY_RESTART_BOOTLOADER = "restart_bootloader";
-    private static final String GLOBAL_ACTION_KEY_RESTART_DOWNLOAD = "restart_download";
-    private static final String GLOBAL_ACTION_KEY_RESTART_SYSTEMUI = "restart_systemui";
 
     // See NotificationManagerService#scheduleDurationReachedLocked
     private static final long TOAST_FADE_TIME = 333;
@@ -692,12 +684,6 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
     }
 
     @VisibleForTesting
-    protected String[] getRestartActions() {
-        return mResources.getStringArray(
-		com.android.internal.R.array.config_restartActionsList);
-    }
-
-    @VisibleForTesting
     void createActionItems() {
         // Simple toggle style if there's no vibrator, otherwise use a tri-state
         if (!mHasVibrator) {
@@ -715,7 +701,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
         mRestartItems.clear();
 
         List<GlobalActionType> actionTypes = mInteractor.getPossibleGlobalActions();
-        String[] restartActions = getRestartActions();
+        List<RestartActionType> restartActionTypes = mInteractor.getPossibleRestartActions();
 
         ShutDownAction shutdownAction = new ShutDownAction();
         RestartAction restartAction = new RestartAction();
@@ -724,7 +710,6 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
         RestartBootloaderAction blAction = new RestartBootloaderAction();
         RestartDownloadAction dlAction = new RestartDownloadAction();
         RestartSystemUIAction sysuiAction = new RestartSystemUIAction();
-        ArraySet<String> addedRestartKeys = new ArraySet<>();
         List<Action> tempActions = new ArrayList<>();
         CurrentUserProvider currentUser = new CurrentUserProvider();
         final UserInfo currentUserInfo = currentUser.get();
@@ -815,25 +800,27 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
             }
         }
 
-        for (int i = 0; i < restartActions.length; i++) {
-            String actionKey = restartActions[i];
-            if (addedRestartKeys.contains(actionKey)) {
-                // If we already have added this, don't add it again.
-                continue;
+        for (RestartActionType restartType : restartActionTypes) {
+            switch (restartType) {
+                case RESTART:
+                    addIfShouldShowAction(mRestartItems, sysAction);
+                    break;
+                case RESTART_RECOVERY:
+                    addIfShouldShowAction(mRestartItems, recAction);
+                    break;
+                case RESTART_BOOTLOADER:
+                    addIfShouldShowAction(mRestartItems, blAction);
+                    break;
+                case RESTART_DOWNLOAD:
+                    addIfShouldShowAction(mRestartItems, dlAction);
+                    break;
+                case RESTART_SYSTEMUI:
+                    addIfShouldShowAction(mRestartItems, sysuiAction);
+                    break;
+                default:
+                    Log.e(TAG, "Unknown restart action type: " + restartType.getConfigKey());
+                    break;
             }
-            if (GLOBAL_ACTION_KEY_RESTART.equals(actionKey)) {
-                addIfShouldShowAction(mRestartItems, sysAction);
-            } else if (GLOBAL_ACTION_KEY_RESTART_RECOVERY.equals(actionKey)) {
-                addIfShouldShowAction(mRestartItems, recAction);
-            } else if (GLOBAL_ACTION_KEY_RESTART_BOOTLOADER.equals(actionKey)) {
-                addIfShouldShowAction(mRestartItems, blAction);
-            } else if (GLOBAL_ACTION_KEY_RESTART_DOWNLOAD.equals(actionKey)) {
-                addIfShouldShowAction(mRestartItems, dlAction);
-            } else if (GLOBAL_ACTION_KEY_RESTART_SYSTEMUI.equals(actionKey)) {
-                addIfShouldShowAction(mRestartItems, sysuiAction);
-            }
-            // Add here so we don't add more than one.
-            addedRestartKeys.add(actionKey);
         }
 
         // replace power and restart with a single power options action, if needed
