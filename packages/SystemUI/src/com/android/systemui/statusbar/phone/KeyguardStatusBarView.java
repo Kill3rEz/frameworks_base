@@ -104,6 +104,9 @@ public class KeyguardStatusBarView extends RelativeLayout {
 
     private DisplayCutout mDisplayCutout;
     private int mRoundedCornerPadding = 0;
+    private int mStatusBarExtraPaddingStart = 0;
+    private int mStatusBarExtraPaddingTop = 0;
+    private int mStatusBarExtraPaddingEnd = 0;
     // right and left padding applied to this view to account for cutouts and rounded corners
     private Insets mPadding = Insets.of(0, 0, 0, 0);
 
@@ -181,7 +184,6 @@ public class KeyguardStatusBarView extends RelativeLayout {
         mCarrierLabel.setTextSize(TypedValue.COMPLEX_UNIT_PX,
                 getResources().getDimensionPixelSize(
                         com.android.internal.R.dimen.text_size_small_material));
-        updateCarrierLabelMargin();
 
         updateKeyguardStatusBarHeight();
     }
@@ -196,15 +198,6 @@ public class KeyguardStatusBarView extends RelativeLayout {
         setLayoutParams(lp);
     }
 
-    private void updateCarrierLabelMargin() {
-        MarginLayoutParams lp = (MarginLayoutParams) mCarrierLabel.getLayoutParams();
-        int marginStart = calculateMargin(
-                getResources().getDimensionPixelSize(R.dimen.keyguard_carrier_text_margin),
-                mPadding.left);
-        lp.setMarginStart(marginStart);
-        mCarrierLabel.setLayoutParams(lp);
-    }
-
     void loadDimens() {
         Resources res = getResources();
         mSystemIconsSwitcherHiddenExpandedMargin = res.getDimensionPixelSize(
@@ -217,6 +210,16 @@ public class KeyguardStatusBarView extends RelativeLayout {
                 R.dimen.display_cutout_margin_consumption);
         mRoundedCornerPadding = res.getDimensionPixelSize(
                 R.dimen.rounded_corner_content_padding);
+    }
+
+    void setExtraStatusBarPaddingDp(int startDp, int topDp, int endDp) {
+        mStatusBarExtraPaddingStart = convertToDip(startDp);
+        mStatusBarExtraPaddingTop = convertToDip(topDp);
+        mStatusBarExtraPaddingEnd = convertToDip(endDp);
+    }
+
+    private int convertToDip(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density);
     }
 
     private void updateVisibilities() {
@@ -321,7 +324,8 @@ public class KeyguardStatusBarView extends RelativeLayout {
                 ? Math.max(mMinDotWidth, mPadding.right) : mPadding.right;
 
         int top = waterfallTop + mPadding.top;
-        setPadding(minLeft, top, minRight, 0);
+        setPadding(minLeft + mStatusBarExtraPaddingStart, top + mStatusBarExtraPaddingTop,
+                minRight + mStatusBarExtraPaddingEnd, 0);
     }
 
     private boolean updateLayoutParamsNoCutout() {
@@ -336,7 +340,6 @@ public class KeyguardStatusBarView extends RelativeLayout {
 
         RelativeLayout.LayoutParams lp = (LayoutParams) mCarrierLabel.getLayoutParams();
         lp.addRule(RelativeLayout.START_OF, R.id.status_icon_area);
-        updateCarrierLabelMargin();
 
         lp = (LayoutParams) mStatusIconArea.getLayoutParams();
         lp.removeRule(RelativeLayout.RIGHT_OF);
@@ -369,7 +372,6 @@ public class KeyguardStatusBarView extends RelativeLayout {
 
         lp = (LayoutParams) mCarrierLabel.getLayoutParams();
         lp.addRule(RelativeLayout.START_OF, R.id.cutout_space_view);
-        updateCarrierLabelMargin();
 
         lp = (LayoutParams) mStatusIconArea.getLayoutParams();
         lp.addRule(RelativeLayout.RIGHT_OF, R.id.cutout_space_view);

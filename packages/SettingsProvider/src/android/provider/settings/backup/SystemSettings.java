@@ -135,7 +135,10 @@ public class SystemSettings {
                 Settings.System.ACCESSIBILITY_FORCE_INVERT_COLOR_OVERRIDE_PACKAGES_TO_DISABLE,
                 Settings.System.ADVANCED_REBOOT,
                 Settings.System.FP_SUCCESS_VIBRATE,
-                Settings.System.FP_ERROR_VIBRATE
+                Settings.System.FP_ERROR_VIBRATE,
+                Settings.System.STATUSBAR_EXTRA_PADDING_START,
+                Settings.System.STATUSBAR_EXTRA_PADDING_TOP,
+                Settings.System.STATUSBAR_EXTRA_PADDING_END
         ));
         return settings.toArray(new String[0]);
     }

@@ -17,6 +17,7 @@ package com.android.systemui.statusbar.phone
 
 import android.app.StatusBarManager.WINDOW_STATUS_BAR
 import android.content.res.Resources
+import android.provider.Settings
 import android.util.Log
 import android.view.Display.DEFAULT_DISPLAY
 import android.view.GestureDetector
@@ -41,6 +42,7 @@ import com.android.systemui.shade.domain.interactor.PanelExpansionInteractor
 import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
 import com.android.systemui.statusbar.core.StatusBarEventForwardingModernization
 import com.android.systemui.statusbar.data.repository.StatusBarConfigurationController
+import com.android.systemui.tuner.TunerService
 import com.android.systemui.statusbar.gesture.StatusBarLongPressGestureDetector
 import com.android.systemui.statusbar.layout.StatusBarContentInsetsProvider
 import com.android.systemui.statusbar.policy.Clock
@@ -86,7 +88,8 @@ private constructor(
     private val shadeExpansionTargetDisplayInteractor: ShadeExpansionTargetDisplayInteractor,
     private val lazyShadeDisplaysRepository: Lazy<ShadeDisplaysRepository>,
     private val statusBarWindowControllerStore: StatusBarWindowControllerStore,
-) : ViewController<PhoneStatusBarView>(view) {
+    private val tunerService: TunerService,
+) : ViewController<PhoneStatusBarView>(view), TunerService.Tunable {
 
     private lateinit var clock: Clock
     private lateinit var startSideContainer: View
@@ -199,6 +202,12 @@ private constructor(
         }
         progressProvider?.setReadyToHandleTransition(true)
         configurationController.addCallback(configurationListener)
+        tunerService.addTunable(
+            this,
+            "system:${Settings.System.STATUSBAR_EXTRA_PADDING_START}",
+            "system:${Settings.System.STATUSBAR_EXTRA_PADDING_TOP}",
+            "system:${Settings.System.STATUSBAR_EXTRA_PADDING_END}",
+        )
     }
 
     private fun addCursorSupportToIconContainers() {
@@ -258,6 +267,7 @@ private constructor(
         endSideContainer.setOnHoverListener(null)
         progressProvider?.setReadyToHandleTransition(false)
         configurationController.removeCallback(configurationListener)
+        tunerService.removeTunable(this)
     }
 
     init {
@@ -319,6 +329,17 @@ private constructor(
 
     private fun removeDarkReceivers() {
         darkIconDispatcher.removeDarkReceiver(clock)
+    }
+
+    override fun onTuningChanged(key: String?, newValue: String?) {
+        val contentResolver = mView.context.contentResolver
+        val startDp = Settings.System.getInt(
+            contentResolver, Settings.System.STATUSBAR_EXTRA_PADDING_START, 0)
+        val topDp = Settings.System.getInt(
+            contentResolver, Settings.System.STATUSBAR_EXTRA_PADDING_TOP, 0)
+        val endDp = Settings.System.getInt(
+            contentResolver, Settings.System.STATUSBAR_EXTRA_PADDING_END, 0)
+        mView.setExtraStatusBarPaddingDp(startDp, topDp, endDp)
     }
 
     @Deprecated(
@@ -463,6 +484,7 @@ private constructor(
         private val shadeExpansionTargetDisplayInteractor: ShadeExpansionTargetDisplayInteractor,
         private val lazyShadeDisplaysRepository: Lazy<ShadeDisplaysRepository>,
         private val statusBarWindowControllerStore: StatusBarWindowControllerStore,
+        private val tunerService: TunerService,
     ) {
         fun create(view: PhoneStatusBarView): PhoneStatusBarViewController {
             return PhoneStatusBarViewController(
@@ -488,6 +510,7 @@ private constructor(
                 shadeExpansionTargetDisplayInteractor,
                 lazyShadeDisplaysRepository,
                 statusBarWindowControllerStore,
+                tunerService,
             )
         }
     }
