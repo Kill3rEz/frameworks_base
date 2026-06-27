@@ -41,4 +41,11 @@
    <java-symbol type="string" name="poweroff_alarm_title" />
    <java-symbol type="string" name="poweroff_alarm_body" />
    <java-symbol type="drawable" name="ic_alarm_on" />
+
+   <!-- Status bar network traffic monitor -->
+   <java-symbol type="dimen" name="net_traffic_text_size" />
+   <java-symbol type="string" name="kilobitspersecond_short" />
+   <java-symbol type="string" name="megabitspersecond_short" />
+   <java-symbol type="string" name="kilobytespersecond_short" />
+   <java-symbol type="string" name="megabytespersecond_short" />
 </resources>

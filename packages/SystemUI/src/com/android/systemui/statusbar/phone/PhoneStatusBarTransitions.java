@@ -22,6 +22,7 @@ import android.animation.ObjectAnimator;
 import android.content.res.Resources;
 import android.view.View;
 
+import com.android.internal.statusbar.NetworkTraffic;
 import com.android.systemui.res.R;
 import com.android.systemui.shared.statusbar.phone.BarTransitions;
 
@@ -35,6 +36,7 @@ public final class PhoneStatusBarTransitions extends BarTransitions {
     private boolean mIsHeadsUp;
 
     private View mStartSide, mStatusIcons;
+    private NetworkTraffic mNetworkTraffic;
     private Animator mCurrentAnimation;
 
     /**
@@ -46,6 +48,7 @@ public final class PhoneStatusBarTransitions extends BarTransitions {
         mIconAlphaWhenOpaque = res.getFraction(R.dimen.status_bar_icon_drawing_alpha, 1, 1);
         mStartSide = statusBarView.findViewById(R.id.status_bar_start_side_except_heads_up);
         mStatusIcons = statusBarView.findViewById(R.id.statusIcons);
+        mNetworkTraffic = statusBarView.findViewById(R.id.network_traffic);
         applyModeBackground(-1, getMode(), false /*animate*/);
         applyMode(getMode(), false /*animate*/);
     }
@@ -112,7 +115,8 @@ public final class PhoneStatusBarTransitions extends BarTransitions {
             AnimatorSet anims = new AnimatorSet();
             anims.playTogether(
                     animateTransitionTo(mStartSide, newStartSideAlpha),
-                    animateTransitionTo(mStatusIcons, newStatusIconsAlpha)
+                    animateTransitionTo(mStatusIcons, newStatusIconsAlpha),
+                    animateTransitionTo(mNetworkTraffic, newStatusIconsAlpha)
                     );
             if (isLightsOut(mode)) {
                 anims.setDuration(LIGHTS_OUT_DURATION);
@@ -122,6 +126,7 @@ public final class PhoneStatusBarTransitions extends BarTransitions {
         } else {
             mStartSide.setAlpha(newStartSideAlpha);
             mStatusIcons.setAlpha(newStatusIconsAlpha);
+            mNetworkTraffic.setAlpha(newStatusIconsAlpha);
         }
     }
 }
