@@ -820,6 +820,10 @@ public final class InputMethodManagerService implements IInputMethodManagerImpl.
                 sendOnNavButtonFlagsChangedLocked(userData);
                 break;
             }
+            case "sysui_show_nav_bar_ime": {
+                onUpdateResourceOverlay(userId);
+                break;
+            }
         }
     }
 
@@ -1132,11 +1136,6 @@ public final class InputMethodManagerService implements IInputMethodManagerImpl.
             // For production code, hook up user lifecycle
             mService.mUserManagerInternal.addUserLifecycleListener(this);
 
-            // Hook up resource change first before initializeUsersAsync() starts reading the
-            // seemingly initial data so that we can eliminate the race condition.
-            InputMethodDrawsNavBarResourceMonitor.registerCallback(context, mService.mIoHandler,
-                    mService::onUpdateResourceOverlay);
-
             // Also schedule user init tasks onto an I/O thread.
             initializeUsersAsync(mService.mUserManagerInternal.getUserIds());
         }
@@ -1318,11 +1317,9 @@ public final class InputMethodManagerService implements IInputMethodManagerImpl.
                     final var settings = InputMethodSettings.create(methodMap, userId);
                     InputMethodSettingsRepository.put(userId, settings);
 
-                    final int profileParentId = userManagerInternal.getProfileParentId(userId);
-                    final boolean value =
-                            InputMethodDrawsNavBarResourceMonitor.evaluate(context,
-                                    profileParentId);
-                    userData.mImeDrawsNavBar.set(value);
+                    final boolean showNavBarIme = Settings.Secure.getIntForUser(
+                        context.getContentResolver(), "sysui_show_nav_bar_ime", 1, userId) == 1;
+                    userData.mImeDrawsNavBar.set(showNavBarIme);
 
                     userData.mBackgroundLoadLatch.countDown();
                     Slog.d(TAG, "Complete initialization for user=" + userId);
@@ -1685,6 +1682,7 @@ public final class InputMethodManagerService implements IInputMethodManagerImpl.
                                 Settings.Secure.SELECTED_INPUT_METHOD_SUBTYPE,
                                 Settings.Secure.STYLUS_HANDWRITING_ENABLED,
                                 Settings.Secure.IME_SWITCHER_BUTTON_IN_NAVBAR_ENABLED,
+                                "sysui_show_nav_bar_ime",
                         }, (key, flags, userId) -> {
                             synchronized (ImfLock.class) {
                                 onSecureSettingsChangedLocked(key, userId);
@@ -5691,13 +5689,13 @@ public final class InputMethodManagerService implements IInputMethodManagerImpl.
     @WorkerThread
     private void onUpdateResourceOverlay(@UserIdInt int userId) {
         final int profileParentId = mUserManagerInternal.getProfileParentId(userId);
-        final boolean value =
-                InputMethodDrawsNavBarResourceMonitor.evaluate(mContext, profileParentId);
         final var profileUserIds = mUserManagerInternal.getProfileIds(profileParentId, false);
+        final boolean showNavBarIme = Settings.Secure.getIntForUser(
+            mContext.getContentResolver(), "sysui_show_nav_bar_ime", 1, userId) == 1;
         final ArrayList<UserData> updatedUsers = new ArrayList<>();
         for (int profileUserId : profileUserIds) {
             final var userData = getUserData(profileUserId);
-            userData.mImeDrawsNavBar.set(value);
+            userData.mImeDrawsNavBar.set(showNavBarIme);
             updatedUsers.add(userData);
         }
         synchronized (ImfLock.class) {
