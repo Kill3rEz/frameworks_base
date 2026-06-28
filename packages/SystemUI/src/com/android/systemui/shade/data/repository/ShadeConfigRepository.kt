@@ -28,6 +28,7 @@ import com.android.systemui.res.R
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shared.settings.data.repository.SecureSettingsRepository
+import com.android.systemui.shared.settings.data.repository.SystemSettingsRepository
 import com.android.systemui.util.kotlin.emitOnStart
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
@@ -52,11 +53,23 @@ constructor(
     @ShadeDisplayAware private val resources: Resources,
     @ShadeDisplayAware private val configurationRepository: ConfigurationRepository,
     secureSettingsRepository: SecureSettingsRepository,
+    systemSettingsRepository: SystemSettingsRepository,
     featureFlags: FeatureFlagsClassic,
 ) {
     /** @see ShadeModeInteractor.isFullWidthShade */
     val isFullWidthShade: Flow<Boolean> =
         booleanConfigFlow(R.bool.config_isFullWidthShade, sceneContainerOnly = false)
+
+    /**
+     * The split ratio between notification and Quick Settings panels for swipe-down gestures.
+     * Persistent user preference from Settings (0.10 to 0.90), defaulting to the resource value.
+     */
+    val dualShadeSplitRatio: Flow<Float> =
+        systemSettingsRepository
+            .intSetting(Settings.System.STATUS_BAR_SHADE_SPLIT_PERCENTAGE, defaultValue = 50)
+            .map { it / 100f }
+            .flowOn(backgroundDispatcher)
+            .distinctUntilChanged()
 
     /**
      * Whether Dual Shade should be enabled in the absence of an explicit preference set by the

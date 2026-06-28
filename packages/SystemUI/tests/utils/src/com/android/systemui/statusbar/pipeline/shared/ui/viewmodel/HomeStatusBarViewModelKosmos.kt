@@ -97,6 +97,7 @@ var Kosmos.homeStatusBarViewModelFactory: (Int) -> HomeStatusBarViewModel by
                 statusBarOperatorNameViewModel,
                 sceneInteractor,
                 shadeInteractor,
+                shadeModeInteractor,
                 shadeExpansionTargetDisplayInteractor,
                 displayAwareShadeElementToggleInteractor,
                 qsElement,

@@ -314,5 +314,7 @@ public class SystemSettingsValidators {
                 new InclusiveIntegerRangeValidator(0, 2));
         VALIDATORS.put(System.STATUS_BAR_BATTERY_STYLE,
                 new InclusiveIntegerRangeValidator(0, 3));
+        VALIDATORS.put(System.STATUS_BAR_SHADE_SPLIT_PERCENTAGE,
+                new InclusiveIntegerRangeValidator(10, 90));
     }
 }

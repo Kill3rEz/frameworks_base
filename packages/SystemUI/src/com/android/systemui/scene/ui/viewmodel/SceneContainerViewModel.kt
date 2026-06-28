@@ -69,6 +69,7 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -135,9 +136,6 @@ constructor(
      */
     private var lastNavigationBarVisibleRequest: Boolean? = null
 
-    private val dualShadeGestureSplitRatio =
-        resources.getFloat(R.dimen.config_invocationGestureSplitRatio)
-
     private val statusBarHeightPx: Int by
         systemBarUtilsState.statusBarHeight.hydratedStateOf(initialValue = 0)
 
@@ -148,18 +146,20 @@ constructor(
      * [UserAction]s for this container.
      */
     val swipeSourceDetector: SwipeSourceDetector by
-        shadeModeInteractor.shadeMode
-            .map {
-                if (it is ShadeMode.Dual) {
-                    SceneContainerSwipeDetector(
-                        dynamicSizeEdgeDetector = dynamicSizeEdgeDetector,
-                        invocationGestureSplitRatio = dualShadeGestureSplitRatio,
-                    )
-                } else {
-                    dynamicSizeEdgeDetector
-                }
+        combine(
+            shadeModeInteractor.shadeMode,
+            shadeModeInteractor.dualShadeGestureSplitRatio,
+        ) { shadeMode, splitRatio ->
+            if (shadeMode is ShadeMode.Dual) {
+                SceneContainerSwipeDetector(
+                    dynamicSizeEdgeDetector = dynamicSizeEdgeDetector,
+                    invocationGestureSplitRatio = splitRatio,
+                )
+            } else {
+                dynamicSizeEdgeDetector
             }
-            .hydratedStateOf(initialValue = dynamicSizeEdgeDetector)
+        }
+        .hydratedStateOf(initialValue = dynamicSizeEdgeDetector)
 
     /** Amount of color saturation for the Flexi🥃 ribbon. */
     val ribbonColorSaturation: Float by

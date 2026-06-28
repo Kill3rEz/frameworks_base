@@ -95,8 +95,8 @@ private constructor(
     private lateinit var startSideContainer: View
     private lateinit var endSideContainer: View
 
-    private val shadeInvocationSplitRatio: Float =
-        resources.getFloat(R.dimen.config_invocationGestureSplitRatio)
+    private val shadeInvocationSplitRatio: Float
+        get() = shadeModeInteractor.dualShadeGestureSplitRatio.value
 
     // Creates a [View.OnTouchListener] that only handles mouse click events.
     private fun createMouseClickListener(onClick: () -> Unit): View.OnTouchListener =
