@@ -60,7 +60,7 @@ import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shade.ShadeViewStateProvider
 import com.android.systemui.statusbar.phone.KeyguardStatusBarView
 import com.android.systemui.statusbar.phone.domain.interactor.IsAreaDark
-import com.android.systemui.statusbar.pipeline.battery.ui.composable.UnifiedBattery
+import com.android.systemui.statusbar.pipeline.battery.ui.composable.BatteryWithPercent
 import com.android.systemui.statusbar.pipeline.battery.ui.viewmodel.BatteryViewModel
 import com.android.systemui.statusbar.systemstatusicons.SystemStatusIconsInCompose
 import com.android.systemui.statusbar.systemstatusicons.domain.interactor.SystemStatusIconBlocklistInteractor
@@ -80,7 +80,7 @@ constructor(
     private val componentFactory: KeyguardStatusBarViewComponent.Factory,
     private val notificationPanelView: Lazy<NotificationPanelView>,
     private val viewModelFactory: KeyguardStatusBarViewModel.Factory,
-    private val batteryViewModelFactory: BatteryViewModel.ShowPercentWhenChargingOrSetting.Factory,
+    private val batteryViewModelFactory: BatteryViewModel.BasedOnUserSetting.Factory,
     private val systemStatusIconsViewModelFactory: SystemStatusIconsViewModel.Factory,
 ) : LockscreenElementProvider {
     override val elements: List<LockscreenElement> by lazy { listOf(StatusBarElement()) }
@@ -205,11 +205,11 @@ private fun SystemStatusIconsContainer(
             with(LocalDensity.current) {
                 BatteryViewModel.getStatusBarBatteryHeight(context).toDp()
             }
-        UnifiedBattery(
-            modifier =
-                modifier.heightDp(height).wrapContentWidth().sysuiResTag(BatteryViewModel.TEST_TAG),
+        BatteryWithPercent(
             viewModel = batteryViewModel,
             isDarkProvider = { isDark },
+            modifier =
+                modifier.heightDp(height).wrapContentWidth().sysuiResTag(BatteryViewModel.TEST_TAG),
         )
     }
 }

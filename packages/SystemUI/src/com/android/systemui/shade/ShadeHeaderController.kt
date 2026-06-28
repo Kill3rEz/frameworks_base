@@ -77,7 +77,8 @@ import com.android.systemui.statusbar.phone.StatusOverlayHoverListenerFactory
 import com.android.systemui.statusbar.phone.domain.interactor.IsAreaDark
 import com.android.systemui.statusbar.phone.ui.StatusBarIconController
 import com.android.systemui.statusbar.phone.ui.TintedIconManager
-import com.android.systemui.statusbar.pipeline.battery.ui.composable.BatteryWithEstimate
+import com.android.systemui.lifecycle.rememberViewModel
+import com.android.systemui.statusbar.pipeline.battery.ui.composable.BatteryWithPercent
 import com.android.systemui.statusbar.pipeline.battery.ui.viewmodel.BatteryViewModel
 import com.android.systemui.statusbar.pipeline.shared.ui.view.SystemStatusIconsLayoutHelper
 import com.android.systemui.statusbar.policy.Clock
@@ -114,7 +115,7 @@ constructor(
     @ShadeDisplayAware private val context: Context,
     private val shadeDisplaysRepositoryLazy: Lazy<ShadeDisplaysRepository>,
     private val variableDateViewControllerFactory: VariableDateViewController.Factory,
-    private val unifiedBatteryViewModelFactory: BatteryViewModel.AlwaysShowPercent.Factory,
+    private val unifiedBatteryViewModelFactory: BatteryViewModel.BasedOnUserSetting.Factory,
     private val dumpManager: DumpManager,
     private val shadeCarrierGroupControllerBuilder: ShadeCarrierGroupController.Builder,
     private val combinedShadeHeadersConstraintManager: CombinedShadeHeadersConstraintManager,
@@ -395,17 +396,15 @@ constructor(
             setContent {
                 PlatformTheme {
                     id = R.id.battery_meter_composable_view
-                    val showBatteryEstimate by showBatteryEstimate.collectAsStateWithLifecycle()
                     val dark = isSystemInDarkTheme()
-                    BatteryWithEstimate(
+                    val viewModel =
+                        rememberViewModel(traceName = "BatteryWithPercent") {
+                            unifiedBatteryViewModelFactory.create()
+                        }
+                    BatteryWithPercent(
                         modifier = Modifier.wrapContentSize(),
-                        viewModelFactory = unifiedBatteryViewModelFactory,
+                        viewModel = viewModel,
                         isDarkProvider = { IsAreaDark { dark } },
-                        textColor =
-                            if (notificationShadeBlur())
-                                Color(context.getColor(R.color.shade_header_text_color))
-                            else Color.White,
-                        showEstimate = showBatteryEstimate,
                     )
                 }
             }

@@ -32,6 +32,7 @@ import com.android.systemui.statusbar.pipeline.battery.domain.interactor.Battery
 import com.android.systemui.statusbar.pipeline.battery.domain.interactor.BatteryAttributionModel.Defend
 import com.android.systemui.statusbar.pipeline.battery.domain.interactor.BatteryAttributionModel.PowerSave
 import com.android.systemui.statusbar.pipeline.battery.domain.interactor.BatteryAttributionModel.Unknown
+import com.android.systemui.statusbar.pipeline.battery.data.repository.BatteryRepository
 import com.android.systemui.statusbar.pipeline.battery.domain.interactor.BatteryInteractor
 import com.android.systemui.statusbar.pipeline.battery.shared.ui.BatteryColors
 import com.android.systemui.statusbar.pipeline.battery.shared.ui.BatteryGlyph
@@ -56,6 +57,14 @@ sealed class BatteryViewModel(
     val isFull by interactor.isFull.hydratedStateOf(initialValue = false)
 
     val isCharging: Boolean by interactor.isCharging.hydratedStateOf(initialValue = false)
+
+    val batteryIconStyle: Int by
+        interactor.batteryIconStyle.hydratedStateOf(
+            initialValue = BatteryRepository.ICON_STYLE_DEFAULT,
+        )
+
+    val isBatteryPercentInsideIconSettingEnabled: Boolean by
+        interactor.isBatteryPercentInsideIconSettingEnabled.hydratedStateOf(initialValue = false)
 
     /** A [List<BatteryGlyph>] representation of the current [level] */
     private val levelGlyphs: Flow<List<BatteryGlyph>> =
@@ -195,7 +204,7 @@ sealed class BatteryViewModel(
     constructor(interactor: BatteryInteractor, @Application context: Context) :
         BatteryViewModel(
             interactor = interactor,
-            shouldShowPercent = interactor.isBatteryPercentSettingEnabled,
+            shouldShowPercent = interactor.isBatteryPercentInsideIconSettingEnabled,
             context = context,
         ) {
 
@@ -215,7 +224,7 @@ sealed class BatteryViewModel(
         BatteryViewModel(
             interactor = interactor,
             shouldShowPercent =
-                combine(interactor.isCharging, interactor.isBatteryPercentSettingEnabled) {
+                combine(interactor.isCharging, interactor.isBatteryPercentInsideIconSettingEnabled) {
                     charging,
                     settingEnabled ->
                     charging || settingEnabled
