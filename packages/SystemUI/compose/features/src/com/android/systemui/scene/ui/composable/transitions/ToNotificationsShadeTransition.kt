@@ -54,7 +54,12 @@ fun TransitionBuilder.toNotificationsShadeTransition(
         enabled = enableSharedElements,
     )
 
-    verticalContainerReveal(NotificationsShade.Elements.Panel, shadeExpansionMotion, revealHaptics)
+    verticalContainerReveal(
+        container = NotificationsShade.Elements.Panel,
+        motionSpec = shadeExpansionMotion,
+        haptics = revealHaptics,
+        useMechanics = true,
+    )
 
     fractionRange(start = .16f, end = 0.8f) { fade(NotificationsShade.Elements.StatusBar) }
     fractionRange(start = .33f, end = 0.8f) { fade(Notifications.Elements.StackPlaceholder) }
