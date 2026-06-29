@@ -8191,6 +8191,7 @@ public final class ActivityThread extends ClientTransactionHandler
 
         PlayIntegritySpoofService pifService = PlayIntegritySpoofService.getInstance();
         if (pifService.shouldSpoof(data.processName)) {
+            PlayIntegritySpoofService.setSpoofPropsForProcess(true);
             pifService.spoofBuildFields(data.processName);
             if (pifService.isSpoofSignatureEnabled()) {
                 pifService.spoofSignature();
