@@ -16,7 +16,6 @@
 package com.android.server.wm;
 
 import android.content.Context;
-import android.os.BatteryManager;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Settings;
@@ -30,13 +29,9 @@ class GameStateDispatcher {
 
     private static final String TAG = "GameStateDispatcher";
     private static final String KEY_GAMING_MODE_ACTIVE = "ax_gaming_mode_active";
-    private static final String KEY_BYPASS_CHARGE_ENABLED = "bypass_charge_enabled";
 
     private final Context mContext;
     private final List<IGameSpaceCallback> mCallbacks;
-
-    private int mChargeControlLimit = 100;
-    private boolean mWasChargingControlEnabled = false;
 
     GameStateDispatcher(Context context, List<IGameSpaceCallback> callbacks) {
         mContext = context;
@@ -59,19 +54,6 @@ class GameStateDispatcher {
                 mCallbacks.remove(callback);
             }
         }
-
-        if (active) {
-            if (bypassChargeEnabled()) {
-                mChargeControlLimit = getChargingLimit();
-                setBypassActive(true);
-                setSmartChargeLvl(battLevel());
-            }
-        } else {
-            if (bypassChargeEnabled()) {
-                setBypassActive(false);
-                setSmartChargeLvl(mChargeControlLimit);
-            }
-        }
     }
 
     void boostGame(boolean enable) {
@@ -84,36 +66,5 @@ class GameStateDispatcher {
                 "persist.sys.power_mode_perf", enable ? 1 : 0,
                 UserHandle.USER_CURRENT);
         SystemProperties.set("persist.sys.power_mode_perf", enable ? "1" : "0");
-    }
-
-    void setBypassCharge(boolean enable) {
-        if (!bypassChargeEnabled()) return;
-
-        if (enable) {
-            mChargeControlLimit = getChargingLimit();
-        }
-
-        setBypassActive(enable);
-        setSmartChargeLvl(enable ? battLevel() : mChargeControlLimit);
-    }
-
-    private boolean bypassChargeEnabled() {
-        return Settings.System.getIntForUser(mContext.getContentResolver(),
-                KEY_BYPASS_CHARGE_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
-    }
-
-    private int getChargingLimit() {
-        return 100;
-    }
-
-    private int battLevel() {
-        BatteryManager bm = mContext.getSystemService(BatteryManager.class);
-        return bm != null ? bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) : -1;
-    }
-
-    private void setSmartChargeLvl(int value) {
-    }
-
-    private void setBypassActive(boolean value) {
     }
 }
