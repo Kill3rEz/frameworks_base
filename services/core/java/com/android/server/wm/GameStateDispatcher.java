@@ -22,8 +22,6 @@ import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.Slog;
 
-import lineageos.health.HealthInterface;
-
 import com.android.internal.app.IGameSpaceCallback;
 
 import java.util.List;
@@ -105,15 +103,6 @@ class GameStateDispatcher {
     }
 
     private int getChargingLimit() {
-        try {
-            HealthInterface health = HealthInterface.getInstance(mContext);
-            mWasChargingControlEnabled = health.getEnabled();
-            if (mWasChargingControlEnabled) {
-                return health.getLimit();
-            }
-        } catch (Exception e) {
-            Slog.w(TAG, "Failed to get charging limit", e);
-        }
         return 100;
     }
 
@@ -123,21 +112,8 @@ class GameStateDispatcher {
     }
 
     private void setSmartChargeLvl(int value) {
-        try {
-            HealthInterface health = HealthInterface.getInstance(mContext);
-            health.setMode(HealthInterface.MODE_LIMIT);
-            health.setLimit(value);
-        } catch (Exception e) {
-            Slog.w(TAG, "Failed to set charging limit", e);
-        }
     }
 
     private void setBypassActive(boolean value) {
-        try {
-            HealthInterface health = HealthInterface.getInstance(mContext);
-            health.setEnabled(value || mWasChargingControlEnabled);
-        } catch (Exception e) {
-            Slog.w(TAG, "Failed to set charging bypass", e);
-        }
     }
 }
