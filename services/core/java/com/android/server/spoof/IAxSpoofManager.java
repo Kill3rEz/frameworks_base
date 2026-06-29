@@ -31,4 +31,6 @@ public interface IAxSpoofManager {
     String getTrickyStoreKeyBox();
 
     String getTrickyStorePatch();
+
+    String getPifTargets();
 }

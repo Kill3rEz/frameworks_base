@@ -161,6 +161,7 @@ public final class PlayIntegritySpoofService {
     private volatile boolean mSpoofPhotos = false;
     private volatile boolean mDebug = false;
 
+    private final Set<String> mTargetApps = ConcurrentHashMap.newKeySet();
     private final Map<String, String> mBuildFields = new ConcurrentHashMap<>();
     private final Map<String, String> mSystemProps = new ConcurrentHashMap<>();
 
@@ -217,6 +218,16 @@ public final class PlayIntegritySpoofService {
             String spoofPhotos = am.getSpoofPifSpoofPhotos();
             mSpoofPhotos = spoofPhotos == null || "1".equals(spoofPhotos)
                             || "true".equalsIgnoreCase(spoofPhotos);
+            String targetsStr = am.getSpoofPifTargets();
+            mTargetApps.clear();
+            if (targetsStr != null && !targetsStr.isEmpty()) {
+                for (String pkg : targetsStr.split("\n")) {
+                    String trimmed = pkg.trim();
+                    if (!trimmed.isEmpty()) {
+                        mTargetApps.add(trimmed);
+                    }
+                }
+            }
         } catch (Throwable e) {
             Log.e(TAG, "Failed to fetch PIF config from system_server", e);
             return;
@@ -366,7 +377,8 @@ public final class PlayIntegritySpoofService {
     public boolean shouldSpoof(String processName) {
         ensureLoaded();
         if (!mConfigLoaded) return false;
-        return DROIDGUARD_PACKAGE.equals(processName) || VENDING_PACKAGE.equals(processName);
+        return DROIDGUARD_PACKAGE.equals(processName) || VENDING_PACKAGE.equals(processName)
+                || mTargetApps.contains(processName);
     }
 
     public boolean isGmsProcess(String dataDir) {

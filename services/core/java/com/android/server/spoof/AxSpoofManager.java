@@ -41,6 +41,7 @@ public class AxSpoofManager implements IAxSpoofManager {
             Settings.Secure.SPOOF_TRICKYSTORE_TARGET,
             Settings.Secure.SPOOF_TRICKYSTORE_KEYBOX,
             Settings.Secure.SPOOF_TRICKYSTORE_PATCH,
+            Settings.Secure.SPOOF_PIF_TARGETS,
     };
 
     private final Map<String, String> mCache = new ConcurrentHashMap<>();
@@ -133,5 +134,10 @@ public class AxSpoofManager implements IAxSpoofManager {
     @Override
     public String getTrickyStorePatch() {
         return getCached(Settings.Secure.SPOOF_TRICKYSTORE_PATCH);
+    }
+
+    @Override
+    public String getPifTargets() {
+        return getCached(Settings.Secure.SPOOF_PIF_TARGETS);
     }
 }
