@@ -85,6 +85,8 @@ void ShaderCache::initShaderDiskCache(const void* identity, ssize_t size) {
     ATRACE_NAME("initShaderDiskCache");
     std::lock_guard lock(mMutex);
 
+    if (mInitialized) return;
+
     // Emulators can switch between different renders either as part of config
     // or snapshot migration. Also, program binaries may not work well on some
     // desktop / laptop GPUs. Thus, disable the shader disk cache for emulator builds.
