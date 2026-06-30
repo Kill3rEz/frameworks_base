@@ -84,6 +84,7 @@ public class AxExtServiceFactory {
 
     public static void systemReady() {
         getSpoofManager().systemReady();
+        IAxExtServiceFactory.initObscuraService();
     }
     
     public static void onLateSystemReady() {

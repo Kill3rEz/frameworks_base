@@ -176,6 +176,7 @@ import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.function.pooled.PooledLambda;
 import com.android.server.LocalServices;
 import com.android.server.am.ActivityManagerService;
+import com.android.server.obscura.ObscuraService;
 import com.android.server.am.HostingRecord;
 import com.android.server.am.UserState;
 import com.android.server.companion.virtual.VirtualDeviceManagerInternal;

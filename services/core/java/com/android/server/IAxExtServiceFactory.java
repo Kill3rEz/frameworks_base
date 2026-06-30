@@ -31,4 +31,9 @@ public interface IAxExtServiceFactory {
             return clazz;
         }
     }
+
+    // Called from SystemServer after critical services are ready
+    static void initObscuraService() {
+        com.android.server.obscura.ObscuraService.systemReady();
+    }
 }

@@ -161,6 +161,7 @@ import com.android.server.power.ShutdownCheckPoints;
 import com.android.server.statusbar.StatusBarManagerInternal;
 import com.android.server.uri.NeededUriGrants;
 import com.android.server.wm.ActivityMetricsLogger.LaunchingState;
+import com.android.server.obscura.ObscuraService;
 import com.android.server.wm.BackgroundActivityStartController.BalVerdict;
 import com.android.server.wm.LaunchParamsController.LaunchParams;
 import com.android.server.wm.TaskFragment.EmbeddingCheckResult;
@@ -912,6 +913,20 @@ class ActivityStarter {
 
                 final long origId = Binder.clearCallingIdentity();
                 try {
+                    if (mRequest.intent != null && mRequest.intent.getComponent() != null) {
+                        String targetPkg = mRequest.intent.getComponent().getPackageName();
+                        String callerPkg = mRequest.callingPackage;
+                        if (targetPkg != null
+                                && ObscuraService.get().isPackageHidden(targetPkg)
+                                && callerPkg != null
+                                && !targetPkg.equals(callerPkg)) {
+                            int callerUid = mRequest.callingUid;
+                            if (callerUid != android.os.Process.SYSTEM_UID
+                                    && callerUid != android.os.Process.ROOT_UID) {
+                                return ActivityManager.START_CLASS_NOT_FOUND;
+                            }
+                        }
+                    }
                     res = resolveToHeavyWeightSwitcherIfNeeded();
                     if (res != START_SUCCESS) {
                         return res;

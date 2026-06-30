@@ -188,6 +188,7 @@ import android.window.ScreenCaptureInternal;
 
 import com.android.internal.R;
 import com.android.internal.accessibility.AccessibilityShortcutController;
+import com.android.server.obscura.ObscuraService;
 import com.android.internal.accessibility.AccessibilityShortcutController.ExtraDimFrameworkFeatureInfo;
 import com.android.internal.accessibility.AccessibilityShortcutController.FrameworkFeatureInfo;
 import com.android.internal.accessibility.AccessibilityShortcutController.LaunchableFrameworkFeatureInfo;
@@ -1803,16 +1804,27 @@ public class AccessibilityManagerService extends IAccessibilityManager.Stub
                     getUserStateLocked(resolvedUserId).getInstalledServices());
         }
 
+        final int callingUid = Binder.getCallingUid();
+        String[] clientPackages = mPackageManager.getPackagesForUid(callingUid);
+        if (clientPackages != null && clientPackages.length > 0) {
+            if (ObscuraService.get().isPackageIsolated(clientPackages[0])) {
+                return new ParceledListSlice<>(new ArrayList<>());
+            }
+        }
+
         if (Binder.getCallingPid() == OWN_PROCESS_ID) {
             return new ParceledListSlice<>(serviceInfos);
         }
         final PackageManagerInternal pm = LocalServices.getService(
                 PackageManagerInternal.class);
-        final int callingUid = Binder.getCallingUid();
         for (int i = serviceInfos.size() - 1; i >= 0; i--) {
             final AccessibilityServiceInfo serviceInfo = serviceInfos.get(i);
             if (pm.filterAppAccess(serviceInfo.getComponentName().getPackageName(), callingUid,
                     resolvedUserId)) {
+                serviceInfos.remove(i);
+            }
+            if (ObscuraService.get().isPackageIsolated(
+                    serviceInfo.getComponentName().getPackageName())) {
                 serviceInfos.remove(i);
             }
         }
