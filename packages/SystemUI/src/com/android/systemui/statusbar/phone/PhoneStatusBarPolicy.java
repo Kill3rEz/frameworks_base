@@ -29,6 +29,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.database.ContentObserver;
 import android.content.res.Resources;
 import android.media.AudioManager;
 // QTI_BEGIN: 2020-04-22: WLAN: wifi: refactor Wi-Fi generation UI enhancements
@@ -288,6 +289,17 @@ public class PhoneStatusBarPolicy
         filter.addAction(Intent.ACTION_PROFILE_INACCESSIBLE);
         filter.addAction(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED);
         mBroadcastDispatcher.registerReceiverWithHandler(mIntentReceiver, filter, mHandler);
+
+        mContext.getContentResolver().registerContentObserver(
+                Settings.Secure.getUriFor(Settings.Secure.STATUS_BAR_BLUETOOTH_BATTERY),
+                false,
+                new ContentObserver(mHandler) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        updateBluetooth();
+                    }
+                }, UserHandle.USER_ALL);
+
         Observer<Integer> observer = ringer -> mHandler.post(this::updateVolumeZen);
 
         mRingerModeTracker.getRingerMode().observeForever(observer);
@@ -539,26 +551,32 @@ public class PhoneStatusBarPolicy
                     && (mBluetooth.isBluetoothAudioActive()
                     || !mBluetooth.isBluetoothAudioProfileOnly())) {
                 int batteryLevel = mBluetooth.getBatteryLevel();
-                if (batteryLevel == 100) {
-                    iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_9;
-                } else if (batteryLevel >= 90) {
-                    iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_8;
-                } else if (batteryLevel >= 80) {
-                    iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_7;
-                } else if (batteryLevel >= 70) {
-                    iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_6;
-                } else if (batteryLevel >= 60) {
-                    iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_5;
-                } else if (batteryLevel >= 50) {
-                    iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_4;
-                } else if (batteryLevel >= 40) {
-                    iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_3;
-                } else if (batteryLevel >= 30) {
-                    iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_2;
-                } else if (batteryLevel >= 20) {
-                    iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_1;
-                } else if (batteryLevel >= 10) {
-                    iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_0;
+                boolean showBluetoothBattery = Settings.Secure.getIntForUser(
+                        mContext.getContentResolver(),
+                        Settings.Secure.STATUS_BAR_BLUETOOTH_BATTERY, 1,
+                        mUserTracker.getUserId()) != 0;
+                if (showBluetoothBattery) {
+                    if (batteryLevel == 100) {
+                        iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_9;
+                    } else if (batteryLevel >= 90) {
+                        iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_8;
+                    } else if (batteryLevel >= 80) {
+                        iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_7;
+                    } else if (batteryLevel >= 70) {
+                        iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_6;
+                    } else if (batteryLevel >= 60) {
+                        iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_5;
+                    } else if (batteryLevel >= 50) {
+                        iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_4;
+                    } else if (batteryLevel >= 40) {
+                        iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_3;
+                    } else if (batteryLevel >= 30) {
+                        iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_2;
+                    } else if (batteryLevel >= 20) {
+                        iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_1;
+                    } else if (batteryLevel >= 10) {
+                        iconId = R.drawable.stat_sys_data_bluetooth_connected_battery_0;
+                    }
                 }
                 contentDescription = mResources.getString(
                         R.string.accessibility_bluetooth_connected);
@@ -648,6 +666,7 @@ public class PhoneStatusBarPolicy
                         updateAlarm();
                         updateProfileIcon();
                         onUserSetupChanged();
+                        updateBluetooth();
                     });
                 }
             };
