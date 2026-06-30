@@ -34,7 +34,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import android.provider.Settings
+import com.android.systemui.util.settings.SecureSettings
 import org.mockito.Mock
+import org.mockito.Mockito.`when`
 import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
@@ -65,12 +68,13 @@ class PrivacyConfigFlagsTest(flags: FlagsParameterization) : SysuiTestCase() {
 
     @Mock private lateinit var callback: PrivacyConfig.Callback
     @Mock private lateinit var dumpManager: DumpManager
+    @Mock private lateinit var secureSettings: SecureSettings
 
     private lateinit var executor: FakeExecutor
     private lateinit var deviceConfigProxy: DeviceConfigProxy
 
     fun createPrivacyConfig(): PrivacyConfig {
-        return PrivacyConfig(executor, deviceConfigProxy, dumpManager)
+        return PrivacyConfig(executor, deviceConfigProxy, secureSettings, dumpManager)
     }
 
     @Before
@@ -78,6 +82,10 @@ class PrivacyConfigFlagsTest(flags: FlagsParameterization) : SysuiTestCase() {
         MockitoAnnotations.initMocks(this)
         executor = FakeExecutor(FakeSystemClock())
         deviceConfigProxy = DeviceConfigProxyFake()
+
+        `when`(secureSettings.getBool(Settings.Secure.ENABLE_CAMERA_PRIVACY_INDICATOR, true)).thenReturn(true)
+        `when`(secureSettings.getBool(Settings.Secure.ENABLE_LOCATION_PRIVACY_INDICATOR, true)).thenReturn(true)
+        `when`(secureSettings.getBool(Settings.Secure.ENABLE_PROJECTION_PRIVACY_INDICATOR, true)).thenReturn(true)
 
         privacyConfig = createPrivacyConfig()
         privacyConfig.addCallback(callback)
