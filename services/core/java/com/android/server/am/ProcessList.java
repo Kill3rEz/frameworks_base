@@ -2543,8 +2543,13 @@ public final class ProcessList extends ProcessListInternal
                     getUidTransitionPolicy().disallowAllUidTransitionsFrom(uid);
                 } else {
                     final IsolatedUidRange uidRange =
-                        mAppIsolatedUidRangeAllocator.getIsolatedUidRangeLocked(
+                        mAppIsolatedUidRangeAllocator.getOrCreateIsolatedUidRangeLocked(
                                 app.info.processName, app.getHostingRecord().getDefiningUid());
+                    if (uidRange == null) {
+                        Slog.w(TAG_PROCESSES, "No isolated UID range available for app zygote: "
+                                + app.info.processName);
+                        return null;
+                    }
                     // Create the app-zygote and provide it with the UID-range it's allowed
                     // to setresuid/setresgid to.
                     firstUid = UserHandle.getUid(userId, uidRange.mFirstUid);
@@ -2791,7 +2796,10 @@ public final class ProcessList extends ProcessListInternal
                         new String[]{PROC_START_SEQ_IDENT + app.getStartSeq()});
             } else if (hostingRecord.usesAppZygote()) {
                 final AppZygote appZygote = createAppZygoteForProcessIfNeeded(app);
-
+                if (appZygote == null) {
+                    throw new IllegalStateException("Failed to create app zygote for "
+                            + app.processName + "; aborting process start.");
+                }
                 if (Flags.useSafesetidUidPolicy2()
                         && UidTransitionPolicy.isEnabled()
                         && getUidTransitionPolicy() != null) {
