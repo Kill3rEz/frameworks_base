@@ -100,20 +100,7 @@ constructor(
             mutableStateOf(true)
         }
 
-    val showMedia: Boolean by
-        shadeStatusBarComponentsInteractor.disableFlags
-            .flatMapLatestConflated {
-                if (it.isQuickSettingsEnabled()) {
-                    mediaCarouselInteractor.hasActiveMedia
-                } else {
-                    flowOf(false)
-                }
-            }
-            .hydratedStateOf(
-                initialValue =
-                    shadeStatusBarComponentsInteractor.disableFlags.value
-                        .isQuickSettingsEnabled() && mediaCarouselInteractor.hasActiveMedia.value
-            )
+    val showMedia: Boolean = false
 
     /**
      * Whether the shade container transparency effect should be enabled (`true`), or whether to
