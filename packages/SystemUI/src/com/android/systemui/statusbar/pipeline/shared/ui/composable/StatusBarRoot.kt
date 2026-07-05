@@ -31,6 +31,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -590,11 +591,11 @@ private fun addBatteryComposable(
 ) {
     val batteryComposeView =
         ComposeView(phoneStatusBarView.context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
             setContent {
-                val height =
-                    with(LocalDensity.current) {
-                        BatteryViewModel.getStatusBarBatteryHeight(LocalContext.current).toDp()
-                    }
                 val viewModel =
                     rememberViewModel(traceName = "UnifiedBattery") {
                         statusBarViewModel.unifiedBatteryViewModel.create()
@@ -602,7 +603,7 @@ private fun addBatteryComposable(
                 BatteryWithPercent(
                     viewModel = viewModel,
                     isDarkProvider = { statusBarViewModel.areaDark },
-                    modifier = Modifier.sysUiResTagContainer().height(height).wrapContentWidth(),
+                    modifier = Modifier.sysUiResTagContainer().fillMaxHeight().wrapContentWidth(),
                 )
             }
         }
@@ -623,6 +624,10 @@ private fun addEndSideComposable(
         phoneStatusBarView.requireViewById<View>(R.id.status_bar_end_side_container)
     val systemStatusIconsComposeView =
         ComposeView(phoneStatusBarView.context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
             setContent {
                 val endSideWidth by rememberViewWidthAsState(endSideContainerView)
 
@@ -630,7 +635,8 @@ private fun addEndSideComposable(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier =
-                        Modifier.widthIn(max = with(LocalDensity.current) { endSideWidth.toDp() })
+                        Modifier.fillMaxHeight()
+                            .widthIn(max = with(LocalDensity.current) { endSideWidth.toDp() })
                             .sysUiResTagContainer(),
                 ) {
                     SystemStatusIconsContainer(
@@ -641,10 +647,6 @@ private fun addEndSideComposable(
                             statusBarViewModel.systemStatusIconBlockListInteractor,
                     )
 
-                    val height =
-                        with(LocalDensity.current) {
-                            BatteryViewModel.getStatusBarBatteryHeight(LocalContext.current).toDp()
-                        }
                     val viewModel =
                         rememberViewModel(traceName = "UnifiedBattery") {
                             statusBarViewModel.unifiedBatteryViewModel.create()
@@ -652,7 +654,7 @@ private fun addEndSideComposable(
                     BatteryWithPercent(
                         viewModel = viewModel,
                         isDarkProvider = { statusBarViewModel.areaDark },
-                        modifier = Modifier.height(height).wrapContentWidth(),
+                        modifier = Modifier.fillMaxHeight().wrapContentWidth(),
                     )
                 }
             }

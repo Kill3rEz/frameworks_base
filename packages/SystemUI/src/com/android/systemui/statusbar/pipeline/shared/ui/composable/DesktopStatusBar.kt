@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -385,7 +386,7 @@ private fun QuickSettingsChip(
                         viewModel.unifiedBatteryViewModel.create()
                     },
                 isDarkProvider = { batteryDarkProvider },
-                modifier = Modifier.height(batteryHeight),
+                modifier = Modifier.fillMaxHeight().wrapContentWidth(),
             )
         }
     }

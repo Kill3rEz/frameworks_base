@@ -36,7 +36,10 @@ import android.view.WindowInsets
 import android.widget.TextView
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.isSystemInDarkTheme
+import android.widget.LinearLayout
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -393,6 +396,10 @@ constructor(
 
     private fun createBatteryComposeView(): ComposeView {
         return ComposeView(mView.context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
             setContent {
                 PlatformTheme {
                     id = R.id.battery_meter_composable_view
@@ -402,7 +409,7 @@ constructor(
                             unifiedBatteryViewModelFactory.create()
                         }
                     BatteryWithPercent(
-                        modifier = Modifier.wrapContentSize(),
+                        modifier = Modifier.fillMaxHeight().wrapContentWidth(),
                         viewModel = viewModel,
                         isDarkProvider = { IsAreaDark { dark } },
                     )
