@@ -1557,7 +1557,7 @@ public class UserControllerTest {
         mUserController.finishUserStopped(uss, /* allowDelayedLocking= */ true);
         // Cannot mock FgThread handler, so confirm that there is no posted message left before
         // checking.
-        waitForHandlerToComplete(FgThread.getHandler(), HANDLER_WAIT_TIME_MS);
+        waitForHandlerToComplete(mInjector.getUnlockHandler(), HANDLER_WAIT_TIME_MS);
         verify(mInjector.mLockSettingsInternalMock, times(0))
                 .lockUser(anyInt());
 
@@ -1571,7 +1571,7 @@ public class UserControllerTest {
         UserState ussUser1 = mUserStates.get(TEST_USER_ID1);
         ussUser1.setState(UserState.STATE_SHUTDOWN);
         mUserController.finishUserStopped(ussUser1, /* allowDelayedLocking= */ true);
-        waitForHandlerToComplete(FgThread.getHandler(), HANDLER_WAIT_TIME_MS);
+        waitForHandlerToComplete(mInjector.getUnlockHandler(), HANDLER_WAIT_TIME_MS);
         verify(mInjector.mLockSettingsInternalMock, times(1))
                 .lockUser(TEST_USER_ID);
     }
@@ -2703,7 +2703,7 @@ public class UserControllerTest {
         // Passing delayedLocking invalidates incorrect internal data passing but currently there is
         // no easy way to get that information passed through lambda.
         mUserController.finishUserStopped(ussUser, allowDelayedLocking);
-        waitForHandlerToComplete(FgThread.getHandler(), HANDLER_WAIT_TIME_MS);
+        waitForHandlerToComplete(mInjector.getUnlockHandler(), HANDLER_WAIT_TIME_MS);
         verify(mInjector.mLockSettingsInternalMock, times(expectLocking ? 1 : 0))
                 .lockUser(eq(userId));
     }
@@ -2871,6 +2871,7 @@ public class UserControllerTest {
         public final List<Intent> mSentIntents = new ArrayList<>();
 
         private final TestHandler mUiHandler;
+        private final TestHandler mUnlockHandler;
 
         private final UserManagerInternal mUserManagerInternalMock;
         private final LockSettingsInternal mLockSettingsInternalMock;
@@ -2897,6 +2898,7 @@ public class UserControllerTest {
             mHandlerThread.start();
             mHandler = new TestHandler(mHandlerThread.getLooper());
             mUiHandler = new TestHandler(mHandlerThread.getLooper());
+            mUnlockHandler = new TestHandler(mHandlerThread.getLooper());
             mUserManagerMock = mock(UserManagerService.class);
             mUserManagerInternalMock = mock(UserManagerInternal.class);
             mLockSettingsInternalMock = mock(LockSettingsInternal.class);
@@ -2933,6 +2935,10 @@ public class UserControllerTest {
         @Override
         protected Handler getUiHandler(Handler.Callback callback) {
             return mUiHandler;
+        }
+
+        protected Handler getUnlockHandler() {
+            return mUnlockHandler;
         }
 
         @Override

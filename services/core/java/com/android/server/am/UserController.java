@@ -99,6 +99,7 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.IProgressListener;
 import android.os.IRemoteCallback;
@@ -320,6 +321,9 @@ class UserController implements Handler.Callback {
     private final Handler mHandler;
     private final Handler mUiHandler;
 
+    /** Dedicated thread for user unlock operations, to avoid contention on FgThread. */
+    private final Handler mUnlockHandler;
+
     // Holds the current foreground user's id. Use mLock when updating
     @GuardedBy("mLock")
     private volatile int mCurrentUserId = UserHandle.USER_SYSTEM;
@@ -520,6 +524,7 @@ class UserController implements Handler.Callback {
         // This should be called early to avoid a null mHandler inside the injector
         mHandler = mInjector.getHandler(this);
         mUiHandler = mInjector.getUiHandler(this);
+        mUnlockHandler = mInjector.getUnlockHandler();
         // User 0 is the first and only user that runs at boot.
         final UserState uss = new UserState(UserHandle.SYSTEM);
         uss.mUnlockProgress.addListener(new UserProgressListener());
@@ -914,8 +919,9 @@ class UserController implements Handler.Callback {
         uss.mUnlockProgress.setProgress(5,
                     mInjector.getContext().getString(R.string.android_start_title));
 
-        // Call onBeforeUnlockUser on a worker thread that allows disk I/O
-        FgThread.getHandler().post(() -> {
+        // Call onBeforeUnlockUser on a dedicated thread that allows disk I/O,
+        // without contending with FgThread work.
+        mUnlockHandler.post(() -> {
             if (!mInjector.isCeStorageUnlocked(userId)) {
                 Slogf.w(TAG, "User's CE storage got locked unexpectedly, leaving user locked.");
                 return;
@@ -1703,9 +1709,9 @@ class UserController implements Handler.Callback {
             @Nullable List<KeyEvictedCallback> keyEvictedCallbacks) {
         // Evict user secrets that require strong authentication to unlock. This includes locking
         // the user's credential-encrypted storage and evicting the user's keystore super keys.
-        // Performed on FgThread to make it serialized with call to
+        // Performed on same dedicated thread to make it serialized with call to
         // UserManagerService.onBeforeUnlockUser in finishUserUnlocking to prevent data corruption.
-        FgThread.getHandler().post(() -> {
+        mUnlockHandler.post(() -> {
             if (hasStartedUserState(userId)) {
                 Slogf.w(TAG, "User was restarted, skipping key eviction");
                 return;
@@ -1890,11 +1896,11 @@ class UserController implements Handler.Callback {
     }
 
     void scheduleStartProfiles() {
-        // Parent user transition to RUNNING_UNLOCKING happens on FgThread, so it is busy, there is
-        // a chance the profile will reach RUNNING_LOCKED while parent is still locked, so no
-        // attempt will be made to unlock the profile. If we go via FgThread, this will be executed
-        // after the parent had chance to unlock fully.
-        FgThread.getHandler().post(() -> {
+        // Parent user transition to RUNNING_UNLOCKING happens on unlock handler thread,
+        // so it is busy, there is a chance the profile will reach RUNNING_LOCKED while parent
+        // is still locked, so no attempt will be made to unlock the profile. If we go via the
+        // unlock handler, this will be executed after the parent had chance to unlock fully.
+        mUnlockHandler.post(() -> {
             if (!mHandler.hasMessages(START_PROFILES_MSG)) {
                 mHandler.sendMessageDelayed(mHandler.obtainMessage(START_PROFILES_MSG),
                         DateUtils.SECOND_IN_MILLIS);
@@ -4437,6 +4443,7 @@ class UserController implements Handler.Callback {
         private LockSettingsInternal mLockSettingsInternal;
         private PowerManagerInternal mPowerManagerInternal;
         private Handler mHandler;
+        private Handler mUnlockHandler;
         private final Object mUserSwitchingDialogLock = new Object();
         @GuardedBy("mUserSwitchingDialogLock")
         private UserSwitchingDialog mUserSwitchingDialog;
@@ -4456,6 +4463,16 @@ class UserController implements Handler.Callback {
 
         protected Handler getUiHandler(Handler.Callback callback) {
             return new Handler(mService.mUiHandler.getLooper(), callback);
+        }
+
+        protected synchronized Handler getUnlockHandler() {
+            if (mUnlockHandler == null) {
+                HandlerThread thread = new HandlerThread("UserControllerUnlock",
+                        android.os.Process.THREAD_PRIORITY_FOREGROUND);
+                thread.start();
+                mUnlockHandler = new Handler(thread.getLooper());
+            }
+            return mUnlockHandler;
         }
 
         protected UserJourneyLogger getUserJourneyLogger() {
