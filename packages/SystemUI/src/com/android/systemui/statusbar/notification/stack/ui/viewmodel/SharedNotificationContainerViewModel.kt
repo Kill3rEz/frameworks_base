@@ -773,7 +773,7 @@ constructor(
             toAodEndStateTransitionViewModel.lockscreenAlpha to "toAodEndState",
             toDozingEndStateTransitionViewModel.notificationAlpha to "toDozingEndState",
             if (SceneContainerFlag.isEnabled) {
-                dozingToGoneTransitionViewModel.lockscreenAlpha(viewState)
+                dozingToGoneTransitionViewModel.notificationAlpha(viewState)
             } else {
                 emptyFlow()
             } to "dozingToGone",

@@ -68,6 +68,23 @@ class DozingToGoneTransitionViewModelTest : SysuiTestCase() {
         }
 
     @Test
+    fun notificationAlpha() =
+        testScope.runTest {
+            val viewState = ViewStateAccessor()
+            val alpha by collectValues(underTest.notificationAlpha(viewState))
+
+            keyguardTransitionRepository.sendTransitionSteps(
+                from = KeyguardState.DOZING,
+                to = KeyguardState.GONE,
+                testScope,
+            )
+
+            // Starts at 0f, remains 0f during step, finishes at 1f
+            assertThat(alpha.first()).isEqualTo(0f)
+            assertThat(alpha.last()).isEqualTo(1f)
+        }
+
+    @Test
     fun deviceEntryParentViewDisappear() =
         testScope.runTest {
             val values by collectValues(underTest.deviceEntryParentViewAlpha)

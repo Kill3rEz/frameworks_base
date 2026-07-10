@@ -47,6 +47,15 @@ constructor(animationFlow: KeyguardTransitionAnimationFlow) : DeviceEntryIconTra
         )
     }
 
+    fun notificationAlpha(viewState: ViewStateAccessor): Flow<Float> {
+        return transitionAnimation.sharedFlow(
+            duration = 200.milliseconds,
+            onStart = { 0f },
+            onStep = { 0f },
+            onFinish = { 1f },
+        )
+    }
+
     val nonAuthUIAlpha: Flow<Float> =
         transitionAnimation.sharedFlow(
             duration = TO_GONE_DURATION,
