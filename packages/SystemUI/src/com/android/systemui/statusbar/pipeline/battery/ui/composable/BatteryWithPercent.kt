@@ -43,65 +43,67 @@ fun BatteryWithPercent(
     isDarkProvider: () -> IsAreaDark,
     modifier: Modifier,
 ) {
-    val boundsState = remember { mutableStateOf(Rect()) }
-    val showPercentNextToIcon by
-        viewModel.interactor.isShowPercentNextToIconEnabled.collectAsState(false)
+    BatteryViewModel.FontResolverWrapper {
+        val boundsState = remember { mutableStateOf(Rect()) }
+        val showPercentNextToIcon by
+            viewModel.interactor.isShowPercentNextToIconEnabled.collectAsState(false)
 
-    val colorProvider = {
-        if (isDarkProvider().isDarkTheme(boundsState.value)) {
-            viewModel.colorProfile.dark
-        } else {
-            viewModel.colorProfile.light
-        }
-    }
-
-    val batteryHeight =
-        with(LocalDensity.current) {
-            BatteryViewModel.getStatusBarBatteryHeight(LocalContext.current).toDp()
+        val colorProvider = {
+            if (isDarkProvider().isDarkTheme(boundsState.value)) {
+                viewModel.colorProfile.dark
+            } else {
+                viewModel.colorProfile.light
+            }
         }
 
-    val percentText = "${viewModel.level}%"
-    val textStyle = BatteryViewModel.getStatusBarBatteryTextStyle(LocalContext.current)
-    val textColor = colorProvider().fill
+        val batteryHeight =
+            with(LocalDensity.current) {
+                BatteryViewModel.getStatusBarBatteryHeight(LocalContext.current).toDp()
+            }
 
-    if (viewModel.batteryIconStyle == BatteryRepository.ICON_STYLE_TEXT) {
-        Box(
-            modifier =
-                modifier.onLayoutRectChanged {
-                    boundsState.value = with(it.boundsInScreen) { Rect(left, top, right, bottom) }
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = percentText,
-                color = textColor,
-                style = textStyle,
-                maxLines = 1,
-            )
-        }
-    } else {
-        Row(
-            modifier =
-                modifier.onLayoutRectChanged {
-                    boundsState.value = with(it.boundsInScreen) { Rect(left, top, right, bottom) }
-                },
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            UnifiedBattery(
-                viewModel = viewModel,
-                isDarkProvider = isDarkProvider,
-                modifier = Modifier.height(batteryHeight).align(Alignment.CenterVertically),
-            )
+        val percentText = "${viewModel.level}%"
+        val textStyle = BatteryViewModel.getStatusBarBatteryTextStyle(LocalContext.current)
+        val textColor = colorProvider().fill
 
-            if (showPercentNextToIcon) {
+        if (viewModel.batteryIconStyle == BatteryRepository.ICON_STYLE_TEXT) {
+            Box(
+                modifier =
+                    modifier.onLayoutRectChanged {
+                        boundsState.value = with(it.boundsInScreen) { Rect(left, top, right, bottom) }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
                 Text(
                     text = percentText,
                     color = textColor,
                     style = textStyle,
                     maxLines = 1,
-                    modifier = Modifier.align(Alignment.CenterVertically),
                 )
+            }
+        } else {
+            Row(
+                modifier =
+                    modifier.onLayoutRectChanged {
+                        boundsState.value = with(it.boundsInScreen) { Rect(left, top, right, bottom) }
+                    },
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                UnifiedBattery(
+                    viewModel = viewModel,
+                    isDarkProvider = isDarkProvider,
+                    modifier = Modifier.height(batteryHeight).align(Alignment.CenterVertically),
+                )
+
+                if (showPercentNextToIcon) {
+                    Text(
+                        text = percentText,
+                        color = textColor,
+                        style = textStyle,
+                        maxLines = 1,
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                    )
+                }
             }
         }
     }
