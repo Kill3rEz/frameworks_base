@@ -16,9 +16,13 @@
 
 package com.android.systemui.shade
 
+import android.content.Context
 import android.graphics.Point
 import android.hardware.display.AmbientDisplayConfiguration
 import android.os.PowerManager
+import android.os.VibrationAttributes
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.Settings
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -50,6 +54,7 @@ import javax.inject.Inject
 class PulsingGestureListener
 @Inject
 constructor(
+    private val context: Context,
     private val falsingManager: FalsingManager,
     private val dockManager: DockManager,
     private val powerInteractor: PowerInteractor,
@@ -57,13 +62,15 @@ constructor(
     private val statusBarStateController: StatusBarStateController,
     private val shadeLogger: ShadeLogger,
     private val dozeInteractor: DozeInteractor,
-    userTracker: UserTracker,
+    private val userTracker: UserTracker,
     tunerService: TunerService,
     dumpManager: DumpManager
 ) : GestureDetector.SimpleOnGestureListener(), Dumpable {
     private var doubleTapEnabled = false
     private var singleTapEnabled = false
     private var doubleTapEnabledNative = false
+
+    private val vibrator: Vibrator? = context.getSystemService(Vibrator::class.java)
 
     init {
         val tunable = Tunable { key: String?, value: String? ->
@@ -101,6 +108,9 @@ constructor(
             shadeLogger.logSingleTapUpFalsingState(proximityIsNotNear, isNotAFalseTap)
             if (proximityIsNotNear && isNotAFalseTap) {
                 shadeLogger.d("Single tap handled, requesting centralSurfaces.wakeUpIfDozing")
+                if (ambientDisplayConfiguration.tapGestureVibrate(userTracker.userId)) {
+                    wakeVibrate()
+                }
                 dozeInteractor.setLastTapToWakePosition(Point(x.toInt(), y.toInt()))
                 powerInteractor.wakeUpIfDozing("PULSING_SINGLE_TAP", PowerManager.WAKE_REASON_TAP)
             }
@@ -133,11 +143,29 @@ constructor(
                 !falsingManager.isProximityNear &&
                 !falsingManager.isFalseDoubleTap
         ) {
+            val isDoubleTap = doubleTapEnabled || doubleTapEnabledNative
+            val shouldVibrate = if (isDoubleTap) {
+                ambientDisplayConfiguration.doubleTapGestureVibrate(userTracker.userId)
+            } else {
+                ambientDisplayConfiguration.tapGestureVibrate(userTracker.userId)
+            }
+            if (shouldVibrate) {
+                wakeVibrate()
+            }
             powerInteractor.wakeUpIfDozing("PULSING_DOUBLE_TAP", PowerManager.WAKE_REASON_TAP)
             return true
         }
 
         return false
+    }
+
+    private fun wakeVibrate() {
+        if (vibrator == null || !vibrator.hasVibrator()) return
+        var effect = VibrationEffect.createWaveform(longArrayOf(0, 100), -1)
+        if (vibrator.areAllEffectsSupported(VibrationEffect.EFFECT_CLICK) == Vibrator.VIBRATION_EFFECT_SUPPORT_YES) {
+            effect = VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
+        }
+        vibrator.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_HARDWARE_FEEDBACK))
     }
 
     override fun dump(pw: PrintWriter, args: Array<out String>) {
