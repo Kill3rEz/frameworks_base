@@ -49,7 +49,7 @@ public class FontController {
     };
 
     private static final Set<String> OVERRIDE_FONTS = new HashSet<>(Arrays.asList(
-            "google", "sans-serif", "gsf-", "variable"
+            "google", "sans-serif", "gsf-", "variable", "system-ui", "roboto"
     ));
 
     private static final Set<String> SYS_OVERRIDE_FONTS = new HashSet<>(Arrays.asList(
