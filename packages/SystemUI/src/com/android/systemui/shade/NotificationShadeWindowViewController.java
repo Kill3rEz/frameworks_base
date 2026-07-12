@@ -476,7 +476,8 @@ public class NotificationShadeWindowViewController implements Dumpable {
                             phoneStatusBarViewController.sendTouchToView(ev));
                 }
 
-                if (!mIsTrackingBarGesture && isDown
+                if (!SceneContainerFlag.isEnabled()
+                        && !mIsTrackingBarGesture && isDown
                         && mPanelExpansionInteractor.isFullyCollapsed()) {
                     float x = ev.getRawX();
                     float y = ev.getRawY();

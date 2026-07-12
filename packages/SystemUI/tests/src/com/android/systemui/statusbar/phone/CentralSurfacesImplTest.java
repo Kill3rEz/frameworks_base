@@ -516,7 +516,7 @@ public class CentralSurfacesImplTest extends SysuiTestCase {
                 mShadeLogger,
                 mKosmos.getJavaAdapter(),
                 mUiBgExecutor,
-                mNotificationPanelViewController,
+                () -> mNotificationPanelViewController,
                 mNotificationMediaManager,
                 mLockscreenUserManager,
                 mRemoteInputManager,
@@ -588,7 +588,8 @@ public class CentralSurfacesImplTest extends SysuiTestCase {
                 mQuickAccessWalletController,
                 mWindowManager,
                 mWindowManagerProvider,
-                mock(SessionTracker.class)
+                mock(SessionTracker.class),
+                () -> mNotificationPanelViewController
         );
         mScreenLifecycle.addObserver(mCentralSurfaces.mScreenObserver);
         mCentralSurfaces.initShadeVisibilityListener();

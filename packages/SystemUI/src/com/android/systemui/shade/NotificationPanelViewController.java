@@ -52,6 +52,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.content.ContentResolver;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
@@ -196,6 +197,7 @@ import com.android.systemui.statusbar.phone.UnlockedScreenOffAnimationController
 import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.statusbar.policy.SplitShadeStateController;
+import com.android.systemui.statusbar.policy.StatusBarBrightnessGesture;
 import com.android.systemui.unfold.SysUIUnfoldComponent;
 import com.android.systemui.util.Utils;
 import com.android.systemui.util.time.SystemClock;
@@ -2294,11 +2296,34 @@ public final class NotificationPanelViewController implements
         }
     }
 
+    /**
+     * Whether the status-bar brightness gesture should fire in the panel's
+     * current state. The gesture is gated on the main toggle and, when on the
+     * keyguard, additionally on the lockscreen sub-toggle.
+     */
+    private boolean isBrightnessGestureAllowedHere() {
+        final ContentResolver cr = mView.getContext().getContentResolver();
+        if (!StatusBarBrightnessGesture.isEnabled(cr)) {
+            return false;
+        }
+        if (mBarState == KEYGUARD
+                && !StatusBarBrightnessGesture.isLockscreenAllowed(cr)) {
+            return false;
+        }
+        return true;
+    }
+
     /** @deprecated Temporary a11y solution until dual shade launch b/371224114 */
     @Override
     @Deprecated
     public void onStatusBarLongPress(MotionEvent event) {
         Log.i(TAG, "Status Bar was long pressed.");
+        // The brightness gesture owns the long press when enabled; suppress
+        // shade expansion so the brightness handler can drive the adjustment.
+        if (StatusBarBrightnessGesture.isEnabled(mView.getContext().getContentResolver())) {
+            mShadeLog.d("Status bar brightness gesture enabled. Long press expansion ignored.");
+            return;
+        }
         if (mTouchDisabled) {
             mShadeLog.d("Touch disabled. Long press expansion ignored.");
             return;
@@ -3006,7 +3031,7 @@ public final class NotificationPanelViewController implements
         return !isDirectionUpwards(x, y);
     }
 
-    private void fling(float vel, boolean expand, boolean expandBecauseOfFalsing) {
+    public void fling(float vel, boolean expand, boolean expandBecauseOfFalsing) {
         fling(vel, expand, 1.0f /* collapseSpeedUpFactor */, expandBecauseOfFalsing);
     }
 
@@ -4034,6 +4059,23 @@ public final class NotificationPanelViewController implements
                     && event.getDownTime() == mStatusBarLongPressDowntime) {
                 mShadeLog.d("Touch has same down time as Status Bar long press. Ignoring.");
                 return false;
+            }
+
+            // Route status-bar-area touches to the brightness gesture when the
+            // user has enabled it. On the keyguard the system status-bar window
+            // does not own input — touches flow through this panel — so without
+            // this hookup the gesture only works when unlocked. Consuming the
+            // event also prevents an unintentional downward drift from being
+            // re-interpreted as a notification-shade pull.
+            if (event.getY(event.getActionIndex()) < mStatusBarMinHeight
+                    && isBrightnessGestureAllowedHere()) {
+                mCentralSurfaces.brightnessControl(event);
+                int action = event.getActionMasked();
+                if (action == MotionEvent.ACTION_UP
+                        || action == MotionEvent.ACTION_CANCEL) {
+                    mCentralSurfaces.onBrightnessChanged(true);
+                }
+                return true;
             }
             if (!mHeadsUpTouchHelper.isTrackingHeadsUp() && mQsController.handleTouch(
                     event, isFullyCollapsed(), isShadeOrQsHeightAnimationRunning())) {

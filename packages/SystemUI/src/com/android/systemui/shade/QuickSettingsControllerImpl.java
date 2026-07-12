@@ -108,6 +108,7 @@ import com.android.systemui.statusbar.phone.StatusBarKeyguardViewManager;
 import com.android.systemui.statusbar.policy.CastController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.statusbar.policy.SplitShadeStateController;
+import com.android.systemui.statusbar.policy.StatusBarBrightnessGesture;
 import com.android.systemui.util.LargeScreenUtils;
 import com.android.systemui.util.kotlin.JavaAdapter;
 import com.android.systemui.utils.windowmanager.WindowManagerProvider;
@@ -1656,7 +1657,7 @@ public class QuickSettingsControllerImpl implements QuickSettingsController, Dum
             return false;
         }
         boolean isInStatusBar = event.getY(event.getActionIndex()) < mStatusBarMinHeight;
-        if (isInStatusBar) {
+        if (isInStatusBar && !StatusBarBrightnessGesture.isEnabled(mPanelView.getContext().getContentResolver())) {
             if (Flags.statusBarLongPressGestureDetectorPerDisplay()) {
                 int shadeDisplayId = mShadeDisplaysInteractorLazy.get().getDisplayId().getValue();
                 ReferenceSysUIDisplaySubcomponent displaySubcomponent =
