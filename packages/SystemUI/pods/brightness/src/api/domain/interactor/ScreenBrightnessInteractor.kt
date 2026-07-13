@@ -41,4 +41,10 @@ public interface ScreenBrightnessInteractor {
 
     /** Sets the brightness definitely. */
     public suspend fun setBrightness(gammaBrightness: GammaBrightness)
+
+    public val isAutoBrightnessEnabledFlow: StateFlow<Boolean>
+
+    public val showAutoBrightnessFlow: StateFlow<Boolean>
+
+    public fun toggleBrightnessMode()
 }

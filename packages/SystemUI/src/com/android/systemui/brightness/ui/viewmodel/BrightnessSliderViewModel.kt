@@ -82,6 +82,16 @@ constructor(
     val currentBrightness by
         screenBrightnessInteractor.gammaBrightness.hydratedStateOf(initialValue)
 
+    val autoMode by
+        screenBrightnessInteractor.isAutoBrightnessEnabledFlow.hydratedStateOf(false)
+
+    val showAutoBrightness by
+        screenBrightnessInteractor.showAutoBrightnessFlow.hydratedStateOf(true)
+
+    fun toggleBrightnessMode() {
+        screenBrightnessInteractor.toggleBrightnessMode()
+    }
+
     val maxBrightness = screenBrightnessInteractor.maxGammaBrightness
     val minBrightness = screenBrightnessInteractor.minGammaBrightness
 

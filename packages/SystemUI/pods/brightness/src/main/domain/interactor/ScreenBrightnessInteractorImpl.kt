@@ -85,6 +85,16 @@ constructor(
         screenBrightnessRepository.setBrightness(gammaBrightness.clamp().toLinearBrightness())
     }
 
+    override val isAutoBrightnessEnabledFlow: StateFlow<Boolean> =
+        screenBrightnessRepository.isAutoBrightnessEnabledFlow
+
+    override val showAutoBrightnessFlow: StateFlow<Boolean> =
+        screenBrightnessRepository.showAutoBrightnessFlow
+
+    override fun toggleBrightnessMode() {
+        screenBrightnessRepository.toggleBrightnessMode()
+    }
+
     private suspend fun GammaBrightness.toLinearBrightness(): LinearBrightness {
         val bounds = screenBrightnessRepository.getMinMaxLinearBrightness()
         return LinearBrightness(

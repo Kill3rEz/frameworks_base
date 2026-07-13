@@ -88,4 +88,12 @@ class FakeScreenBrightnessRepository(
                 )
             }
     }
+
+    override val isAutoBrightnessEnabledFlow: kotlinx.coroutines.flow.StateFlow<Boolean> =
+        MutableStateFlow(false).asStateFlow()
+
+    override val showAutoBrightnessFlow: kotlinx.coroutines.flow.StateFlow<Boolean> =
+        MutableStateFlow(true).asStateFlow()
+
+    override fun toggleBrightnessMode() {}
 }

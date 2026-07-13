@@ -49,4 +49,13 @@ public interface ScreenBrightnessRepository {
 
     /** Sets the brightness definitively. */
     public fun setBrightness(value: LinearBrightness)
+
+    /** Flow indicating whether auto brightness mode is enabled. */
+    public val isAutoBrightnessEnabledFlow: StateFlow<Boolean>
+
+    /** Flow indicating whether the auto brightness toggle should be shown next to the slider. */
+    public val showAutoBrightnessFlow: StateFlow<Boolean>
+
+    /** Toggles the brightness mode between manual and automatic. */
+    public fun toggleBrightnessMode()
 }
