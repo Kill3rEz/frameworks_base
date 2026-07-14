@@ -112,6 +112,7 @@ fun PatternBouncer(
         viewModel.selectedDots.collectAsStateWithLifecycle()
     val isInputEnabled: Boolean by viewModel.isInputEnabled.collectAsStateWithLifecycle()
     val isAnimationEnabled: Boolean by viewModel.isPatternVisible.collectAsStateWithLifecycle()
+    val isVisibleDotsEnabled: Boolean by viewModel.isVisibleDotsEnabled.collectAsStateWithLifecycle()
     val animateFailure: Boolean by viewModel.animateFailure.collectAsStateWithLifecycle()
 
     // Map of animatables for the scale of each dot, keyed by dot.
@@ -391,27 +392,29 @@ fun PatternBouncer(
                 }
 
                 // Draw each dot on the grid.
-                dots.forEach { dot ->
-                    val initialOffset = checkNotNull(dotAppearMaxOffsetPixels[dot])
-                    val appearOffset =
-                        (1 - checkNotNull(dotAppearMoveUpAnimatables[dot]).value) * initialOffset
-                    drawCircle(
-                        center =
-                            pixelOffset(
-                                dot,
-                                spacing,
-                                horizontalOffset,
-                                verticalOffset + appearOffset,
-                            ),
-                        color =
-                            if (isAnimationEnabled && dot == currentDot) {
-                                    activeDotColor
-                                } else {
-                                    idleDotColor
-                                }
-                                .copy(alpha = checkNotNull(dotAppearFadeInAnimatables[dot]).value),
-                        radius = dotRadius * checkNotNull(dotScalingAnimatables[dot]).value,
-                    )
+                if (isVisibleDotsEnabled) {
+                    dots.forEach { dot ->
+                        val initialOffset = checkNotNull(dotAppearMaxOffsetPixels[dot])
+                        val appearOffset =
+                            (1 - checkNotNull(dotAppearMoveUpAnimatables[dot]).value) * initialOffset
+                        drawCircle(
+                            center =
+                                pixelOffset(
+                                    dot,
+                                    spacing,
+                                    horizontalOffset,
+                                    verticalOffset + appearOffset,
+                                ),
+                            color =
+                                if (isAnimationEnabled && dot == currentDot) {
+                                        activeDotColor
+                                    } else {
+                                        idleDotColor
+                                    }
+                                    .copy(alpha = checkNotNull(dotAppearFadeInAnimatables[dot]).value),
+                            radius = dotRadius * checkNotNull(dotScalingAnimatables[dot]).value,
+                        )
+                    }
                 }
             }
         }

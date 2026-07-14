@@ -94,6 +94,9 @@ interface AuthenticationRepository {
     /** Whether the pattern should be visible for the currently-selected user. */
     val isPatternVisible: StateFlow<Boolean>
 
+    /** Whether the pattern dots should be visible for the currently-selected user. */
+    val isVisibleDotsEnabled: StateFlow<Boolean>
+
     /** The current pattern size. */
     val patternSize: StateFlow<Byte>
 
@@ -270,6 +273,12 @@ constructor(
         refreshingFlow(
             initialValue = true,
             getFreshValue = lockPatternUtils::isVisiblePatternEnabled,
+        )
+
+    override val isVisibleDotsEnabled: StateFlow<Boolean> =
+        refreshingFlow(
+            initialValue = true,
+            getFreshValue = lockPatternUtils::isVisibleDotsEnabled,
         )
 
     override val isAutoConfirmFeatureEnabled: StateFlow<Boolean> =

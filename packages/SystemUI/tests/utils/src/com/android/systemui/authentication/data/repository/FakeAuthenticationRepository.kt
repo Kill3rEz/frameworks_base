@@ -53,6 +53,9 @@ class FakeAuthenticationRepository(private val currentTimeMs: () -> Long) :
     private val _isPatternVisible = MutableStateFlow(true)
     override val isPatternVisible: StateFlow<Boolean> = _isPatternVisible.asStateFlow()
 
+    private val _isVisibleDotsEnabled = MutableStateFlow(true)
+    override val isVisibleDotsEnabled: StateFlow<Boolean> = _isVisibleDotsEnabled.asStateFlow()
+
     private val _patternSize = MutableStateFlow(LockPatternUtils.PATTERN_SIZE_DEFAULT)
     override val patternSize: StateFlow<Byte> = _patternSize.asStateFlow()
 

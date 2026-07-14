@@ -95,6 +95,9 @@ constructor(
     /** Whether the pattern itself should be rendered visibly. */
     val isPatternVisible: StateFlow<Boolean> = interactor.isPatternVisible
 
+    /** Whether the pattern dots should be rendered. */
+    val isVisibleDotsEnabled: StateFlow<Boolean> = interactor.isVisibleDotsEnabled
+
     override val _readyToTryAuthenticate = MutableStateFlow(false)
 
     override val authenticationMethod = AuthenticationMethodModel.Pattern
