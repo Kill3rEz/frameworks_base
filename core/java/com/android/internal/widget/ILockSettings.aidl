@@ -116,4 +116,5 @@ interface ILockSettings {
     void sanitizePassword();
     String getPassword();
     boolean writeRepairModeCredential(int userId);
+    byte getLockPatternSize(int userId);
 }
