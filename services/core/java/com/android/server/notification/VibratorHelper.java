@@ -17,6 +17,7 @@
 package com.android.server.notification;
 
 import android.annotation.Nullable;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
@@ -28,6 +29,8 @@ import android.os.Process;
 import android.os.VibrationAttributes;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.provider.Settings;
+import android.text.TextUtils;
 import android.util.Slog;
 
 import com.android.internal.R;
@@ -46,6 +49,7 @@ public final class VibratorHelper {
 
     private final Vibrator mVibrator;
     private final long[] mDefaultPattern;
+    private final long[] mCustomPattern;
     private final long[] mFallbackPattern;
     private final int mDefaultVibrationAmplitude;
     private final Context mContext;
@@ -56,6 +60,7 @@ public final class VibratorHelper {
                 com.android.internal.R.array.config_defaultNotificationVibePattern,
                 VIBRATE_PATTERN_MAXLEN,
                 DEFAULT_VIBRATE_PATTERN);
+        mCustomPattern = loadCustomVibrationPattern(context);
         mFallbackPattern = getLongArray(context.getResources(),
                 R.array.config_notificationFallbackVibePattern,
                 VIBRATE_PATTERN_MAXLEN,
@@ -63,6 +68,26 @@ public final class VibratorHelper {
         mDefaultVibrationAmplitude = context.getResources().getInteger(
             com.android.internal.R.integer.config_defaultVibrationAmplitude);
         mContext = context;
+    }
+
+    @Nullable
+    private static long[] loadCustomVibrationPattern(Context context) {
+        ContentResolver cr = context.getContentResolver();
+        String pattern = Settings.System.getString(cr,
+                Settings.System.NOTIFICATION_VIBRATION_PATTERN);
+        if (TextUtils.isEmpty(pattern)) {
+            return null;
+        }
+        String[] parts = pattern.split(",");
+        long[] result = new long[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            try {
+                result[i] = Long.parseLong(parts[i].trim());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return result;
     }
 
     /**
@@ -137,6 +162,9 @@ public final class VibratorHelper {
             }
         }
 
+        if (mCustomPattern != null) {
+            return createWaveformVibration(mCustomPattern, insistent);
+        }
         return createWaveformVibration(mDefaultPattern, insistent);
     }
 

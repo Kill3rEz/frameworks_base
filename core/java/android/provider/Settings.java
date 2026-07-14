@@ -6129,6 +6129,22 @@ public final class Settings {
             "notification_cooldown_vibrate_unlocked";
 
         /**
+         * Stores the notification vibration pattern as a comma-separated long array.
+         * @hide
+         */
+        @Readable
+        public static final String NOTIFICATION_VIBRATION_PATTERN =
+            "notification_vibration_pattern";
+
+        /**
+         * Stores a custom notification vibration pattern as a comma-separated long array.
+         * @hide
+         */
+        @Readable
+        public static final String CUSTOM_NOTIFICATION_VIBRATION_PATTERN =
+            "custom_notification_vibration_pattern";
+
+        /**
          * Persistent store for the system-wide default alarm alert.
          *
          * @see #RINGTONE
@@ -7438,6 +7454,8 @@ public final class Settings {
             PRIVATE_SETTINGS.add(RIGHT_VERTICAL_BACK_SWIPE_APP_FR_ACTION);
             PRIVATE_SETTINGS.add(RIGHT_VERTICAL_BACK_SWIPE_APP_ACTIVITY_ACTION);
             PRIVATE_SETTINGS.add(FORCE_FULLSCREEN_CUTOUT_APPS);
+            PRIVATE_SETTINGS.add(NOTIFICATION_VIBRATION_PATTERN);
+            PRIVATE_SETTINGS.add(CUSTOM_NOTIFICATION_VIBRATION_PATTERN);
             PRIVATE_SETTINGS.add(VIBRATE_ON_CONNECT);
             PRIVATE_SETTINGS.add(VIBRATE_ON_CALLWAITING);
             PRIVATE_SETTINGS.add(VIBRATE_ON_DISCONNECT);
