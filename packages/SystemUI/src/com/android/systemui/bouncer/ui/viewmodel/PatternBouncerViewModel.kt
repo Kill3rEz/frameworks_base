@@ -113,9 +113,15 @@ constructor(
                         selectedDotList.value = it.toList()
                     }
             }
+            launch {
+                interactor.patternSize.collect {
+                    clearInput()
+                }
+            }
             awaitCancellation()
         }
     }
+
 
     /** Notifies that the user has started a drag gesture across the dot grid. */
     fun onDragStart(startOffset: Offset) {
