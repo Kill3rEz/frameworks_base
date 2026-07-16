@@ -935,38 +935,65 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
         attachCustomOverlays();
     }
 
-    private ViewGroup getScrimOverlayContainer() {
-        ViewGroup root = (ViewGroup) getNotificationShadeWindowView();
-
-        FrameLayout container = root.findViewById(R.id.custom_overlay_container);
-        if (container != null) {
-            return container;
+    private void attachCustomOverlays() {
+        if (SceneContainerFlag.isEnabled()) {
+            attachCustomOverlaysToSceneContainer();
+        } else {
+            attachCustomOverlaysToLegacy();
         }
-
-        container = new FrameLayout(mContext);
-        container.setId(R.id.custom_overlay_container);
-        container.setLayoutParams(new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
-
-        View scrimInFront = root.findViewById(R.id.scrim_in_front);
-        int scrimIndex = Math.max(root.indexOfChild(scrimInFront) - 3, 0);
-        root.addView(container, scrimIndex);
-
-        return container;
     }
 
-    private void attachCustomOverlays() {
-        ViewGroup overlay = getScrimOverlayContainer();
+    private void attachCustomOverlaysToSceneContainer() {
+        ViewGroup root = (ViewGroup) mNotificationShadeWindowController.getWindowRootView();
+
+        FrameLayout container = root.findViewById(R.id.custom_overlay_container);
+        if (container == null) {
+            container = new FrameLayout(mContext);
+            container.setId(R.id.custom_overlay_container);
+            container.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            // Insert after index 0 (hidden legacy window), before scene container composable
+            root.addView(container, 1);
+        }
 
         detachFromParent(mMediaViewController.getMediaArtScrim());
         detachFromParent(mPulseViewController.getPulseView());
 
-        overlay.addView(mMediaViewController.getMediaArtScrim(),
+        container.addView(mMediaViewController.getMediaArtScrim(),
                 new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT));
-        overlay.addView(mPulseViewController.getPulseView(),
+        container.addView(mPulseViewController.getPulseView(),
+                new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    private void attachCustomOverlaysToLegacy() {
+        ViewGroup root = (ViewGroup) getNotificationShadeWindowView();
+
+        FrameLayout container = root.findViewById(R.id.custom_overlay_container);
+        if (container == null) {
+            container = new FrameLayout(mContext);
+            container.setId(R.id.custom_overlay_container);
+            container.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+
+            View scrimInFront = root.findViewById(R.id.scrim_in_front);
+            int scrimIndex = Math.max(root.indexOfChild(scrimInFront) - 3, 0);
+            root.addView(container, scrimIndex);
+        }
+
+        detachFromParent(mMediaViewController.getMediaArtScrim());
+        detachFromParent(mPulseViewController.getPulseView());
+
+        container.addView(mMediaViewController.getMediaArtScrim(),
+                new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT));
+        container.addView(mPulseViewController.getPulseView(),
                 new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT));
