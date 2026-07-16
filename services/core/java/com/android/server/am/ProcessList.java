@@ -314,6 +314,17 @@ public final class ProcessList extends ProcessListInternal
     static final byte LMK_PROCS_PRIO = 11;  // Batch option for LMK_PROCPRIO
     static final byte LMK_UPDATE_LAZY_KILL_FLAG = 12;
 
+    // Process types passed to lmkd in the LMK_PROCPRIO / LMK_PROCS_PRIO payload.
+    // These must be kept in sync with enum proc_type in lmkd.h.
+    static final int PROC_TYPE_APP = 0;
+    static final int PROC_TYPE_SERVICE = 1;
+    static final int PROC_TYPE_HOME = 2;
+    static final int PROC_TYPE_TOP = 3;
+    static final int PROC_TYPE_TOP_BOUND = 4;
+
+    // Pid of the current home process, or -1 if none. OomAdjuster owns this state.
+    public static volatile int sHomePid = -1;
+
     // Low Memory Killer Daemon command codes.
     // These must be kept in sync with async_event_type definitions in lmkd.h
     //
@@ -1590,6 +1601,28 @@ public final class ProcessList extends ProcessListInternal
         }
     }
 
+    public static int getLmkProcType(ProcessRecordInternal app) {
+        final int schedGroup = app.getCurrentSchedulingGroup();
+        final int curAdj = app.getCurAdj();
+        if (curAdj == FOREGROUND_APP_ADJ && schedGroup == SCHED_GROUP_TOP_APP) {
+            Slog.i(TAG, "LMKD proc type top: pid=" + app.getPid() + " uid=" + app.uid
+                    + " adj=" + curAdj + " schedGroup=" + schedGroup
+                    + " name=" + app.processName);
+            return PROC_TYPE_TOP;
+        }
+        if (curAdj == FOREGROUND_APP_ADJ + 1 && schedGroup == SCHED_GROUP_TOP_APP) {
+            Slog.i(TAG, "LMKD proc type top_bound: pid=" + app.getPid() + " uid=" + app.uid
+                    + " adj=" + curAdj + " schedGroup=" + schedGroup
+                    + " name=" + app.processName);
+            return PROC_TYPE_TOP_BOUND;
+        }
+        if (app.getPid() == sHomePid) {
+            return PROC_TYPE_HOME;
+        }
+        return PROC_TYPE_APP;
+    }
+
+
     // The max size for PROCS_PRIO cmd in LMKD
     private static final int MAX_PROCS_PRIO_PACKET_SIZE = 3;
 
@@ -1628,7 +1661,7 @@ public final class ProcessList extends ProcessListInternal
             buf.putInt(pid);
             buf.putInt(uid);
             buf.putInt(amt);
-            buf.putInt(0);  // Default proc type to PROC_TYPE_APP
+            buf.putInt(getLmkProcType(apps.get(i)));
             buf.putInt(forLmkdOnly ? 1 : 0);
             total_procs_in_buf++;
         }
@@ -1672,7 +1705,7 @@ public final class ProcessList extends ProcessListInternal
             buf.putInt(uid);
             buf.putInt(amt);
             buf.putInt(weight);
-            buf.putInt(0);  // Default proc type to PROC_TYPE_APP
+            buf.putInt(getLmkProcType(apps.get(i)));
             buf.putInt(forLmkdOnly ? 1 : 0);
             total_procs_in_buf++;
         }
