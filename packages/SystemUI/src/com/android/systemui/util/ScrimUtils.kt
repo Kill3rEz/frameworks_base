@@ -55,6 +55,8 @@ class ScrimUtils private constructor() {
     @Volatile private var mBarState: Int? = null
     @Volatile private var mAwake: Boolean? = null
 
+    @Volatile private var mShadeExpandedForScene: Boolean? = null
+
     private val mStateIsKeyguard get() = mBarState == SHADE_LOCKED || mBarState == KEYGUARD
 
     private var keyguardRetryRunnable: Runnable? = null
@@ -164,10 +166,24 @@ class ScrimUtils private constructor() {
     fun isPulsing(): Boolean = mPulsing.get()
     fun isKeyguardShowing(): Boolean = mKeyguardShowing == true
 
-    fun isPanelFullyCollapsed(): Boolean =
-        if (mStateIsKeyguard) {
+    fun setShadeExpanded(expanded: Boolean) {
+        mShadeExpandedForScene = expanded
+        val fraction = if (expanded) 1.0f else 0.0f
+        if (mExpandedFraction == null ||
+            ((fraction == 0.0f || fraction == 1.0f) && mExpandedFraction != fraction)) {
+            mExpandedFraction = fraction
+            listeners.notifyOnBackground { it.onExpandedFractionChanged(fraction) }
+        }
+    }
+
+    fun isPanelFullyCollapsed(): Boolean {
+        val sceneOverride = mShadeExpandedForScene
+        return if (mStateIsKeyguard) {
             !mQsVisible.get()
+        } else if (sceneOverride != null) {
+            !sceneOverride
         } else {
             (mExpandedFraction ?: 0.0f) <= 0.0f
         }
+    }
 }

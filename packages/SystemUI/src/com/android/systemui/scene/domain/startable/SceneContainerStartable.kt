@@ -93,6 +93,7 @@ import com.android.systemui.statusbar.VibratorHelper
 import com.android.systemui.statusbar.notification.domain.interactor.HeadsUpNotificationInteractor
 import com.android.systemui.statusbar.phone.CentralSurfaces
 import com.android.systemui.statusbar.policy.domain.interactor.DeviceProvisioningInteractor
+import com.android.systemui.util.ScrimUtils
 import com.android.systemui.util.asIndenting
 import com.android.systemui.util.kotlin.Quad
 import com.android.systemui.util.kotlin.getOrNull
@@ -214,6 +215,7 @@ constructor(
             showDismissibleKeyguardWhenFolded()
             wakeFromDozingOnContentChange()
             hydrateLockScreenUserManager()
+            hydrateScrimUtils()
         } else {
             sceneLogger.logFrameworkEnabled(isEnabled = false)
         }
@@ -1233,6 +1235,20 @@ constructor(
                     // sure redaction is immediately applied: b/440335509
                     lockscreenUserManager.updatePublicMode()
                 }
+        }
+    }
+
+     private fun hydrateScrimUtils() {
+        applicationScope.launch {
+            shadeInteractor.isAnyExpanded.collect { isExpanded ->
+                ScrimUtils.get().setShadeExpanded(isExpanded)
+            }
+        }
+
+        applicationScope.launch {
+            shadeInteractor.isQsExpanded.collect { isQsExpanded ->
+                ScrimUtils.get().setQsVisible(isQsExpanded)
+            }
         }
     }
 
