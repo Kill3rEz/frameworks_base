@@ -24,4 +24,9 @@
         <item name="android:textColor">@android:color/white</item>
         <item name="android:alpha">0.5</item>
     </style>
+
+    <!-- Custom clocks -->
+    <dimen name="presentation_clock_text_size">50dp</dimen>
+    <dimen name="large_clock_text_size">150dp</dimen>
+    <dimen name="small_clock_text_size">86dp</dimen>
 </resources>

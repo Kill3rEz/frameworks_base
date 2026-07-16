@@ -117,4 +117,9 @@
     <java-symbol type="string" name="config_oemFastChargerStatusPath2" />
     <!-- Expected value from fast charging status file -->
     <java-symbol type="string" name="config_oemFastChargerStatusValue" />
+    
+   <!-- Custom clocks -->
+   <java-symbol type="dimen" format="float" name="presentation_clock_text_size" />
+   <java-symbol type="dimen" format="float" name="large_clock_text_size" />
+   <java-symbol type="dimen" format="float" name="small_clock_text_size" />
 </resources>
