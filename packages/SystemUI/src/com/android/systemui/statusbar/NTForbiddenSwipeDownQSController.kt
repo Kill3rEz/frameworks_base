@@ -27,16 +27,16 @@ class NTForbiddenSwipeDownQSController @Inject constructor(
     private val context: Context
 ) : ScrimUtils.ScrimEventListener {
 
-    private val enableSwipeDownQS 
+    private val disableSwipeDownQS
         get() = Settings.Secure.getIntForUser(
-            context.contentResolver, 
-            Settings.Secure.ENABLE_LOCKSCREEN_QUICK_SETTINGS, 1,
+            context.contentResolver,
+            Settings.Secure.ENABLE_LOCKSCREEN_QUICK_SETTINGS, 0,
             UserHandle.USER_CURRENT) == 1
 
     private val keyguardShowing get() = ScrimUtils.get().isKeyguardShowing()
     private val dozing get() = ScrimUtils.get().isDozing()
 
-    fun getForbiddenSwipeDownQS(): Boolean = (keyguardShowing || dozing) && !enableSwipeDownQS
+    fun getForbiddenSwipeDownQS(): Boolean = (keyguardShowing || dozing) && disableSwipeDownQS
 
     companion object {
         @Volatile

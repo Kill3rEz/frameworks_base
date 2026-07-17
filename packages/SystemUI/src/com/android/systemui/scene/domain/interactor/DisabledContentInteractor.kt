@@ -22,6 +22,7 @@ import com.android.compose.animation.scene.UserActionResult
 import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.domain.interactor.ShadeStatusBarComponentsInteractor
+import com.android.systemui.statusbar.NTForbiddenSwipeDownQSController
 import com.android.systemui.statusbar.disableflags.shared.model.DisableFlagsModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
@@ -32,7 +33,10 @@ import kotlinx.coroutines.flow.map
 
 class DisabledContentInteractor
 @Inject
-constructor(private val shadeStatusBarComponentsInteractor: ShadeStatusBarComponentsInteractor) {
+constructor(
+    private val shadeStatusBarComponentsInteractor: ShadeStatusBarComponentsInteractor,
+    private val forbiddenSwipeDownQSController: NTForbiddenSwipeDownQSController,
+) {
 
     /** Returns `true` if the given [key] is disabled; `false` if it's enabled */
     fun isDisabled(
@@ -44,7 +48,9 @@ constructor(private val shadeStatusBarComponentsInteractor: ShadeStatusBarCompon
                 Scenes.Shade,
                 Overlays.NotificationsShade -> !isShadeEnabled()
                 Scenes.QuickSettings,
-                Overlays.QuickSettingsShade -> !isQuickSettingsEnabled()
+                Overlays.QuickSettingsShade ->
+                    !isQuickSettingsEnabled() ||
+                        forbiddenSwipeDownQSController.getForbiddenSwipeDownQS()
                 else -> false
             }
         }
