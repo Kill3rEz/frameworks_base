@@ -16,6 +16,7 @@
 
 package com.android.systemui.biometrics.ui.view
 
+import android.provider.Settings
 import android.view.View
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityManager
@@ -63,6 +64,17 @@ fun CredentialPinView(
     val view = LocalView.current
     val context = LocalContext.current
     val accessibilityManager = remember(context) { AccessibilityManager.getInstance(context) }
+
+    val scrambledDigits = remember {
+        val isEnabled = Settings.System.getInt(
+            context.contentResolver,
+            Settings.System.LOCKSCREEN_PIN_SCRAMBLE_LAYOUT,
+            0,
+        ) != 0
+        val digits = mutableListOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 0)
+        if (isEnabled) digits.shuffle()
+        digits
+    }
 
     LaunchedEffect(isVisible) {
         if (isVisible) {
@@ -163,6 +175,7 @@ fun CredentialPinView(
             },
             isInputEnabled = isVisible,
             deleteButtonAppearance = ActionButtonAppearance.Shown,
+            scrambledDigits = scrambledDigits,
         )
     }
 }
