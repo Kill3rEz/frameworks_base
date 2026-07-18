@@ -17,6 +17,7 @@
 package com.android.systemui.bouncer.ui.viewmodel
 
 import android.content.Context
+import android.provider.Settings
 import android.view.KeyEvent.KEYCODE_0
 import android.view.KeyEvent.KEYCODE_9
 import android.view.KeyEvent.KEYCODE_DEL
@@ -54,7 +55,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 class PinBouncerViewModel
 @AssistedInject
 constructor(
-    applicationContext: Context,
+    private val applicationContext: Context,
     interactor: BouncerInteractor,
     private val simBouncerInteractor: SimBouncerInteractor,
     keyguardKeyboardInteractor: KeyguardKeyboardInteractor,
@@ -69,6 +70,21 @@ constructor(
         traceName = "PinBouncerViewModel",
         bouncerHapticPlayer = bouncerHapticPlayer,
     ) {
+    /** Whether PIN scrambling is enabled, and the shuffled digit order to display. */
+    private val _scrambledDigits = MutableStateFlow(computeScrambledDigits())
+    val scrambledDigits: StateFlow<List<Int>> = _scrambledDigits.asStateFlow()
+
+    private fun computeScrambledDigits(): List<Int> {
+        val isEnabled = Settings.System.getInt(
+            applicationContext.contentResolver,
+            Settings.System.LOCKSCREEN_PIN_SCRAMBLE_LAYOUT,
+            0,
+        ) != 0
+        val digits = mutableListOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 0)
+        if (isEnabled) digits.shuffle()
+        return digits
+    }
+
     /**
      * Whether the sim-related UI in the pin view is showing.
      *
