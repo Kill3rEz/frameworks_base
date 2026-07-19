@@ -43,6 +43,8 @@ import com.android.compose.animation.scene.ContentScope
 import com.android.compose.modifiers.padding
 import com.android.systemui.common.ui.compose.PagerDots
 import com.android.systemui.compose.modifiers.sysuiResTag
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import com.android.systemui.development.ui.compose.BuildNumber
 import com.android.systemui.development.ui.viewmodel.BuildNumberViewModel
 import com.android.systemui.lifecycle.rememberViewModel
@@ -55,6 +57,8 @@ import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toolbar.EditModeButtonViewModel
 import com.android.systemui.res.R
 import javax.inject.Inject
+
+val LocalIsPaginatedGrid = compositionLocalOf { false }
 
 class PaginatedGridLayout
 @Inject
@@ -139,13 +143,15 @@ constructor(
             ) {
                 val page = pages[it]
 
-                with(delegateGridLayout) {
-                    TileGrid(
-                        tiles = page,
-                        modifier = Modifier,
-                        listening = listening,
-                        enableRevealEffect = false,
-                    )
+                CompositionLocalProvider(LocalIsPaginatedGrid provides true) {
+                    with(delegateGridLayout) {
+                        TileGrid(
+                            tiles = page,
+                            modifier = Modifier,
+                            listening = listening,
+                            enableRevealEffect = false,
+                        )
+                    }
                 }
             }
             FooterBar(
