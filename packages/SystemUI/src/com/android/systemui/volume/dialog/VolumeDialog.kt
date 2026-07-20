@@ -66,12 +66,17 @@ constructor(
                 attributes.apply {
                     title = "VolumeDialog" // Not the same as Window#setTitle
                 }
+            val isLeft = android.provider.Settings.Secure.getInt(
+                context.contentResolver,
+                android.provider.Settings.Secure.VOLUME_PANEL_ON_LEFT,
+                0
+            ) == 1
             if (isVolumeDialogVertical) {
                 setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT)
-                setGravity(Gravity.END)
+                setGravity(if (isLeft) Gravity.START else Gravity.END)
             } else {
                 setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                setGravity(Gravity.TOP or Gravity.END)
+                setGravity(if (isLeft) (Gravity.TOP or Gravity.START) else (Gravity.TOP or Gravity.END))
             }
         }
         setCancelable(false)

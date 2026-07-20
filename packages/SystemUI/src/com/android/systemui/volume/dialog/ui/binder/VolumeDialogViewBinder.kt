@@ -25,6 +25,7 @@ import android.view.WindowInsets
 import android.view.accessibility.AccessibilityEvent
 import androidx.compose.ui.util.lerp
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.dynamicanimation.animation.DynamicAnimation
@@ -113,6 +114,41 @@ constructor(
         // Root view of the Volume Dialog.
         val root: ViewGroup = dialog.requireViewById(R.id.volume_dialog)
         val mainSliderContainer: View? = root.findViewById(R.id.volume_dialog_main_slider_container)
+
+        val isLeft = android.provider.Settings.Secure.getInt(
+            root.context.contentResolver,
+            android.provider.Settings.Secure.VOLUME_PANEL_ON_LEFT,
+            0
+        ) == 1
+
+        if (isLeft && root is ConstraintLayout) {
+            val windowMargin = root.context.resources.getDimensionPixelSize(R.dimen.volume_dialog_window_margin)
+            val constraintSet = ConstraintSet()
+            constraintSet.clone(root)
+
+            if (isVolumeDialogVertical) {
+                constraintSet.clear(R.id.volume_dialog_main_slider_container, ConstraintSet.RIGHT)
+                constraintSet.connect(
+                    R.id.volume_dialog_main_slider_container,
+                    ConstraintSet.LEFT,
+                    ConstraintSet.PARENT_ID,
+                    ConstraintSet.LEFT,
+                    windowMargin
+                )
+
+                constraintSet.clear(R.id.volume_dialog_floating_sliders_container, ConstraintSet.RIGHT)
+                constraintSet.connect(
+                    R.id.volume_dialog_floating_sliders_container,
+                    ConstraintSet.LEFT,
+                    R.id.volume_dialog_background,
+                    ConstraintSet.RIGHT
+                )
+            } else {
+                constraintSet.setHorizontalBias(R.id.volume_dialog_main_slider_container, 0f)
+            }
+
+            constraintSet.applyTo(root)
+        }
         root.accessibilityDelegate = Accessibility(viewModel)
         root.setOnHoverListener { _, event ->
             viewModel.onHover(
@@ -235,7 +271,13 @@ constructor(
      */
     private fun View.applyAnimationProgress(fraction: Float) {
         alpha = ceil(fraction)
-        translationX = lerp(width, 0, fraction).toFloat()
+        val isLeft = android.provider.Settings.Secure.getInt(
+            context.contentResolver,
+            android.provider.Settings.Secure.VOLUME_PANEL_ON_LEFT,
+            0
+        ) == 1
+        val startX = if (isLeft) -width else width
+        translationX = lerp(startX, 0, fraction).toFloat()
     }
 
     private suspend fun View.applyVerticalOffset(offsetPx: Float, shouldAnimate: Boolean) {
