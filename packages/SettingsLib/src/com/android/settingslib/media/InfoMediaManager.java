@@ -413,12 +413,15 @@ public abstract class InfoMediaManager {
         }
 
         if (firstCallbackAdded) {
-            registerRouter(callbackHandler::post);
+            final Handler handler = callbackHandler;
+            registerRouter(handler::post);
             if (mMediaController != null) {
-                mMediaController.registerCallback(mMediaControllerCallback, callbackHandler);
+                mMediaController.registerCallback(mMediaControllerCallback, handler);
             }
-            refreshDevices();
-            refreshMissingPermissionsInfo();
+            handler.post(() -> {
+                refreshDevices();
+                refreshMissingPermissionsInfo();
+            });
         }
     }
 

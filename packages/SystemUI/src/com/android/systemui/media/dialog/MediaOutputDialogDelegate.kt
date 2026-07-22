@@ -94,6 +94,10 @@ constructor(
     private var mDismissing = false
     private var currentDialog: SystemUIDialog? = null
 
+    @Volatile private var mIsStarted = false
+
+    @Volatile private var mPendingRefresh = false
+
     @JvmField
     @VisibleForTesting
     var mAdapter: MediaOutputAdapter = MediaOutputAdapter(mMediaSwitchingController)
@@ -214,9 +218,16 @@ constructor(
 
     override fun onStart(dialog: SystemUIDialog) {
         mMediaSwitchingController.start(this)
+        mIsStarted = true
+        if (mPendingRefresh) {
+            mPendingRefresh = false
+            mMainThreadHandler.post { refresh(true) }
+        }
     }
 
     override fun onStop(dialog: SystemUIDialog) {
+        mIsStarted = false
+        mPendingRefresh = false
         mMediaSwitchingController.stop()
         mOnDialogEventListener?.onStop(dialog)
         currentDialog = null
@@ -448,20 +459,33 @@ constructor(
     }
 
     override fun onMediaChanged() {
+        if (!mIsStarted) {
+            mPendingRefresh = true
+            return
+        }
         mMainThreadHandler.post { refresh() }
     }
 
     override fun onMediaStoppedOrPaused() {
+        if (!mIsStarted) return
         if (currentDialog?.isShowing == true) {
             currentDialog?.dismiss()
         }
     }
 
     override fun onRouteChanged() {
+        if (!mIsStarted) {
+            mPendingRefresh = true
+            return
+        }
         mMainThreadHandler.post { refresh() }
     }
 
     override fun onDeviceListChanged() {
+        if (!mIsStarted) {
+            mPendingRefresh = true
+            return
+        }
         mMainThreadHandler.post { refresh(true) }
     }
 
@@ -475,6 +499,10 @@ constructor(
     }
 
     override fun onQuickAccessButtonsChanged() {
+        if (!mIsStarted) {
+            mPendingRefresh = true
+            return
+        }
         mMainThreadHandler.post { refreshQuickAccessShelf() }
     }
 
