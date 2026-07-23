@@ -45,6 +45,7 @@ import android.os.Message;
 import android.os.PowerManager;
 import android.os.RemoteException;
 import android.os.SystemClock;
+import android.os.SystemProperties;
 import android.os.Trace;
 import android.os.UserHandle;
 import android.provider.Settings;
@@ -110,6 +111,27 @@ public class AutomaticBrightnessController {
     // Debounce for sampling user-initiated changes in display brightness to ensure
     // the user is satisfied with the result before storing the sample.
     private static final int BRIGHTNESS_ADJUSTMENT_SAMPLE_DEBOUNCE_MILLIS = 10000;
+
+    /**
+     * Under-display fusion ALS (CWB-compensated) can emit exact/near-zero lux on content
+     * transitions — e.g. a dark web page with animated colorful regions over the sensor ROI —
+     * via over-subtraction. Real ambient on this path leaves a residual of a few lux even in
+     * a dark room; true lights-off arrives as a progressive drop, not a single hard-0 sample.
+     * Dropping those samples prevents auto-brightness collapses while residual floors
+     * ({@code mMinDarkening}) only block small wobbles.
+     *
+     * <p>Gated by {@code persist.alpha.drop_fusion_hard_zero} (default true). Not related to
+     * the fullscreen video pin/floor path.
+     */
+    private static final String PROP_DROP_FUSION_HARD_ZERO =
+            "persist.alpha.drop_fusion_hard_zero";
+    /** Treat samples at or below this as fusion hard-zeros / over-sub. */
+    private static final float FUSION_HARD_ZERO_LUX_MAX = 0.5f;
+    /**
+     * Only drop hard-zeros while the established ambient is clearly above residual dark.
+     * Allows real progressive darkening once ambient is already low.
+     */
+    private static final float FUSION_HARD_ZERO_MIN_AMBIENT = 2.0f;
 
     private static final int MSG_UPDATE_AMBIENT_LUX = 1;
     private static final int MSG_BRIGHTNESS_ADJUSTMENT_SAMPLE = 2;
@@ -687,6 +709,9 @@ public class AutomaticBrightnessController {
         ipw.println("mLastObservedLux=" + mLastObservedLux);
         ipw.println("mLastObservedLuxTime=" + TimeUtils.formatUptime(mLastObservedLuxTime));
         ipw.println("mRecentLightSamples=" + mRecentLightSamples);
+        ipw.println("dropFusionHardZero=" + isDropFusionHardZeroEnabled()
+                + " (lux<=" + FUSION_HARD_ZERO_LUX_MAX
+                + " while ambient>=" + FUSION_HARD_ZERO_MIN_AMBIENT + ")");
         ipw.println("mAmbientLightRingBuffer=" + mAmbientLightRingBuffer);
         ipw.println("mScreenAutoBrightness=" + mScreenAutoBrightness);
         ipw.println("mDisplayPolicy=" + DisplayPowerRequest.policyToString(mDisplayPolicy));
@@ -778,12 +803,43 @@ public class AutomaticBrightnessController {
         Trace.traceCounter(Trace.TRACE_TAG_POWER, "ALS", (int) lux);
         mHandler.removeMessages(MSG_UPDATE_AMBIENT_LUX);
 
+        if (shouldDropFusionHardZero(lux)) {
+            // Do not push into the ring buffer — a hard-0 poisons both the weighted ambient
+            // estimate and the darkening-transition timer (every sample below threshold
+            // extends the "ready to darken" window).
+            Slog.d(TAG, "drop fusion hard-zero lux=" + lux + " ambient=" + mAmbientLux);
+            return;
+        }
+
         if (mAmbientLightRingBuffer.size() == 0) {
             // switch to using the steady-state sample rate after grabbing the initial light sample
             adjustLightSensorRate(mNormalLightSensorRate);
         }
         applyLightSensorMeasurement(time, lux);
         updateAmbientLux(time);
+    }
+
+    /**
+     * @return true if this sample is a fusion over-sub hard-zero that must not affect ambient.
+     */
+    private boolean shouldDropFusionHardZero(float lux) {
+        if (!isDropFusionHardZeroEnabled()) {
+            return false;
+        }
+        if (!mAmbientLuxValid) {
+            // Still warming up / first estimate — accept whatever the sensor reports.
+            return false;
+        }
+        if (lux > FUSION_HARD_ZERO_LUX_MAX) {
+            return false;
+        }
+        // Established ambient well above residual dark → a sudden ≤0.5 lux is content over-sub,
+        // not the room going black.
+        return mAmbientLux >= FUSION_HARD_ZERO_MIN_AMBIENT;
+    }
+
+    private static boolean isDropFusionHardZeroEnabled() {
+        return SystemProperties.getBoolean(PROP_DROP_FUSION_HARD_ZERO, true);
     }
 
     private void applyLightSensorMeasurement(long time, float lux) {
