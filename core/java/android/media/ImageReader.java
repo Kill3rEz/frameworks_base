@@ -1468,6 +1468,13 @@ public class ImageReader implements AutoCloseable {
     private synchronized native void nativeReleaseImage(Image i);
     private synchronized native Surface nativeGetSurface();
     private synchronized native int nativeDetachImage(Image i, boolean throwISEOnly);
+    /**
+     * Oplus Live Photo / Motion Photo: returns the native {@code BufferItemConsumer*}
+     * pointer for this reader. Stock OplusCamera reflects on this method to attach
+     * preview {@link HardwareBuffer}s into the reader buffer queue.
+     * @hide
+     */
+    private synchronized native long nativeGetConsumer();
     private synchronized native void nativeDiscardFreeBuffers();
 
     /**

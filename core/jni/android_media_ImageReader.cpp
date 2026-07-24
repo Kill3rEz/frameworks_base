@@ -755,6 +755,17 @@ static jobject ImageReader_getSurface(JNIEnv* env, jobject thiz)
 }
 #endif
 
+// Oplus Live Photo: stock libandroid_runtime exposes nativeGetConsumer() which returns
+// the BufferItemConsumer* for this ImageReader. OplusCamera reflects on it and passes
+// the pointer into HardwareBufferUtils.generateAddress() / attach-to-buffer-queue.
+static jlong ImageReader_getConsumer(JNIEnv* env, jobject thiz) {
+    BufferItemConsumer* consumer = ImageReader_getBufferConsumer(env, thiz);
+    if (consumer == nullptr) {
+        return 0;
+    }
+    return reinterpret_cast<jlong>(consumer);
+}
+
 static void Image_getLockedImage(JNIEnv* env, jobject thiz, LockedImage *image,
         uint64_t ndkReaderUsage) {
     ALOGV("%s", __FUNCTION__);
@@ -1055,6 +1066,7 @@ static const JNINativeMethod gImageReaderMethods[] =
          {"nativeImageSetup", "(Landroid/media/Image;)I", (void*)ImageReader_imageSetup},
          {"nativeGetSurface", "()Landroid/view/Surface;", (void*)ImageReader_getSurface},
          {"nativeDetachImage", "(Landroid/media/Image;Z)I", (void*)ImageReader_detachImage},
+         {"nativeGetConsumer", "()J", (void*)ImageReader_getConsumer},
 #ifdef __ANDROID__
          {"nativeCreateImagePlanes",
           "(ILandroid/graphics/GraphicBuffer;IIIIII)[Landroid/media/ImageReader$ImagePlane;",
