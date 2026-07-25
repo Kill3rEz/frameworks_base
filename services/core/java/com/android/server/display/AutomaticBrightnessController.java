@@ -268,6 +268,14 @@ public class AutomaticBrightnessController {
     private final ShortTermModel mShortTermModel;
     private final ShortTermModel mPausedShortTermModel;
 
+    // When true, the screen-off short-term-model timeout (MSG_INVALIDATE_CURRENT_SHORT_TERM_MODEL)
+    // fully resets the model (clears the user's manual adjustment) instead of merely invalidating
+    // it. Stock AOSP only invalidates, so a manual brightness set is kept at a similar ambient lux
+    // and only forgotten once the light changes drastically -- which reads as "min stays stuck
+    // across lock/unlock". With this enabled (+ a short config_autoBrightnessShortTermModelTimeout)
+    // any real screen-off forgets the manual set, so unlocking returns to the auto curve.
+    private final boolean mResetShortTermModelOnScreenOff;
+
     // Controls Brightness range (including High Brightness Mode).
     private final BrightnessRangeController mBrightnessRangeController;
 
@@ -368,6 +376,8 @@ public class AutomaticBrightnessController {
         mScreenBrightnessThresholdsIdle = screenBrightnessThresholdsIdle;
         mShortTermModel = new ShortTermModel();
         mPausedShortTermModel = new ShortTermModel();
+        mResetShortTermModelOnScreenOff = mContext.getResources().getBoolean(
+                com.android.internal.R.bool.config_autoBrightnessResetShortTermModelOnScreenOff);
         mHandler = new AutomaticBrightnessHandler(looper);
         mAmbientLightRingBuffer =
             new AmbientLightRingBuffer(mNormalLightSensorRate, mAmbientLightHorizonLong, mClock);
@@ -1440,7 +1450,14 @@ public class AutomaticBrightnessController {
                     break;
 
                 case MSG_INVALIDATE_CURRENT_SHORT_TERM_MODEL:
-                    mShortTermModel.invalidate();
+                    // Stock: only invalidate, so a same-lux manual set survives lock/unlock and is
+                    // revalidated by maybeReset(). When the device opts in, fully reset so any
+                    // real screen-off forgets the manual adjustment and unlock returns to the curve.
+                    if (mResetShortTermModelOnScreenOff) {
+                        resetShortTermModel();
+                    } else {
+                        mShortTermModel.invalidate();
+                    }
                     break;
 
                 case MSG_UPDATE_FOREGROUND_APP:
