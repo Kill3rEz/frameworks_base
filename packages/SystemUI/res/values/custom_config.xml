@@ -50,4 +50,7 @@
 
     <!-- Draw rounded corners in software for composers that crash on mask-only frames. -->
     <bool name="config_disableHwcScreenDecoration">false</bool>
+    <!-- Alert slider (tri-state) -->
+    <integer name="config_alertSliderLocation">0</integer>
+    <string name="config_alertSliderIntent" translatable="false"></string>
 </resources>
