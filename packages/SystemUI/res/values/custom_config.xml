@@ -48,4 +48,7 @@
     <!-- Whether to disable Smart Pixels on UDFPS -->
     <bool name="config_disableSmartPixelsOnUDFPS">false</bool>
 
+    <!-- Alert slider (tri-state) -->
+    <integer name="config_alertSliderLocation">0</integer>
+    <string name="config_alertSliderIntent" translatable="false"></string>
 </resources>
