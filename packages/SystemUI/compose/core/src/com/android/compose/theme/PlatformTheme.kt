@@ -61,7 +61,9 @@ fun PlatformTheme(isDarkTheme: Boolean = isSystemInDarkTheme(), content: @Compos
             TraceUtils.trace("PlatformTheme.androidColorScheme") { AndroidColorScheme(context) }
         }
 
-    val typefaceNames = remember(context) { TypefaceNames.get(context) }
+    // Font overlays change the assets sequence without replacing the context. Re-read the
+    // configured families so Compose typography is recreated along with the color scheme.
+    val typefaceNames = remember(context, currentAssetsSeq) { TypefaceNames.get(context) }
     val typefaceTokens = remember(typefaceNames) { TypefaceTokens(typefaceNames) }
     val typography =
         remember(typefaceTokens) {
