@@ -138,9 +138,9 @@ constructor(
                         Log.d(TAG, "Shade layout is derived from the Dual Shade config")
                         shadeConfigRepository.isFullWidthShade
                     } else {
-                        // Single shade should be shown
-                        Log.d(TAG, "Single shade is always full-width")
-                        flowOf(true)
+                        // Single shade layout is derived from legacy split shade config
+                        Log.d(TAG, "Single shade layout is derived from legacy split shade config")
+                        shadeConfigRepository.legacyUseSplitShade.map { !it }
                     }
                 }
             } else {
@@ -174,10 +174,12 @@ constructor(
         isDualShadeEnabled: Boolean,
         isFullWidthShade: Boolean,
     ): ShadeMode {
-        return if (DualShadeFlag.isEnabled) {
-            if (isDualShadeEnabled) ShadeMode.Dual else ShadeMode.Single
+        return if (isDualShadeEnabled) {
+            ShadeMode.Dual
+        } else if (!isFullWidthShade) {
+            ShadeMode.Split
         } else {
-            if (isFullWidthShade) ShadeMode.Single else ShadeMode.Split
+            ShadeMode.Single
         }
     }
 
