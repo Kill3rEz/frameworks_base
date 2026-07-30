@@ -116,6 +116,7 @@ internal constructor(
 
     private var screenBitmap: Bitmap? = null
     /** The screenshot currently on screen, kept so that it can be saved to storage on demand. */
+    private var pendingScreenshotData: ScreenshotData? = null
     private var screenshotTakenInPortrait = false
     private var screenshotAnimation: Animator? = null
     private var packageName = ""
@@ -157,6 +158,9 @@ internal constructor(
         reloadAssets()
 
         actionExecutor = actionExecutorFactory.create(window.window, viewProxy) { finishDismiss() }
+        actionsController =
+            screenshotActionsControllerFactory.getController(actionExecutor) { onResult ->
+                saveCurrentScreenshotToStorage(onResult)
             }
 
         copyBroadcastReceiver =
@@ -217,6 +221,7 @@ internal constructor(
         }
 
         screenBitmap = currentBitmap
+        pendingScreenshotData = screenshot
         val oldPackageName = packageName
         packageName = screenshot.packageNameString
 
@@ -604,6 +609,7 @@ internal constructor(
             copyScreenshotToClipboard(screenshot, requestId, finisher, onResult)
             return
         }
+        exportToStorage(screenshot, requestId, finisher, onResult)
     }
 
     /** Whether screenshots are copied to the clipboard instead of being written to storage. */
@@ -674,17 +680,25 @@ internal constructor(
 
     /** Saves the screenshot currently on screen to storage, for the clipboard-only case. */
     private fun saveCurrentScreenshotToStorage(onResult: Consumer<ScreenshotSavedResult?>) {
+        val screenshot = pendingScreenshotData
+        if (screenshot?.bitmap == null) {
+            Log.e(TAG, "saveCurrentScreenshotToStorage: no pending screenshot bitmap")
+            onResult.accept(null)
             return
         }
+        exportToStorage(screenshot, UUID.randomUUID(), Consumer {}) { result ->
             if (result.uri != null) {
                 Toast.makeText(context, R.string.screenshot_saved_title, Toast.LENGTH_SHORT).show()
+                onResult.accept(
                     ScreenshotSavedResult(result.uri, screenshot.userHandle, result.timestamp)
                 )
             } else {
+                onResult.accept(null)
             }
         }
     }
 
+    private fun exportToStorage(
         screenshot: ScreenshotData,
         requestId: UUID,
         finisher: Consumer<Uri?>,
