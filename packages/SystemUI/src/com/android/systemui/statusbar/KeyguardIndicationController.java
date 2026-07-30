@@ -1715,7 +1715,9 @@ public class KeyguardIndicationController {
 
             mKeyguardLogger.logRefreshBatteryInfo(isChargingOrFull, mPowerPluggedIn, mBatteryLevel,
                     mBatteryDefender);
-            updateDeviceEntryIndication(!wasPluggedIn && mPowerPluggedInWired);
+            if (ScrimUtils.get().isKeyguardShowing()) {
+                updateDeviceEntryIndication(!wasPluggedIn && mPowerPluggedInWired);
+            }
         }
 
         @Override
