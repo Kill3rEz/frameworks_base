@@ -957,25 +957,25 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
     private void attachCustomOverlaysToSceneContainer() {
         ViewGroup root = (ViewGroup) mNotificationShadeWindowController.getWindowRootView();
 
-        FrameLayout container = root.findViewById(R.id.custom_overlay_container);
-        if (container == null) {
-            container = new FrameLayout(mContext);
-            container.setId(R.id.custom_overlay_container);
-            container.setLayoutParams(new FrameLayout.LayoutParams(
+        FrameLayout bgContainer = root.findViewById(R.id.custom_overlay_container);
+        if (bgContainer == null) {
+            bgContainer = new FrameLayout(mContext);
+            bgContainer.setId(R.id.custom_overlay_container);
+            bgContainer.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
             // Insert after index 0 (hidden legacy window), before scene container composable
-            root.addView(container, 1);
+            root.addView(bgContainer, 1);
         }
 
         detachFromParent(mMediaViewController.getMediaArtScrim());
         detachFromParent(mPulseViewController.getPulseView());
 
-        container.addView(mMediaViewController.getMediaArtScrim(),
+        bgContainer.addView(mMediaViewController.getMediaArtScrim(),
                 new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT));
-        container.addView(mPulseViewController.getPulseView(),
+        bgContainer.addView(mPulseViewController.getPulseView(),
                 new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT));
@@ -1134,17 +1134,19 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
             mScrimController.attachViews(scrimBehind, notificationsScrim, scrimInFront);
         }
 
-        // Setup depth wallpaper view - insert between clock and notifications
-        // Z-order: wallpaper -> clock -> depth image -> notifications
-        ViewGroup root = getNotificationShadeWindowView();
         View depthWallpaperView = mWallpaperDepthUtils.getDepthWallpaperView();
-        if (depthWallpaperView.getParent() == null) {
-            root.setClipChildren(false);
-            root.setClipToPadding(false);
-            // Insert after KeyguardRootView (clock) but before SharedNotificationContainer
-            View keyguardRootView = root.findViewById(R.id.keyguard_root_view);
-            int insertIndex = root.indexOfChild(keyguardRootView) + 1;
-            root.addView(depthWallpaperView, insertIndex);
+        if (!SceneContainerFlag.isEnabled()) {
+            // Setup depth wallpaper view - insert between clock and notifications
+            // Z-order: wallpaper -> clock -> depth image -> notifications
+            ViewGroup root = getNotificationShadeWindowView();
+            if (depthWallpaperView.getParent() == null) {
+                root.setClipChildren(false);
+                root.setClipToPadding(false);
+                // Insert after KeyguardRootView (clock) but before SharedNotificationContainer
+                View keyguardRootView = root.findViewById(R.id.keyguard_root_view);
+                int insertIndex = root.indexOfChild(keyguardRootView) + 1;
+                root.addView(depthWallpaperView, insertIndex);
+            }
         }
         ScrimUtils.get(mContext).setWallpaperDepthUtils(mWallpaperDepthUtils);
         mWallpaperDepthUtils.updateDepthWallpaper();

@@ -61,7 +61,7 @@ class ScrimUtils private constructor(context: Context?) {
     private val mScrimController: ScrimController? by lazy {
         try {
             Dependency.get(ScrimController::class.java)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }
@@ -316,6 +316,10 @@ class ScrimUtils private constructor(context: Context?) {
     }
 
     fun getScrimBehindAlphaKeyguard(): Float {
-        return mScrimController?.getScrimBehindAlpha() ?: 0f
+        return try {
+            mScrimController?.getScrimBehindAlpha() ?: 0f
+        } catch (e: Throwable) {
+            0f
+        }
     }
 }

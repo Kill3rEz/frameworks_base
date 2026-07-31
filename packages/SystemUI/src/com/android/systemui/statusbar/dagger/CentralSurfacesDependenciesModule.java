@@ -261,6 +261,6 @@ public interface CentralSurfacesDependenciesModule {
         static WallpaperDepthUtils provideWallpaperDepthUtils(
             Context context,
             Lazy<ScrimController> scrimControllerLazy) {
-        return WallpaperDepthUtils.getInstance(context, scrimControllerLazy.get());
+        return WallpaperDepthUtils.getInstance(context, scrimControllerLazy);
     }
 }
