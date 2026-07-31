@@ -367,6 +367,44 @@ public class DimmerTests extends WindowTestsBase {
     }
 
     @Test
+    public void testBlurOnlyDimIsAppliedWithoutAnimation() {
+        final WindowState win = createSystemWindow("win");
+        final Dimmer dimmer = mDisplayContent.mDimmer;
+        final int BLUR_RADIUS = 10;
+        dimmer.adjustAppearance(win, 0.0f /* alpha */, BLUR_RADIUS /* blurRadius */);
+        dimmer.adjustPosition(win, win);
+        final SurfaceControl dimLayer = dimmer.getDimLayer();
+
+        dimmer.updateDims(mTransaction);
+
+        verify(mTransaction).setBackgroundBlurRadius(dimLayer, BLUR_RADIUS);
+        invokeAnimationEndCallback(never());
+    }
+
+    @Test
+    public void testBlurOnlyDimUpdateUsesRequestedStateAfterAnimationCancellation() {
+        final WindowState win1 = createSystemWindow("win1");
+        final WindowState win2 = createSystemWindow("win2");
+        final int INITIAL_BLUR_RADIUS = 10;
+        final int UPDATED_BLUR_RADIUS = 20;
+        final float ALPHA = 0.5f;
+        final Dimmer dimmer = mDisplayContent.mDimmer;
+        dimmer.adjustAppearance(win1, ALPHA,INITIAL_BLUR_RADIUS);
+        dimmer.adjustPosition(win1, win1);
+        final SurfaceControl dimLayer = dimmer.getDimLayer();
+        dimmer.updateDims(mTransaction);
+
+        clearInvocations(mTransaction, mWm.mSurfaceAnimationRunner);
+        dimmer.resetDimStates();
+        dimmer.adjustAppearance(win2, ALPHA,UPDATED_BLUR_RADIUS);
+        dimmer.adjustPosition(win1, win2);
+        dimmer.updateDims(mTransaction);
+
+        verify(mTransaction).setBackgroundBlurRadius(dimLayer, UPDATED_BLUR_RADIUS);
+        invokeAnimationEndCallback(never());
+    }
+
+    @Test
     @EnableFlags(com.android.window.flags.Flags.FLAG_SUPPORT_CUSTOM_DIM_COLOR)
     public void testCustomDimColorApplied() {
         final WindowState win = createSystemWindow("win");

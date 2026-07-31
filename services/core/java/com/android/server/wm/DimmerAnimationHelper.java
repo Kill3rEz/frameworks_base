@@ -215,12 +215,25 @@ public class DimmerAnimationHelper {
             @NonNull SurfaceControl.Transaction t, @NonNull Dimmer.DimState dim,
             @NonNull Change from, @NonNull Change to) {
         ProtoLog.v(WM_DEBUG_DIMMER, "Starting animation on %s", dim);
+        float targetAlpha = to.mAlpha;
+        long targetColor = to.mColor;
         mAlphaAnimationSpec = getRequestedAnimationSpec(from, to);
+
+        if (mAlphaAnimationSpec.getDuration() == 0) {
+            // A zero-duration animation still finishes asynchronously on AnimationThread. Apply
+            // its final state in this transaction so it is visible to the next screen capture.
+            mCurrentProperties.copyFrom(to);
+            setCurrentState(dim, t);
+            if (targetAlpha == 0f && !dim.isDimming()) {
+                dim.remove(t);
+            }
+            mAlphaAnimationSpec = null;
+            return;
+        }
+
         mLocalAnimationAdapter = new LocalAnimationAdapter(mAlphaAnimationSpec,
                 mSurfaceAnimationRunner);
 
-        float targetAlpha = to.mAlpha;
-        long targetColor = to.mColor;
         EventLogTags.writeWmDimAnimate(dim.mDimSurface.getLayerId(), targetAlpha, to.mBlurRadius);
 
         mLocalAnimationAdapter.startAnimation(dim.mDimSurface, t,
