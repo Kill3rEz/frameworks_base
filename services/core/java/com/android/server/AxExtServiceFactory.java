@@ -83,8 +83,13 @@ public class AxExtServiceFactory {
         return (T) type.getClazz().cast(instance);
     }
 
-    public static void systemReady() {
+    // GameSpaceService must exist before AMS runs goingCallback (starts SystemUI):
+    // the keyguard/focus/task hooks call GameSpaceService.get() unconditionally.
+    public static void earlySystemReady() {
         GameSpaceService.systemReady();
+    }
+
+    public static void systemReady() {
         getSpoofManager().systemReady();
         IAxExtServiceFactory.initObscuraService();
     }
