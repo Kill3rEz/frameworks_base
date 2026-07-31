@@ -1528,6 +1528,9 @@ public class StatusBarKeyguardViewManager implements RemoteInputController.Callb
         if (isPrimaryBouncerShowingChanged || mFirstUpdate) {
             mNotificationShadeWindowController.setBouncerShowing(primaryBouncerShowing);
             mCentralSurfaces.setBouncerShowing(primaryBouncerShowing);
+            if (com.android.systemui.util.WallpaperDepthUtils.get() != null) {
+                com.android.systemui.util.WallpaperDepthUtils.get().onBouncerShowingChanged(primaryBouncerShowing);
+            }
         }
         if (!SceneContainerFlag.isEnabled()) {
             if (primaryBouncerIsOrWillBeShowing != mLastPrimaryBouncerIsOrWillBeShowing

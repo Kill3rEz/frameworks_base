@@ -90,6 +90,12 @@ class MediaViewController @Inject constructor(
 
     private var mediaArtJob: Job? = null
     private var isAlbumArtVisible = false
+        set(value) {
+            if (field != value) {
+                field = value
+                com.android.systemui.util.WallpaperDepthUtils.get()?.updateDepthWallpaperVisibility()
+            }
+        }
     private var dismissingKeyguard = false
     private var retryRunnable: Runnable? = null
     private var coalesceJob: Job? = null
