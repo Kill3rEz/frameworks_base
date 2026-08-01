@@ -120,14 +120,16 @@ public class WallpaperDepthUtils {
     }
     
     public void onDozingChanged(boolean dozing) {
-        if (mDozing == dozing) {
-            return;
-        }
         mDozing = dozing;
         if (mDozing) {
-            hideDepthWallpaper();
+            hideDepthWallpaperImmediate();
         } else {
+            updateDepthWallpaper(true);
             updateDepthWallpaperVisibility();
+            if (mLockScreenSubject != null) {
+                mLockScreenSubject.postDelayed(this::updateDepthWallpaperVisibility, 200);
+                mLockScreenSubject.postDelayed(this::updateDepthWallpaperVisibility, 500);
+            }
         }
     }
 
@@ -137,7 +139,7 @@ public class WallpaperDepthUtils {
         }
         mBouncerShowing = showing;
         if (mBouncerShowing) {
-            hideDepthWallpaper();
+            hideDepthWallpaperImmediate();
         } else {
             updateDepthWallpaperVisibility();
         }
@@ -149,7 +151,7 @@ public class WallpaperDepthUtils {
         }
         mGlanceableHubShowing = showing;
         if (mGlanceableHubShowing) {
-            hideDepthWallpaper();
+            hideDepthWallpaperImmediate();
         } else {
             updateDepthWallpaperVisibility();
         }
@@ -237,19 +239,27 @@ public class WallpaperDepthUtils {
 
     public void updateDepthWallpaperVisibility() {
         if (mLockScreenSubject == null || !isDWallpaperEnabled()) return;
-        int subjectVisibility = canShowDepthWallpaper() ? View.VISIBLE : View.GONE;
-        if (mLockScreenSubject.getVisibility() == subjectVisibility) return;
+        final boolean canShow = canShowDepthWallpaper();
+        final int targetVisibility = canShow ? View.VISIBLE : View.GONE;
         mLockScreenSubject.post(() -> {
-            mLockScreenSubject.setVisibility(subjectVisibility);
-            if (subjectVisibility == View.VISIBLE) {
+            mLockScreenSubject.setVisibility(targetVisibility);
+            if (canShow) {
+                mLockScreenSubject.setAlpha(1f);
+                mLockScreenSubject.setTranslationZ(0f);
+                mLockScreenSubject.setElevation(2.0f);
                 mLockScreenSubject.invalidate();
+            } else {
+                mLockScreenSubject.setTranslationZ(-100f);
             }
         });
     }
     
     public void hideDepthWallpaper() {
-        if (mLockScreenSubject == null || mLockScreenSubject.getVisibility() == View.GONE) return;
-        mLockScreenSubject.post(() -> mLockScreenSubject.setVisibility(View.GONE));
+        if (mLockScreenSubject == null) return;
+        mLockScreenSubject.post(() -> {
+            mLockScreenSubject.setVisibility(View.GONE);
+            mLockScreenSubject.setTranslationZ(-100f);
+        });
     }
 
     public void hideDepthWallpaperImmediate() {
@@ -261,6 +271,7 @@ public class WallpaperDepthUtils {
                     .setDuration(120)
                     .withEndAction(() -> {
                         mLockScreenSubject.setVisibility(View.GONE);
+                        mLockScreenSubject.setTranslationZ(-100f);
                         mLockScreenSubject.setAlpha(1f);
                     })
                     .start();
@@ -292,7 +303,8 @@ public class WallpaperDepthUtils {
     public void updateDepthWallpaper(boolean forced) {
         if (mLockScreenSubject == null || !isDWallpaperEnabled()) return;
         boolean pathChanged = (mPreviousWallpaperPath != null && !mPreviousWallpaperPath.equals(mWallpaperSubjectPath));
-        if (!mWallpaperLoaded || pathChanged || forced) {
+        boolean backgroundMissing = (mLockScreenSubject.getBackground() == null);
+        if (!mWallpaperLoaded || pathChanged || backgroundMissing || forced) {
             Log.d("WallpaperDepthUtils", "updateDepthWallpaper: " + (mWallpaperLoaded || forced ? "update required" : "first load"));
             new LoadWallpaperTask().execute();
             mWallpaperLoaded = true;
