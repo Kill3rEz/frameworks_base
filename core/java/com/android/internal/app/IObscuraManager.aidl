@@ -41,4 +41,6 @@ interface IObscuraManager {
     void setDataIsolationEnabled(String packageName, boolean enabled);
 
     String getSpoofedSetting(String callingPackage, String settingName);
+
+    void launchHiddenApp(String packageName);
 }

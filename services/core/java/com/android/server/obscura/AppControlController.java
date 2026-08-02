@@ -444,4 +444,39 @@ public class AppControlController {
             if (changed) saveConfigToSettings();
         }
     }
+
+    public void launchHiddenApp(String packageName) {
+        if (TextUtils.isEmpty(packageName)) return;
+        boolean wasHidden = isPackageHidden(packageName);
+        boolean wasLauncherHidden = isPackageLauncherHidden(packageName);
+
+        if (wasHidden) {
+            setPackageHidden(packageName, false);
+        }
+        if (wasLauncherHidden) {
+            setPackageLauncherHidden(packageName, false);
+        }
+
+        // Launch the app
+        try {
+            Intent intent = mContext.getPackageManager()
+                    .getLaunchIntentForPackage(packageName);
+            if (intent != null) {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                mContext.startActivityAsUser(intent, UserHandle.CURRENT);
+            }
+        } catch (Exception e) {
+            Slog.e(TAG, "Failed to launch hidden app: " + packageName, e);
+        }
+
+        // Re-hide after a short delay to allow launch to complete
+        if (wasHidden || wasLauncherHidden) {
+            mHandler.postDelayed(() -> {
+                if (wasHidden) setPackageHidden(packageName, true);
+                if (wasLauncherHidden) setPackageLauncherHidden(packageName, true);
+            }, 2000);
+        }
+    }
 }
