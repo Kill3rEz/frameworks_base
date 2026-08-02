@@ -21,9 +21,12 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.internal.jank.InteractionJankMonitor;
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 
+import com.android.systemui.animation.DialogCuj;
+import com.android.systemui.animation.DialogTransitionAnimator;
 import com.android.systemui.animation.Expandable;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
@@ -35,11 +38,14 @@ import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.QsEventLogger;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
+import com.android.systemui.qs.tiles.dialog.PreferredNetworkDialogDelegate;
 import com.android.systemui.res.R;
+import com.android.systemui.statusbar.phone.SystemUIDialog;
 
 import java.util.List;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 
 public class PreferredNetworkTile extends QSTileImpl<State> {
     public static final String TILE_SPEC = "preferred_network";
@@ -55,6 +61,8 @@ public class PreferredNetworkTile extends QSTileImpl<State> {
 
     private final TelephonyManager mTelephonyManager;
     private final SubscriptionManager mSubscriptionManager;
+    private final Provider<PreferredNetworkDialogDelegate> mDialogDelegateProvider;
+    private final DialogTransitionAnimator mDialogTransitionAnimator;
     private int mSimCount = 0;
     private boolean mCanSwitch = true;
 
@@ -70,12 +78,16 @@ public class PreferredNetworkTile extends QSTileImpl<State> {
             MetricsLogger metricsLogger,
             StatusBarStateController statusBarStateController,
             ActivityStarter activityStarter,
-            QSLogger qsLogger
+            QSLogger qsLogger,
+            Provider<PreferredNetworkDialogDelegate> dialogDelegateProvider,
+            DialogTransitionAnimator dialogTransitionAnimator
     ) {
         super(host, uiEventLogger, backgroundLooper, mainHandler, falsingManager, metricsLogger,
                 statusBarStateController, activityStarter, qsLogger);
         mTelephonyManager = mContext.getSystemService(TelephonyManager.class);
         mSubscriptionManager = mContext.getSystemService(SubscriptionManager.class);
+        mDialogDelegateProvider = dialogDelegateProvider;
+        mDialogTransitionAnimator = dialogTransitionAnimator;
         updateSimCount();
     }
 
@@ -221,6 +233,37 @@ public class PreferredNetworkTile extends QSTileImpl<State> {
         return TYPE_UNKNOWN;
     }
 
+    @Override
+    protected void handleSecondaryClick(@Nullable Expandable expandable) {
+        if (mSimCount == 0) return;
+
+        mUiHandler.post(() -> {
+            SystemUIDialog dialog = mDialogDelegateProvider.get().createDialog();
+            if (expandable != null) {
+                DialogTransitionAnimator.Controller controller =
+                        expandable.dialogTransitionController(
+                                new DialogCuj(InteractionJankMonitor.CUJ_SHADE_DIALOG_OPEN, TAG));
+                if (controller != null) {
+                    mDialogTransitionAnimator.show(dialog, controller);
+                    return;
+                }
+            }
+            dialog.show();
+        });
+    }
+
+    private boolean isModeEnabledByUser(int type) {
+        String key;
+        switch (type) {
+            case TYPE_2G: key = "preferred_network_tile_mode_2g"; break;
+            case TYPE_3G: key = "preferred_network_tile_mode_3g"; break;
+            case TYPE_4G: key = "preferred_network_tile_mode_4g"; break;
+            case TYPE_5G: key = "preferred_network_tile_mode_5g"; break;
+            default: return true;
+        }
+        return Settings.System.getInt(mContext.getContentResolver(), key, 1) == 1;
+    }
+
     private int getNextType(TelephonyManager tm, int currentType) {
         int[] order = {TYPE_2G, TYPE_3G, TYPE_4G, TYPE_5G};
         int idx = 0;
@@ -236,6 +279,9 @@ public class PreferredNetworkTile extends QSTileImpl<State> {
 
         for (int i = 1; i <= order.length; i++) {
             int nextType = order[(idx + i) % order.length];
+            if (!isModeEnabledByUser(nextType)) {
+                continue;
+            }
             long mask = getMaskForType(nextType);
             if ((supported & mask) != 0) {
                 return nextType;
