@@ -98,28 +98,30 @@ public class PreferredNetworkTile extends QSTileImpl<State> {
 
     @Override
     public State newTileState() {
-        return new State();
+        State state = new State();
+        state.dualTarget = true;
+        state.handlesSecondaryClick = true;
+        return state;
     }
 
     @Override
     public void handleClick(@Nullable Expandable expandable) {
-        if (!mCanSwitch || mSimCount == 0) return;
+        // Right-side label area: open the quick-select dialog
+        if (mSimCount == 0) return;
 
-        int subId = SubscriptionManager.getDefaultDataSubscriptionId();
-        if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) return;
-
-        TelephonyManager tm = mTelephonyManager.createForSubscriptionId(subId);
-        int current = getCurrentType(tm);
-        if (current == TYPE_UNKNOWN) return;
-
-        int next = getNextType(tm, current);
-        long mask = getMaskForType(next);
-
-        tm.setAllowedNetworkTypesForReason(
-            TelephonyManager.ALLOWED_NETWORK_TYPES_REASON_USER, mask);
-        if (DEBUG) Log.d(TAG, "Applied type=" + next + " mask=" + mask);
-
-        refreshState();
+        mUiHandler.post(() -> {
+            SystemUIDialog dialog = mDialogDelegateProvider.get().createDialog();
+            if (expandable != null) {
+                DialogTransitionAnimator.Controller controller =
+                        expandable.dialogTransitionController(
+                                new DialogCuj(InteractionJankMonitor.CUJ_SHADE_DIALOG_OPEN, TAG));
+                if (controller != null) {
+                    mDialogTransitionAnimator.show(dialog, controller);
+                    return;
+                }
+            }
+            dialog.show();
+        });
     }
 
     @Override
@@ -138,6 +140,8 @@ public class PreferredNetworkTile extends QSTileImpl<State> {
     @Override
     protected void handleUpdateState(State state, Object arg) {
         updateSimCount();
+        state.dualTarget = true;
+        state.handlesSecondaryClick = true;
         state.icon = ResourceIcon.get(R.drawable.ic_preferred_network);
         state.label = mContext.getString(R.string.quick_settings_preferred_network_label);
 
@@ -235,21 +239,24 @@ public class PreferredNetworkTile extends QSTileImpl<State> {
 
     @Override
     protected void handleSecondaryClick(@Nullable Expandable expandable) {
-        if (mSimCount == 0) return;
+        // Icon area: cycle through enabled network modes
+        if (!mCanSwitch || mSimCount == 0) return;
 
-        mUiHandler.post(() -> {
-            SystemUIDialog dialog = mDialogDelegateProvider.get().createDialog();
-            if (expandable != null) {
-                DialogTransitionAnimator.Controller controller =
-                        expandable.dialogTransitionController(
-                                new DialogCuj(InteractionJankMonitor.CUJ_SHADE_DIALOG_OPEN, TAG));
-                if (controller != null) {
-                    mDialogTransitionAnimator.show(dialog, controller);
-                    return;
-                }
-            }
-            dialog.show();
-        });
+        int subId = SubscriptionManager.getDefaultDataSubscriptionId();
+        if (subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) return;
+
+        TelephonyManager tm = mTelephonyManager.createForSubscriptionId(subId);
+        int current = getCurrentType(tm);
+        if (current == TYPE_UNKNOWN) return;
+
+        int next = getNextType(tm, current);
+        long mask = getMaskForType(next);
+
+        tm.setAllowedNetworkTypesForReason(
+            TelephonyManager.ALLOWED_NETWORK_TYPES_REASON_USER, mask);
+        if (DEBUG) Log.d(TAG, "Applied type=" + next + " mask=" + mask);
+
+        refreshState();
     }
 
     private boolean isModeEnabledByUser(int type) {

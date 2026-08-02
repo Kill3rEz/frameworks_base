@@ -12,6 +12,7 @@ import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import android.view.LayoutInflater
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.android.systemui.plugins.ActivityStarter
@@ -31,7 +32,8 @@ class PreferredNetworkDialogDelegate @Inject constructor(
     override fun createDialog(): SystemUIDialog = systemUIDialogFactory.create(this)
 
     override fun beforeCreate(dialog: SystemUIDialog, savedInstanceState: Bundle?) {
-        val view = LayoutInflater.from(dialog.context).inflate(R.layout.preferred_network_dialog, null)
+        val view = LayoutInflater.from(dialog.context)
+            .inflate(R.layout.preferred_network_dialog, null)
         dialog.setView(view)
     }
 
@@ -45,6 +47,14 @@ class PreferredNetworkDialogDelegate @Inject constructor(
         val container = dialog.findViewById<LinearLayout>(R.id.mode_options_container) ?: return
         container.removeAllViews()
 
+        val fgColor = run {
+            val ta = dialog.context.obtainStyledAttributes(intArrayOf(android.R.attr.colorForeground))
+            val c = ta.getColor(0, android.graphics.Color.WHITE)
+            ta.recycle()
+            c
+        }
+        val onPrimary = dialog.context.getColor(com.android.internal.R.color.materialColorOnPrimary)
+
         val options = listOf(
             NetworkOption(4, "5G", TelephonyManager.NETWORK_CLASS_BITMASK_5G),
             NetworkOption(3, "4G", TelephonyManager.NETWORK_CLASS_BITMASK_4G),
@@ -56,14 +66,19 @@ class PreferredNetworkDialogDelegate @Inject constructor(
             val itemView = LayoutInflater.from(dialog.context)
                 .inflate(R.layout.preferred_network_option_item, container, false)
             val title = itemView.findViewById<TextView>(R.id.option_title)
+            val icon  = itemView.findViewById<ImageView>(R.id.option_icon)
             val isSelected = (opt.type == currentType)
 
             title.text = opt.label
 
             if (isSelected) {
                 itemView.setBackgroundResource(R.drawable.preferred_network_pill_active)
+                title.setTextColor(onPrimary)
+                icon.setColorFilter(onPrimary)
             } else {
                 itemView.setBackgroundResource(R.drawable.preferred_network_pill_inactive)
+                title.setTextColor(fgColor)
+                icon.setColorFilter(fgColor)
             }
 
             itemView.setOnClickListener {
