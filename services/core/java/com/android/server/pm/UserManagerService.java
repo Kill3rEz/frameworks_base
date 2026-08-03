@@ -8174,16 +8174,26 @@ public class UserManagerService extends IUserManager.Stub {
      * Sets the last entered foreground time to the current time for the given user.
      */
     public void setLastEnteredForegroundTimeToNow(@UserIdInt int userId) {
-        UserData userData = getUserDataNoChecks(userId);
-        if (userData == null) {
-            Slog.w(LOG_TAG, "setLastEnteredForegroundTimeToNow: unknown user #" + userId);
-            return;
+        synchronized (mUsersLock) {
+            UserData userData = getUserDataNoChecks(userId);
+            if (userData == null) {
+                Slog.w(LOG_TAG, "setLastEnteredForegroundTimeToNow: unknown user #" + userId);
+                return;
+            }
+            setLastEnteredForegroundTimeToNow(userData);
         }
-        setLastEnteredForegroundTimeToNow(userData);
     }
 
     private void setLastEnteredForegroundTimeToNow(@NonNull UserData userData) {
-        userData.mLastEnteredForegroundTimeMillis = System.currentTimeMillis();
+        long latestEnteredForegroundTime = 0;
+        for (int i = 0; i < mUsers.size(); i++) {
+            latestEnteredForegroundTime = Math.max(latestEnteredForegroundTime,
+                    mUsers.valueAt(i).mLastEnteredForegroundTimeMillis);
+        }
+        // Wall-clock time can be equal for consecutive switches or move backwards after a reboot.
+        // Preserve a strict ordering so the latest foreground user is selected deterministically.
+        userData.mLastEnteredForegroundTimeMillis = Math.max(System.currentTimeMillis(),
+                latestEnteredForegroundTime + 1);
         scheduleWriteUser(userData.info.id);
     }
 
