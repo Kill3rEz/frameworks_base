@@ -138,6 +138,7 @@ import com.android.compose.gesture.gesturesDisabled
 import com.android.compose.modifiers.height
 import com.android.compose.modifiers.padding
 import com.android.compose.modifiers.thenIf
+import com.android.compose.theme.LocalAndroidColorScheme
 import com.android.compose.theme.PlatformTheme
 import com.android.settingslib.display.BrightnessUtils.GAMMA_SPACE_MAX
 import com.android.settingslib.display.BrightnessUtils.GAMMA_SPACE_MIN
@@ -1786,7 +1787,7 @@ fun VerticalSlider(
             .width(housingWidth)
             .height(housingHeight)
             .clip(RoundedCornerShape(percent = 50))
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
+            .background(LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = 0.45f))
             .sliderGestures(scope, onValueChanged, onValueChangeFinished, onLongPress),
         contentAlignment = Alignment.BottomCenter
     ) {

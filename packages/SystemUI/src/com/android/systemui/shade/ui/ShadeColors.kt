@@ -17,6 +17,7 @@
 package com.android.systemui.shade.ui
 
 import android.content.Context
+import android.graphics.Color
 import com.android.internal.graphics.ColorUtils
 import com.android.systemui.res.R
 
@@ -48,7 +49,7 @@ object ShadeColors {
     @JvmStatic
     fun notificationScrim(context: Context, blurSupported: Boolean): Int {
         return if (blurSupported) {
-            notificationScrimStandard(context)
+            Color.TRANSPARENT
         } else {
             notificationScrimFallback(context)
         }
