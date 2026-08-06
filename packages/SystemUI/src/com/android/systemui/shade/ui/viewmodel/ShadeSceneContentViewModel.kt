@@ -135,8 +135,14 @@ constructor(
     private val qqsMediaInRowViewModel =
         mediaInRowInLandscapeViewModelFactory.create(LOCATION_QQS, qqsMediaUiBehavior)
 
+    val qsContainerViewModel =
+        qsContainerViewModelFactory.create(supportsBrightnessMirroring = true)
+
     override suspend fun onActivated() {
-        coroutineScope { launch { qqsMediaInRowViewModel.activate() } }
+        coroutineScope {
+            launch { qqsMediaInRowViewModel.activate() }
+            launch { qsContainerViewModel.activate() }
+        }
     }
 
     /**

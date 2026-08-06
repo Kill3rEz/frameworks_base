@@ -16,6 +16,9 @@
 
 package com.android.systemui.shade.ui.composable
 
+import com.android.systemui.qs.composefragment.BrightnessLayout
+import com.android.systemui.qs.composefragment.VolumeLayout
+import com.android.systemui.qs.panels.ui.compose.TileGrid
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
@@ -392,13 +395,15 @@ private fun ContentScope.SingleShade(
                                 onStopOrDispose { listening = false }
                             }
                             Box {
-                                val qqsViewModel =
-                                    rememberViewModel(traceName = "shade_scene_qqs") {
-                                        viewModel.quickQuickSettingsViewModel.create()
-                                    }
                                 if (viewModel.isQsEnabled) {
-                                    QuickQuickSettings(
-                                        qqsViewModel,
+                                    val top2Specs = remember(viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels) {
+                                        viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
+                                    }
+                                    TileGrid(
+                                        viewModel = viewModel.qsContainerViewModel.tileGridViewModel,
+                                        includeSpecs = top2Specs,
+                                        columnsOverride = 1,
+                                        forceLargeTiles = true,
                                         listening = { listening },
                                         modifier = Modifier.sysuiResTag("quick_qs_panel"),
                                     )
@@ -475,7 +480,7 @@ private fun ContentScope.SingleShade(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun MediaAndQqsLayout(
+private fun ContentScope.MediaAndQqsLayout(
     tiles: @Composable () -> Unit,
     media: @Composable () -> Unit,
     mediaInRow: Boolean,
@@ -483,19 +488,28 @@ private fun MediaAndQqsLayout(
 ) {
     val modifierAnimated =
         modifier.animateContentSizeNoClip(MaterialTheme.motionScheme.defaultSpatialSpec())
-    if (mediaInRow) {
-        Row(
-            modifier = modifierAnimated,
-            horizontalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_vertical)),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(modifier = Modifier.weight(1f)) { tiles() }
-            Box(modifier = Modifier.weight(1f)) { media() }
-        }
-    } else {
-        Column(modifier = modifierAnimated, verticalArrangement = spacedBy(16.dp)) {
+    Row(
+        modifier = modifierAnimated.fillMaxWidth(),
+        horizontalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_horizontal)),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(modifier = Modifier.weight(1f)) {
             tiles()
-            media()
+        }
+        Box(modifier = Modifier.weight(1f)) {
+            Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = spacedBy(
+                        dimensionResource(R.dimen.qs_tile_margin_horizontal),
+                        Alignment.CenterHorizontally
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BrightnessLayout(enable = true, sliderHeight = 160.dp)
+                    VolumeLayout(enable = true, sliderHeight = 160.dp)
+                }
+            }
         }
     }
 }

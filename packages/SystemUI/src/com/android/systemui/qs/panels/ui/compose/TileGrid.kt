@@ -32,15 +32,22 @@ fun ContentScope.TileGrid(
     viewModel: TileGridViewModel,
     modifier: Modifier = Modifier,
     excludeSpecs: List<TileSpec> = emptyList(),
+    includeSpecs: List<TileSpec>? = null,
+    columnsOverride: Int? = null,
+    forceLargeTiles: Boolean = false,
     listening: () -> Boolean = { true },
     enableRevealEffect: Boolean = false,
 ) {
     val gridLayout = viewModel.gridLayout
-    val tiles = viewModel.tileViewModels.filter { it.spec !in excludeSpecs }
+    val tiles = viewModel.tileViewModels.filter {
+        (includeSpecs == null || it.spec in includeSpecs) && it.spec !in excludeSpecs
+    }
     with(gridLayout) {
         TileGrid(
             tiles = tiles,
             modifier = modifier,
+            columnsOverride = columnsOverride,
+            forceLargeTiles = forceLargeTiles,
             listening = listening,
             enableRevealEffect = enableRevealEffect,
         )
