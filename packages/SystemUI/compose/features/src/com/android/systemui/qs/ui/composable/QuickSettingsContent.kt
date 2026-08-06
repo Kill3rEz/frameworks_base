@@ -98,6 +98,9 @@ fun ContentScope.QuickSettingsContent(
                         .filterNotNull()
                         .collect { isBrightnessSliderInteractable = it >= .5f }
                 }
+                val tileHeight = dimensionResource(id = R.dimen.custom_qs_tile_height)
+                val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+                val headerHeight = tileHeight * 2 + tileSpacing
                 Element(modifier = Modifier, key = Elements.BrightnessSlider) {
                     Row(
                         modifier = Modifier
@@ -109,8 +112,8 @@ fun ContentScope.QuickSettingsContent(
                         ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        BrightnessLayout(enable = isBrightnessSliderInteractable, sliderHeight = 160.dp)
-                        VolumeLayout(enable = isBrightnessSliderInteractable, sliderHeight = 160.dp)
+                        BrightnessLayout(enable = isBrightnessSliderInteractable, sliderHeight = headerHeight)
+                        VolumeLayout(enable = isBrightnessSliderInteractable, sliderHeight = headerHeight)
                     }
                 }
             },
