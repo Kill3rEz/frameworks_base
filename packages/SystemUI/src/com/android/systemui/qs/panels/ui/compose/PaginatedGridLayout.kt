@@ -75,6 +75,19 @@ constructor(
         listening: () -> Boolean,
         enableRevealEffect: Boolean,
     ) {
+        if (columnsOverride != null || forceLargeTiles) {
+            with(delegateGridLayout) {
+                TileGrid(
+                    tiles = tiles,
+                    modifier = modifier,
+                    columnsOverride = columnsOverride,
+                    forceLargeTiles = forceLargeTiles,
+                    listening = listening,
+                    enableRevealEffect = enableRevealEffect,
+                )
+            }
+            return
+        }
         val viewModel =
             rememberViewModel(traceName = "PaginatedGridLayout-TileGrid") {
                 viewModelFactory.create()
