@@ -57,6 +57,7 @@ fun ContentScope.QuickSettingsContent(
     mediaSquishiness: () -> Float = { 1f },
 ) {
     val showMedia = viewModel.showMedia
+    val headerShowsMedia = showMedia && isAlwaysComposedContentVisible()
     val top2Specs = remember(viewModel.tileGridViewModel.tileViewModels) {
         viewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
     }
@@ -64,7 +65,7 @@ fun ContentScope.QuickSettingsContent(
     QuickSettingsPanelLayout(
         headerLeft =
             @Composable {
-                if (showMedia && isAlwaysComposedContentVisible()) {
+                if (headerShowsMedia) {
                     Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
                         Media(
                             viewModelFactory = viewModel.mediaViewModelFactory,
@@ -125,7 +126,7 @@ fun ContentScope.QuickSettingsContent(
                     onStopOrDispose { listening = false }
                 }
 
-                val excludeSpecs = top2Specs
+                val excludeSpecs = if (headerShowsMedia) emptyList() else top2Specs
 
                 Box {
                     GridAnchor()

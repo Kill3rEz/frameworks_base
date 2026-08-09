@@ -36,7 +36,12 @@ object QuickSettings {
         val BrightnessSlider = ElementKey("BrightnessSlider")
 
         fun TileSpec.toElementKey() =
-            ElementKey(this.spec, TileIdentity(this), contentPicker = SharedQsTileContentPicker)
+            ElementKey(
+                this.spec,
+                TileIdentity(this),
+                contentPicker = SharedQsTileContentPicker,
+                placeAllCopies = true,
+            )
 
         val TileElementMatcher = ElementKey.withIdentity { it is TileIdentity }
 

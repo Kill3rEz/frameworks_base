@@ -118,42 +118,46 @@ constructor(
             remember(sizedTiles) { List(sizedTiles.size) { BounceableTileViewModel() } }
         val spans by remember(sizedTiles) { derivedStateOf { sizedTiles.fastMap { it.width } } }
         val isPaginated = LocalIsPaginatedGrid.current
+        val isMainGrid = columnsOverride == null && !forceLargeTiles
+        val tileSquishiness: () -> Float = if (isMainGrid) ({ squishiness }) else ({ 1f })
+
         Column(modifier) {
-        VerticalSpannedGrid(
-            columns = columns,
-            columnSpacing = dimensionResource(R.dimen.qs_tile_margin_horizontal),
-            rowSpacing = dimensionResource(R.dimen.qs_tile_margin_vertical),
-            spans = spans,
-            keys = { sizedTiles[it].tile.spec },
-            modifier = Modifier,
-        ) { spanIndex, column, isFirstInColumn, isLastInColumn ->
-            val it = sizedTiles[spanIndex]
+            VerticalSpannedGrid(
+                columns = columns,
+                columnSpacing = dimensionResource(R.dimen.qs_tile_margin_horizontal),
+                rowSpacing = dimensionResource(R.dimen.qs_tile_margin_vertical),
+                spans = spans,
+                keys = { sizedTiles[it].tile.spec },
+                modifier = Modifier,
+            ) { spanIndex, column, isFirstInColumn, isLastInColumn ->
+                val it = sizedTiles[spanIndex]
 
-            Element(it.tile.spec.toElementKey(), Modifier) {
-                Tile(
-                    tile = it.tile,
-                    iconOnly = if (forceLargeTiles) false else iconTilesViewModel.isIconTile(it.tile.spec),
-                    squishiness = { squishiness },
-                    tileHapticsViewModelFactory = tileHapticsViewModelFactory,
-                    coroutineScope = scope,
-                    bounceableInfo =
-                        bounceables.bounceableInfo(
-                            it,
-                            index = spanIndex,
-                            column = column,
-                            columns = columns,
-                            isFirstInRow = isFirstInColumn,
-                            isLastInRow = isLastInColumn,
-                        ),
-                    detailsViewModel = detailsViewModel,
-                    isVisible = listening,
-                    requestToggleTextFeedback = textFeedbackViewModel::requestShowFeedback,
-                    enableRevealEffect = enableRevealEffect,
-                )
+                Element(it.tile.spec.toElementKey(), Modifier) {
+                    Tile(
+                        tile = it.tile,
+                        iconOnly = if (forceLargeTiles) false else iconTilesViewModel.isIconTile(it.tile.spec),
+                        squishiness = tileSquishiness,
+                        isHeaderTile = !isMainGrid,
+                        tileHapticsViewModelFactory = tileHapticsViewModelFactory,
+                        coroutineScope = scope,
+                        bounceableInfo =
+                            bounceables.bounceableInfo(
+                                it,
+                                index = spanIndex,
+                                column = column,
+                                columns = columns,
+                                isFirstInRow = isFirstInColumn,
+                                isLastInRow = isLastInColumn,
+                            ),
+                        detailsViewModel = detailsViewModel,
+                        isVisible = listening,
+                        requestToggleTextFeedback = textFeedbackViewModel::requestShowFeedback,
+                        enableRevealEffect = enableRevealEffect,
+                    )
+                }
             }
-        }
 
-            if (!isPaginated) {
+            if (!isPaginated && isMainGrid) {
                 Row(
                     modifier = Modifier.requiredHeight(48.dp).fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
