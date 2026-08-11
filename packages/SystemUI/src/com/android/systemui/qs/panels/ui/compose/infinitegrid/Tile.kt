@@ -524,13 +524,17 @@ object TileMotionTestKeys {
 }
 
 private object TileDefaults {
+    private const val GlassSurfaceAlpha = 0.45f
+    private const val GlassIconSurfaceAlpha = 0.55f
+    private const val ActiveTileAlpha = 0.80f
+
     /** An active tile uses the active color as background */
     @Composable
     @ReadOnlyComposable
     fun activeTileColors(): TileColors =
         TileColors(
-            background = MaterialTheme.colorScheme.primary,
-            iconBackground = MaterialTheme.colorScheme.primary,
+            background = MaterialTheme.colorScheme.primary.copy(alpha = ActiveTileAlpha),
+            iconBackground = MaterialTheme.colorScheme.primary.copy(alpha = ActiveTileAlpha),
             label = MaterialTheme.colorScheme.onPrimary,
             secondaryLabel = MaterialTheme.colorScheme.onPrimary,
             icon = MaterialTheme.colorScheme.onPrimary,
@@ -541,7 +545,8 @@ private object TileDefaults {
     @ReadOnlyComposable
     fun activeDualTargetTileColors(): TileColors =
         TileColors(
-            background = LocalAndroidColorScheme.current.surfaceEffect1,
+            background =
+                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = GlassSurfaceAlpha),
             iconBackground = MaterialTheme.colorScheme.primary,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
@@ -553,19 +558,23 @@ private object TileDefaults {
     @ReadOnlyComposable
     fun inactiveDualTargetTileColors(): TileColors =
         TileColors(
-            background = LocalAndroidColorScheme.current.surfaceEffect1,
-            iconBackground = LocalAndroidColorScheme.current.surfaceEffect2,
+            background =
+                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = GlassSurfaceAlpha),
+            iconBackground =
+                LocalAndroidColorScheme.current.surfaceEffect2.copy(alpha = GlassIconSurfaceAlpha),
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
             icon = MaterialTheme.colorScheme.onSurface,
-            circleAroundIcon = LocalAndroidColorScheme.current.surfaceEffect2,
+            circleAroundIcon =
+                LocalAndroidColorScheme.current.surfaceEffect2.copy(alpha = GlassIconSurfaceAlpha),
         )
 
     @Composable
     @ReadOnlyComposable
     fun inactiveTileColors(): TileColors =
         TileColors(
-            background = LocalAndroidColorScheme.current.surfaceEffect1,
+            background =
+                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = GlassSurfaceAlpha),
             iconBackground = Color.Transparent,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
