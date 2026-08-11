@@ -523,7 +523,7 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
         UiModeManager uiModeManager = mUiModeManagerProvider.forUser(UserHandle.of(userId));
         uiModeManager.addContrastChangeListener(mMainExecutor, mContrastChangeListener);
         mContrast = uiModeManager.getContrast();
-        mSecureSettings.registerContentObserverForUser(
+        mSecureSettings.registerContentObserverForUserSync(
                 Settings.Secure.getUriFor(Settings.Secure.SYSTEM_BLACK_THEME),
                 false,
                 new ContentObserver(mBgHandler) {
