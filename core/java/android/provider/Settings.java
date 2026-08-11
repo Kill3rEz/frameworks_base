@@ -11618,9 +11618,6 @@ public final class Settings {
         @RequiresPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
         public static final String SYNC_PARENT_SOUNDS = "sync_parent_sounds";
 
-        /**
-         * @hide
-         */
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         @TestApi
         @Readable
@@ -14382,9 +14379,6 @@ public final class Settings {
         @Readable
         public static final String RADIO_WIFI = "wifi";
 
-        /**
-         * @hide
-         */
         @Readable
         public static final String RADIO_WIMAX = "wimax";
         /**
@@ -17033,9 +17027,6 @@ public final class Settings {
         @Readable
         public static final String PRIVATE_DNS_MODE = "private_dns_mode";
 
-        /**
-         * @hide
-         */
         @Readable
         public static final String PRIVATE_DNS_SPECIFIER = "private_dns_specifier";
 

@@ -656,10 +656,6 @@ fun ContentScope.NestedScrollingNotificationPanel(
                                     .let { scrimRounding.value.toRoundedCornerShape(it) }
                             clip = true
                         }
-                        // The DstOut blend mode is used to punch a transparent hole through
-                        // the scrim's background, cutting out the QQS tiles. When used in
-                        // conjunction with CompositingStrategy.Offscreen on the parent,
-                        // it will only affects content on the current Scene.
                         .thenIf(shouldPunchHoleBehindScrim) {
                             Modifier.drawBehind {
                                 drawRect(Color.Black, blendMode = BlendMode.DstOut)

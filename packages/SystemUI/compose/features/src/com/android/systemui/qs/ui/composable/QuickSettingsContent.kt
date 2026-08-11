@@ -117,8 +117,6 @@ fun ContentScope.QuickSettingsContent(
                         )
                     }
                 } else {
-                    // Add an empty box when QS content is not visible to keep the same number of
-                    // elements.
                     Box(modifier = Modifier)
                 }
             },

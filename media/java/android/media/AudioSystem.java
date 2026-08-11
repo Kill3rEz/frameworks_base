@@ -1997,9 +1997,6 @@ public class AudioSystem
         return setDeviceConnectionState(attributes, state, codecFormat, false /*deviceSwitch*/);
     }
 
-    /**
-     * @hide
-     */
     public static int setDeviceConnectionState(AudioDeviceAttributes attributes, int state,
             int codecFormat, boolean deviceSwitch) {
         android.media.audio.common.AudioPort port =
@@ -2013,9 +2010,6 @@ public class AudioSystem
             parcel.recycle();
         }
     }
-    /**
-     * @hide
-     */
     @UnsupportedAppUsage
     public static native int setDeviceConnectionState(int state, Parcel parcel, int codecFormat,
                                                       boolean deviceSwitch);

@@ -6436,9 +6436,6 @@ public class Activity extends ContextThemeWrapper
         }
     }
 
-    /**
-     * @hide
-     */
     public void startIntentSenderForResultInner(IntentSender intent, String who, int requestCode,
             Intent fillInIntent, int flagsMask, int flagsValues,
             @Nullable Bundle options)
@@ -6900,9 +6897,6 @@ public class Activity extends ContextThemeWrapper
         startActivityForResultAsUser(intent, fragment.mWho, requestCode, options, user);
     }
 
-    /**
-     * @hide
-     */
     @Override
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
     public void startActivityForResult(
@@ -6924,9 +6918,6 @@ public class Activity extends ContextThemeWrapper
         cancelInputsAndStartExitTransition(options);
     }
 
-    /**
-     * @hide
-     */
     @Override
     public boolean canStartActivityForResult() {
         return true;
@@ -8806,9 +8797,6 @@ public class Activity extends ContextThemeWrapper
     public void onEnterAnimationComplete() {
     }
 
-    /**
-     * @hide
-     */
     public void dispatchEnterAnimationComplete() {
         onEnterAnimationComplete();
         if (getWindow() != null && getWindow().getDecorView() != null) {
@@ -9697,9 +9685,6 @@ public class Activity extends ContextThemeWrapper
         onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
     }
 
-    /**
-     * @hide
-     */
     @UnsupportedAppUsage
     @FlaggedApi(android.nfc.Flags.FLAG_ENABLE_NFC_MAINLINE)
     @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
@@ -9911,16 +9896,10 @@ public class Activity extends ContextThemeWrapper
         fragment.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
-    /**
-     * @hide
-     */
     public final boolean isVisibleForAutofill() {
         return !mStopped;
     }
 
-    /**
-     * @hide
-     */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.S,
             publicAlternatives = "Use {@link #setRecentsScreenshotEnabled(boolean)} instead.")
     public void setDisablePreviewScreenshots(boolean disable) {

@@ -87,14 +87,11 @@ public class TextViewReceiveContentTest {
 
     @Test
     public void testGetFallbackMimeTypesForAutofill() throws Throwable {
-        // Configure the EditText with an EditorInfo/InputConnection that supports some image MIME
-        // types.
         String[] mimeTypes = {"image/gif", "image/png"};
         mEditText.setContentMimeTypes(mimeTypes);
         MyInputConnection ic = new MyInputConnection();
         mEditText.setInputConnectionWrapper(ic);
 
-        // Focus into the EditText.
         onView(withId(mEditText.getId())).perform(clickOnTextAtIndex(0));
 
         // Assert that the default listener returns the MIME types declared in the EditorInfo.
@@ -111,7 +108,6 @@ public class TextViewReceiveContentTest {
         MyInputConnection ic = new MyInputConnection();
         mEditText.setInputConnectionWrapper(ic);
 
-        // Focus into the EditText.
         onView(withId(mEditText.getId())).perform(clickOnTextAtIndex(0));
 
         // Assert that the default listener returns null as the MIME types.
@@ -120,13 +116,10 @@ public class TextViewReceiveContentTest {
 
     @Test
     public void testOnReceive_fallbackToCommitContent() throws Throwable {
-        // Configure the EditText with an EditorInfo/InputConnection that supports some image MIME
-        // types.
         mEditText.setContentMimeTypes(new String[] {"image/gif", "image/png"});
         MyInputConnection ic = new MyInputConnection();
         mEditText.setInputConnectionWrapper(ic);
 
-        // Focus into the EditText.
         onView(withId(mEditText.getId())).perform(clickOnTextAtIndex(0));
 
         // Invoke the listener with SOURCE_AUTOFILL and assert that it triggers a call to
@@ -149,7 +142,6 @@ public class TextViewReceiveContentTest {
         MyInputConnection ic = new MyInputConnection();
         mEditText.setInputConnectionWrapper(ic);
 
-        // Focus into the EditText.
         onView(withId(mEditText.getId())).perform(clickOnTextAtIndex(0));
 
         // Invoke the listener and assert that the InputConnection is not invoked.
@@ -163,13 +155,10 @@ public class TextViewReceiveContentTest {
 
     @Test
     public void testOnReceive_fallbackToCommitContent_sourceOtherThanAutofill() throws Throwable {
-        // Configure the EditText with an EditorInfo/InputConnection that supports some image MIME
-        // types.
         mEditText.setContentMimeTypes(new String[] {"image/gif", "image/png"});
         MyInputConnection ic = new MyInputConnection();
         mEditText.setInputConnectionWrapper(ic);
 
-        // Focus into the EditText.
         onView(withId(mEditText.getId())).perform(clickOnTextAtIndex(0));
 
         // Invoke the listener with sources other than SOURCE_AUTOFILL and assert that it does NOT
