@@ -1377,8 +1377,6 @@ private interface CanScrollQs {
     fun backward(): Boolean
 }
 
-private val MediaElementKey = ElementKey("QSMediaPlayer")
-
 @Composable
 private fun ContentScope.MediaObject(
     mediaHost: MediaHost,
@@ -1452,25 +1450,23 @@ private fun ContentScope.Header(
         ) {
             if (viewModel.qqsMediaVisible) {
                 val isQqs = location == "QQS"
-                Element(MediaElementKey, modifier = Modifier.fillMaxSize()) {
-                    MediaObject(
-                        mediaHost = if (isQqs) viewModel.qqsMediaHost else viewModel.qsMediaHost,
-                        modifier = Modifier.fillMaxSize(),
-                        mediaViewModelFactory = viewModel.mediaViewModelFactory,
-                        mediaPresentationStyle =
-                            if (isQqs && viewModel.qqsMediaInRow) {
-                                MediaPresentationStyle.Compressed
-                            } else {
-                                MediaPresentationStyle.Default
-                            },
-                        onSwipeToDismiss = viewModel::onMediaSwipeToDismiss,
-                        behavior =
-                            if (isQqs) viewModel.qqsMediaUiBehavior else viewModel.qsMediaUiBehavior,
-                        visible = { true },
-                        location = if (isQqs) Media.Location.SHADE else Media.Location.QS,
-                        expansion = { viewModel.expansionState.progress },
-                    )
-                }
+                MediaObject(
+                    mediaHost = if (isQqs) viewModel.qqsMediaHost else viewModel.qsMediaHost,
+                    modifier = Modifier.fillMaxSize(),
+                    mediaViewModelFactory = viewModel.mediaViewModelFactory,
+                    mediaPresentationStyle =
+                        if (isQqs && viewModel.qqsMediaInRow) {
+                            MediaPresentationStyle.Compressed
+                        } else {
+                            MediaPresentationStyle.Default
+                        },
+                    onSwipeToDismiss = viewModel::onMediaSwipeToDismiss,
+                    behavior =
+                        if (isQqs) viewModel.qqsMediaUiBehavior else viewModel.qsMediaUiBehavior,
+                    visible = { true },
+                    location = if (isQqs) Media.Location.SHADE else Media.Location.QS,
+                    expansion = { viewModel.expansionState.progress },
+                )
             } else {
                 leftContent()
             }
@@ -1798,7 +1794,7 @@ fun VerticalSlider(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(value)
-                .clip(RoundedCornerShape(topStartPercent = 50, topEndPercent = 50))
+                .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
                 .background(
                     color = MaterialTheme.colorScheme.primary
                 )
