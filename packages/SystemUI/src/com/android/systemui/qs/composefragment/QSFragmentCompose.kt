@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,13 +16,18 @@
 
 package com.android.systemui.qs.composefragment
 
+import android.animation.Animator
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Path
 import android.graphics.PointF
 import android.graphics.Rect
+import android.media.AudioManager
 import android.os.Bundle
 import android.os.Trace
 import android.view.LayoutInflater
@@ -32,23 +37,40 @@ import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.VisibleForTesting
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -58,13 +80,19 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.approachLayout
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onLayoutRectChanged
@@ -75,7 +103,9 @@ import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -83,6 +113,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.round
@@ -108,6 +139,10 @@ import com.android.compose.modifiers.height
 import com.android.compose.modifiers.padding
 import com.android.compose.modifiers.thenIf
 import com.android.compose.theme.PlatformTheme
+import com.android.settingslib.display.BrightnessUtils.GAMMA_SPACE_MAX
+import com.android.settingslib.display.BrightnessUtils.GAMMA_SPACE_MIN
+import com.android.settingslib.display.BrightnessUtils.convertGammaToLinearFloat
+import com.android.settingslib.display.BrightnessUtils.convertLinearToGammaFloat
 import com.android.systemui.Dumpable
 import com.android.systemui.Flags
 import com.android.systemui.Flags.notificationShadeBlur
@@ -142,6 +177,7 @@ import com.android.systemui.qs.composefragment.ui.toEditMode
 import com.android.systemui.qs.composefragment.viewmodel.QSFragmentComposeViewModel
 import com.android.systemui.qs.footer.ui.compose.FooterActions
 import com.android.systemui.qs.panels.shared.model.QSFragmentComposeClippingTableLog
+import com.android.systemui.qs.panels.shared.model.splitInRowsSequence
 import com.android.systemui.qs.panels.ui.compose.EditMode
 import com.android.systemui.qs.panels.ui.compose.QuickQuickSettings
 import com.android.systemui.qs.panels.ui.compose.TileGrid
@@ -161,16 +197,30 @@ import com.android.systemui.util.println
 import java.io.PrintWriter
 import java.util.function.Consumer
 import javax.inject.Inject
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import android.database.ContentObserver
+import android.hardware.display.BrightnessInfo
+import android.hardware.display.DisplayManager
+import android.os.Handler
+import android.os.Looper
+import android.os.UserHandle
+import android.provider.Settings
+
+import com.android.systemui.qs.shared.ui.slider.SharedSliderKey
 
 @SuppressLint("ValidFragment")
 class QSFragmentCompose
@@ -457,7 +507,7 @@ constructor(
         /*
          * Looking at the code, it seems that
          * * If customizing, then the height is that of the view post-layout, which is set by
-         *   QSContainerImpl.calculateContainerHeight, which is the height the customizer takes
+         * QSContainerImpl.calculateContainerHeight, which is the height the customizer takes
          * * If not customizing, it's the measured height. So we may want to surface that.
          */
         return view?.height ?: 0
@@ -676,20 +726,26 @@ constructor(
     private fun ContentScope.QuickQuickSettingsElement(modifier: Modifier = Modifier) {
         val qqsPadding = viewModel.qqsHeaderHeight
         val bottomPadding = viewModel.qqsBottomPadding
+        val extraPaddingPx = with(LocalDensity.current) { 12.dp.roundToPx() }
         DisposableEffect(Unit) {
             qqsVisible.value = true
-
             onDispose { qqsVisible.value = false }
         }
+
         val squishiness by
             viewModel.quickQuickSettingsViewModel.squishinessViewModel.squishiness
                 .collectAsStateWithLifecycle()
+        
+        LaunchedEffect(viewModel.qqsMediaHost) {
+            viewModel.qqsMediaHost.disableScrolling = true
+        }
 
         Column(modifier = modifier.sysuiResTag(ResIdTags.quickQsPanel)) {
             Box(
                 modifier =
                     Modifier.fillMaxWidth()
                         .onPlaced { coordinates ->
+                            if (!coordinates.isAttached) return@onPlaced
                             val (leftFromRoot, topFromRoot) = coordinates.positionInRoot().round()
                             qqsPositionOnRoot.set(
                                 leftFromRoot,
@@ -701,9 +757,6 @@ constructor(
                                 viewModel.qqsHeight = coordinates.size.height
                             }
                         }
-                        // Use an approach layout to determien the height without squishiness, as
-                        // that's the value that NPVC and QuickSettingsController care about
-                        // (measured height).
                         .approachLayout(isMeasurementApproachInProgress = { squishiness < 1f }) {
                             measurable,
                             constraints ->
@@ -711,68 +764,47 @@ constructor(
                             val placeable = measurable.measure(constraints)
                             layout(placeable.width, placeable.height) { placeable.place(0, 0) }
                         }
-                        .padding(top = { qqsPadding }, bottom = { bottomPadding })
+                        .padding(top = { qqsPadding + extraPaddingPx }, bottom = { bottomPadding })
             ) {
-                // When always compose is false, this will always be true, and we'll be
-                // listening whenever this is composed. When always compose is true, we
-                // listen if we are visible and not fully expanded
-                val isListening: () -> Boolean =
-                    remember(viewModel) {
-                            derivedStateOf {
-                                viewModel.isQsVisibleAndAnyShadeExpanded &&
-                                    viewModel.expansionState.progress < 1f &&
-                                    !viewModel.isEditing
-                            }
-                        }
-                        .let { state -> { state.value } }
-                val Tiles =
-                    @Composable {
-                        QuickQuickSettings(
-                            viewModel = viewModel.quickQuickSettingsViewModel,
-                            listening = isListening,
-                        )
-                    }
-                val Media =
-                    @Composable {
-                        if (viewModel.qqsMediaVisible) {
-                            MediaObject(
-                                // In order to have stable constraints passed to the AndroidView
-                                // during expansion (available height changing due to squishiness),
-                                // We always allow the media here to be as tall as it wants.
-                                // (b/383085298)
-                                modifier = Modifier.requiredHeightIn(max = Dp.Infinity),
-                                mediaHost = viewModel.qqsMediaHost,
-                                mediaPresentationStyle =
-                                    if (viewModel.qqsMediaInRow) {
-                                        MediaPresentationStyle.Compressed
-                                    } else {
-                                        MediaPresentationStyle.Default
-                                    },
-                                onSwipeToDismiss = viewModel::onMediaSwipeToDismiss,
-                                mediaViewModelFactory = viewModel.mediaViewModelFactory,
-                                behavior = viewModel.qqsMediaUiBehavior,
-                                visible = isListening,
-                                location = Media.Location.SHADE,
-                                expansion = { viewModel.expansionState.progress },
-                            )
-                        }
-                    }
+                val enabled =
+                    layoutState.transitionState is TransitionState.Idle && viewModel.isNotTransitioning
+
+                val Tiles: @Composable (columnsOverride: Int?) -> Unit = { columnsOverride ->
+                    QuickQuickSettings(
+                        viewModel = viewModel.quickQuickSettingsViewModel,
+                        columnsOverride = columnsOverride,
+                        listening = {
+                            viewModel.isQsVisibleAndAnyShadeExpanded &&
+                                viewModel.expansionState.progress < 1f &&
+                                !viewModel.isEditing
+                        },
+                    )
+                }
+
+                val DragHandle: @Composable () -> Unit = { DragHandle(enable = enabled, vm = viewModel) }
 
                 if (viewModel.isQsEnabled) {
                     Box(
                         modifier =
                             Modifier.collapseExpandSemanticAction(
-                                    stringResource(
-                                        id = R.string.accessibility_quick_settings_expand
-                                    )
+                                    stringResource(id = R.string.accessibility_quick_settings_expand)
                                 )
                                 .padding(horizontal = qsHorizontalMargin())
                     ) {
-                        QuickQuickSettingsLayout(
-                            tiles = Tiles,
-                            media = Media,
-                            mediaInRow = viewModel.qqsMediaInRow,
-                        )
+                        Column {
+                            Header(
+                                viewModel = viewModel,
+                                location = "QQS",
+                                enabled = enabled,
+                                leftContent = { Tiles(2) }
+                            )
+                            if (viewModel.qqsMediaVisible) {
+                                spacerLayout(height = 16.dp)
+                                Tiles(null)
+                            }
+                            spacerLayout(height = dimensionResource(R.dimen.qs_tile_margin_horizontal))
+                            DragHandle()
+                        }
                     }
                 }
             }
@@ -784,6 +816,11 @@ constructor(
     private fun ContentScope.QuickSettingsElement(modifier: Modifier = Modifier) {
         val qqsPadding = viewModel.qqsHeaderHeight
         val qsExtraPadding = dimensionResource(R.dimen.qs_panel_padding_top)
+        
+        LaunchedEffect(viewModel.qsMediaHost) {
+            viewModel.qsMediaHost.disableScrolling = true
+        }
+
         Column(
             modifier =
                 modifier.collapseExpandSemanticAction(
@@ -806,6 +843,7 @@ constructor(
                         modifier =
                             Modifier.fillMaxSize()
                                 .onPlaced { coordinates ->
+                                    if (!coordinates.isAttached) return@onPlaced
                                     val positionOnScreen = coordinates.positionOnScreen()
                                     val left = positionOnScreen.x
                                     val right = left + coordinates.size.width
@@ -830,83 +868,58 @@ constructor(
                                 .sysuiResTag(ResIdTags.qsScroll)
                     ) {
                         val containerViewModel = viewModel.containerViewModel
-                        Spacer(
-                            modifier = Modifier.height { qqsPadding + qsExtraPadding.roundToPx() }
-                        )
-                        val BrightnessSlider =
-                            @Composable {
-                                Box(
-                                    Modifier.systemGestureExclusionInShade(
-                                        enabled = {
-                                            /*
-                                             * While we are transitioning into QS (either from QQS
-                                             * or from gone), the global position of the brightness
-                                             * slider will change in every frame. This causes
-                                             * the modifier to send a new gesture exclusion
-                                             * rectangle on every frame. Instead, only apply the
-                                             * modifier when this is settled.
-                                             */
-                                            layoutState.transitionState is TransitionState.Idle &&
-                                                viewModel.isNotTransitioning
-                                        }
-                                    )
-                                ) {
-                                    AlwaysDarkMode {
-                                        BrightnessSliderContainer(
-                                            viewModel =
-                                                containerViewModel.brightnessSliderViewModel,
-                                            containerColors =
-                                                ContainerColors(
-                                                    Color.Transparent,
-                                                    ContainerColors.defaultContainerColor,
-                                                ),
-                                            modifier = Modifier.fillMaxWidth(),
-                                        )
-                                    }
-                                }
+                        val topPadding =
+                            with(LocalDensity.current) {
+                                (qqsPadding + qsExtraPadding.roundToPx() + 12.dp.roundToPx()).toDp()
                             }
-                        // When always compose is false, this will always be true, and
-                        // we'll be listening whenever this is composed. When always
-                        // compose is true, we look a the second condition and we'll
-                        // listen if QS is visible AND we are not fully collapsed.
-                        val isListening: () -> Boolean =
-                            remember(viewModel) {
-                                    derivedStateOf {
-                                        viewModel.isQsVisibleAndAnyShadeExpanded &&
-                                            viewModel.expansionState.progress >
-                                                QSFragmentComposeViewModel.QS_LISTENING_THRESHOLD &&
-                                            !viewModel.isEditing &&
-                                            !viewModel.isStackScrollerOverscrolling
-                                    }
-                                }
-                                .let { state -> { state.value } }
-                        val TileGrid =
-                            @Composable {
-                                Box {
-                                    GridAnchor()
+                        Spacer(modifier = Modifier.height(topPadding))
 
-                                    TileGrid(
-                                        viewModel = containerViewModel.tileGridViewModel,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        listening = isListening,
-                                    )
-                                }
+                        val enabled =
+                            layoutState.transitionState is TransitionState.Idle &&
+                                viewModel.isNotTransitioning
+
+                        val QqsTiles: @Composable (columnsOverride: Int?) -> Unit = { columnsOverride ->
+                            QuickQuickSettings(
+                                viewModel = viewModel.quickQuickSettingsViewModel,
+                                columnsOverride = columnsOverride,
+                                showAnchor = false,
+                                listening = {
+                                    viewModel.isQsVisibleAndAnyShadeExpanded &&
+                                        viewModel.expansionState.progress > 0f &&
+                                        !viewModel.isEditing
+                                },
+                            )
+                        }
+
+                        val TileGrid: @Composable () -> Unit = {
+                            Box {
+                                GridAnchor()
+                                val excludeSpecs =
+                                    if (!viewModel.qqsMediaVisible) {
+                                        splitInRowsSequence(
+                                                viewModel.quickQuickSettingsViewModel.allSizedTiles,
+                                                2,
+                                            )
+                                            .take(2)
+                                            .toList()
+                                            .flatten()
+                                            .map { it.tile.spec }
+                                    } else {
+                                        emptyList()
+                                    }
+                                TileGrid(
+                                    viewModel = containerViewModel.tileGridViewModel,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    excludeSpecs = excludeSpecs,
+                                    listening = {
+                                        viewModel.isQsVisibleAndAnyShadeExpanded &&
+                                            viewModel.expansionState.progress > 0f &&
+                                            !viewModel.isEditing
+                                    },
+                                )
                             }
-                        val Media =
-                            @Composable {
-                                if (viewModel.qsMediaVisible) {
-                                    MediaObject(
-                                        mediaHost = viewModel.qsMediaHost,
-                                        mediaViewModelFactory = viewModel.mediaViewModelFactory,
-                                        mediaPresentationStyle = MediaPresentationStyle.Default,
-                                        onSwipeToDismiss = viewModel::onMediaSwipeToDismiss,
-                                        behavior = viewModel.qsMediaUiBehavior,
-                                        visible = isListening,
-                                        location = Media.Location.QS,
-                                        expansion = { viewModel.expansionState.progress },
-                                    )
-                                }
-                            }
+                        }
+                        
                         Box(
                             modifier =
                                 Modifier.fillMaxWidth()
@@ -917,17 +930,16 @@ constructor(
                                         end = qsHorizontalMargin(),
                                     )
                         ) {
-                            QuickSettingsLayout(
-                                brightness =
-                                    if (viewModel.isBrightnessSliderVisible) {
-                                        { BrightnessSlider() }
-                                    } else {
-                                        {}
-                                    },
-                                tiles = TileGrid,
-                                media = Media,
-                                mediaInRow = viewModel.qsMediaInRow,
-                            )
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Header(
+                                    viewModel = viewModel,
+                                    location = "QS",
+                                    enabled = enabled,
+                                    leftContent = { QqsTiles(2) },
+                                )
+                                spacerLayout(height = 16.dp)
+                                TileGrid()
+                            }
                         }
                     }
                 }
@@ -1287,8 +1299,8 @@ private class FrameLayoutTouchPassthrough(
     }
 
     val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
-    var downY = 0f
     var downX = 0f
+    var downY = 0f
     var preventingIntercept = false
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -1365,6 +1377,8 @@ private interface CanScrollQs {
     fun backward(): Boolean
 }
 
+private val MediaElementKey = ElementKey("QSMediaPlayer")
+
 @Composable
 private fun ContentScope.MediaObject(
     mediaHost: MediaHost,
@@ -1413,6 +1427,426 @@ private fun ContentScope.MediaObject(
                 },
                 onReset = {},
             )
+        }
+    }
+}
+
+@Composable
+private fun ContentScope.Header(
+    viewModel: QSFragmentComposeViewModel,
+    location: String,
+    enabled: Boolean,
+    leftContent: @Composable () -> Unit = {}
+) {
+    val tileHeight = dimensionResource(id = R.dimen.custom_qs_tile_height)
+    val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+    val headerHeight = tileHeight * 2 + tileSpacing
+    val horizontalSpacing = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
+
+    Row(modifier = Modifier.fillMaxWidth().wrapContentHeight(), verticalAlignment = Alignment.Top) {
+        Box(
+            modifier =
+                Modifier.weight(1f)
+                    .height(headerHeight)
+                    .padding(end = horizontalSpacing / 2)
+        ) {
+            if (viewModel.qqsMediaVisible) {
+                val isQqs = location == "QQS"
+                Element(MediaElementKey, modifier = Modifier.fillMaxSize()) {
+                    MediaObject(
+                        mediaHost = if (isQqs) viewModel.qqsMediaHost else viewModel.qsMediaHost,
+                        modifier = Modifier.fillMaxSize(),
+                        mediaViewModelFactory = viewModel.mediaViewModelFactory,
+                        mediaPresentationStyle =
+                            if (isQqs && viewModel.qqsMediaInRow) {
+                                MediaPresentationStyle.Compressed
+                            } else {
+                                MediaPresentationStyle.Default
+                            },
+                        onSwipeToDismiss = viewModel::onMediaSwipeToDismiss,
+                        behavior =
+                            if (isQqs) viewModel.qqsMediaUiBehavior else viewModel.qsMediaUiBehavior,
+                        visible = { true },
+                        location = if (isQqs) Media.Location.SHADE else Media.Location.QS,
+                        expansion = { viewModel.expansionState.progress },
+                    )
+                }
+            } else {
+                leftContent()
+            }
+        }
+        Box(
+            modifier = Modifier.weight(1f).height(headerHeight).padding(start = horizontalSpacing / 2),
+            contentAlignment = Alignment.Center
+        ) {
+            AnimatedSliders(vm = viewModel, enable = enabled, sliderHeight = headerHeight)
+        }
+    }
+}
+
+@Composable
+@VisibleForTesting
+fun spacerLayout(height: Dp) {
+    Spacer(modifier = Modifier.height(height))
+}
+
+@Composable
+@VisibleForTesting
+fun DragHandle(
+    vm: QSFragmentComposeViewModel,
+    enable: Boolean
+) {
+    val translationY = with(LocalDensity.current) { 100.dp.toPx() }
+
+    val qqsMin = 0.01f
+    val qqsMax = 0.4f
+
+    val expansionProgress = vm.expansionState.progress
+
+    val progress = run {
+        val range = expansionProgress.coerceIn(qqsMin, qqsMax)
+        ((qqsMax - range) / (qqsMax - qqsMin)).coerceIn(0f, 1f)
+    }
+
+    val expansionAlpha by animateFloatAsState(targetValue = progress, label = "dragHandleAlpha")
+
+    val offsetY by
+        animateFloatAsState(
+            targetValue = translationY * (1f - progress),
+            label = "dragHandleOffsetY",
+        )
+
+    Box(
+        modifier =
+            Modifier.offset { IntOffset(0, offsetY.roundToInt()) }
+                .alpha(expansionAlpha)
+                .systemGestureExclusionInShade(enabled = { enable })
+                .fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier =
+                Modifier.size(width = 56.dp, height = 4.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(2.dp),
+                    )
+        )
+    }
+}
+
+@Composable
+@VisibleForTesting
+fun ContentScope.AnimatedSliders(vm: QSFragmentComposeViewModel, enable: Boolean, sliderHeight: Dp) {
+    Box(modifier = Modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement =
+                Arrangement.spacedBy(
+                    dimensionResource(id = R.dimen.qs_tile_margin_horizontal),
+                    Alignment.CenterHorizontally,
+                ),
+        ) {
+            Element(SharedSliderKey.Brightness, modifier = Modifier) {
+                BrightnessLayout(enable = enable, vm = vm, sliderHeight = sliderHeight)
+            }
+            Element(SharedSliderKey.Volume, modifier = Modifier) {
+                VolumeLayout(enable = enable, vm = vm, sliderHeight = sliderHeight)
+            }
+        }
+    }
+}
+
+@Composable
+@VisibleForTesting
+fun VolumeLayout(
+    enable: Boolean,
+    vm: QSFragmentComposeViewModel,
+    sliderHeight: Dp,
+) {
+    val context = LocalContext.current
+    val audioManager = remember(context) {
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
+
+    var sliderValue by remember { mutableFloatStateOf(0f) }
+    var isMuted by remember { mutableStateOf(false) }
+    var currentVolume by remember { mutableStateOf(0) }
+
+    val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }
+
+    val updateVolumeState = {
+        currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        sliderValue = currentVolume.toFloat() / maxVolume.toFloat()
+        isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC) || currentVolume == 0
+    }
+
+    DisposableEffect(context) {
+        val volumeObserver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == AudioManager.VOLUME_CHANGED_ACTION) {
+                    updateVolumeState()
+                }
+            }
+        }
+        val filter = IntentFilter(AudioManager.VOLUME_CHANGED_ACTION)
+        context.registerReceiver(volumeObserver, filter, Context.RECEIVER_NOT_EXPORTED)
+
+        updateVolumeState()
+
+        onDispose {
+            context.unregisterReceiver(volumeObserver)
+        }
+    }
+
+    val onValueChanged = { newProgress: Float ->
+        sliderValue = newProgress
+        val newVolume = (newProgress * maxVolume).roundToInt()
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVolume, 0)
+        Unit
+    }
+
+    val onValueChangeFinished = { finalProgress: Float ->
+        val newVolume = (finalProgress * maxVolume).roundToInt()
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVolume, 0)
+        Unit
+    }
+
+    val toggleMute = {
+        audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_TOGGLE_MUTE, 0)
+        updateVolumeState()
+        Unit
+    }
+
+    val commonModifier =
+        Modifier.systemGestureExclusionInShade(enabled = { enable })
+
+    Box(modifier = commonModifier) {
+        AlwaysDarkMode {
+            val scope = rememberCoroutineScope()
+            val icon = painterResource(id = if (isMuted || currentVolume == 0) R.drawable.ic_volume_off else R.drawable.ic_volume_media)
+            VerticalSlider(
+                scope = scope,
+                value = sliderValue,
+                onValueChanged = onValueChanged,
+                onValueChangeFinished = onValueChangeFinished,
+                onLongPress = toggleMute,
+                icon = icon,
+                modifier = Modifier,
+                housingHeight = sliderHeight
+            )
+        }
+    }
+}
+
+@Composable
+@VisibleForTesting
+fun BrightnessLayout(
+    enable: Boolean,
+    vm: QSFragmentComposeViewModel,
+    sliderHeight: Dp,
+) {
+    val context = LocalContext.current
+    val contentResolver = context.contentResolver
+    val displayManager =
+        remember(context) {
+            context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        }
+
+    var sliderValue by remember { mutableFloatStateOf(0f) }
+    var isAuto by remember { mutableStateOf(false) }
+
+    val updateBrightnessState = {
+        isAuto = Settings.System.getInt(
+            contentResolver,
+            Settings.System.SCREEN_BRIGHTNESS_MODE,
+            Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+        ) == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
+
+        val info: BrightnessInfo? = context.display?.getBrightnessInfo()
+        val newBrightness = info?.let {
+            val value = convertLinearToGammaFloat(it.brightness, it.brightnessMinimum, it.brightnessMaximum)
+            val range = GAMMA_SPACE_MAX - GAMMA_SPACE_MIN
+            if (range > 0) {
+                ((value - GAMMA_SPACE_MIN).toFloat() / range).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+        } ?: 0f
+        sliderValue = newBrightness
+    }
+
+    DisposableEffect(context) {
+        val handler = Handler(Looper.getMainLooper())
+        val brightnessObserver = object : ContentObserver(handler) {
+            override fun onChange(selfChange: Boolean) {
+                updateBrightnessState()
+            }
+        }
+        val displayListener = object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(displayId: Int) {}
+            override fun onDisplayRemoved(displayId: Int) {}
+            override fun onDisplayChanged(displayId: Int) {
+                updateBrightnessState()
+            }
+        }
+
+        val brightnessModeUri = Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS_MODE)
+        val brightnessAdjUri = Settings.System.getUriFor(Settings.System.SCREEN_AUTO_BRIGHTNESS_ADJ)
+
+        contentResolver.registerContentObserver(brightnessModeUri, false, brightnessObserver)
+        contentResolver.registerContentObserver(brightnessAdjUri, false, brightnessObserver)
+        displayManager.registerDisplayListener(displayListener, handler)
+
+        updateBrightnessState()
+
+        onDispose {
+            contentResolver.unregisterContentObserver(brightnessObserver)
+            displayManager.unregisterDisplayListener(displayListener)
+        }
+    }
+
+    val onValueChanged = { newProgress: Float ->
+        sliderValue = newProgress
+        val info: BrightnessInfo? = context.display?.getBrightnessInfo()
+        info?.let {
+            val linear = convertGammaToLinearFloat(
+                (newProgress * GAMMA_SPACE_MAX).roundToInt(),
+                it.brightnessMinimum,
+                it.brightnessMaximum
+            )
+            val brightnessValue = linear.coerceIn(it.brightnessMinimum, it.brightnessMaximum)
+            displayManager.setTemporaryBrightness(context.displayId, brightnessValue)
+        }
+        Unit
+    }
+
+    val onValueChangeFinished = { finalProgress: Float ->
+        val info: BrightnessInfo? = context.display?.getBrightnessInfo()
+        info?.let {
+            val linear = convertGammaToLinearFloat(
+                (finalProgress * GAMMA_SPACE_MAX).roundToInt(),
+                it.brightnessMinimum,
+                it.brightnessMaximum
+            )
+            val brightnessValue = linear.coerceIn(it.brightnessMinimum, it.brightnessMaximum)
+            displayManager.setBrightness(context.displayId, brightnessValue)
+        }
+        Unit
+    }
+
+    val toggleBrightnessMode = {
+        val newMode = if (isAuto) {
+            Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+        } else {
+            Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
+        }
+        Settings.System.putIntForUser(
+            contentResolver,
+            Settings.System.SCREEN_BRIGHTNESS_MODE,
+            newMode,
+            UserHandle.USER_CURRENT
+        )
+        Unit
+    }
+
+    val commonModifier =
+        Modifier.systemGestureExclusionInShade(enabled = { enable })
+
+    Box(modifier = commonModifier) {
+        AlwaysDarkMode {
+            val scope = rememberCoroutineScope()
+            val icon = painterResource(id = if (isAuto) R.drawable.ic_qs_brightness_auto_on_new else R.drawable.ic_qs_brightness_auto_off_new)
+            VerticalSlider(
+                scope = scope,
+                value = sliderValue,
+                onValueChanged = onValueChanged,
+                onValueChangeFinished = onValueChangeFinished,
+                onLongPress = toggleBrightnessMode,
+                icon = icon,
+                modifier = Modifier,
+                housingHeight = sliderHeight
+            )
+        }
+    }
+}
+
+@Composable
+fun VerticalSlider(
+    scope: CoroutineScope,
+    value: Float,
+    onValueChanged: (Float) -> Unit,
+    onValueChangeFinished: (Float) -> Unit,
+    onLongPress: () -> Unit,
+    icon: Painter,
+    modifier: Modifier = Modifier,
+    housingHeight: Dp,
+) {
+    val housingWidth = 75.dp
+
+    Box(
+        modifier = modifier
+            .width(housingWidth)
+            .height(housingHeight)
+            .clip(RoundedCornerShape(percent = 50))
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
+            .sliderGestures(scope, onValueChanged, onValueChangeFinished, onLongPress),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(value)
+                .clip(RoundedCornerShape(topStartPercent = 50, topEndPercent = 50))
+                .background(
+                    color = MaterialTheme.colorScheme.primary
+                )
+        )
+
+        Icon(
+            painter = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier
+                .padding(bottom = 16.dp)
+                .size(24.dp)
+        )
+    }
+}
+
+fun Modifier.sliderGestures(
+    scope: CoroutineScope,
+    onValueChanged: (Float) -> Unit,
+    onValueChangeFinished: (Float) -> Unit,
+    onLongPress: () -> Unit
+): Modifier = pointerInput(Unit) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        val longPressTimeout = viewConfiguration.longPressTimeoutMillis
+        var isLongPress = false
+        val longPressJob =
+            scope.launch {
+                delay(longPressTimeout)
+                onLongPress()
+                isLongPress = true
+            }
+        var lastProgress = 0f
+        drag(down.id) { change ->
+            if (change.pressed) {
+                longPressJob.cancel()
+                if (!isLongPress) {
+                    change.consume()
+                    val height = size.height
+                    val newProgress = (1f - (change.position.y / height)).coerceIn(0f, 1f)
+                    lastProgress = newProgress
+                    onValueChanged(newProgress)
+                }
+            }
+        }
+        longPressJob.cancel()
+        if (!isLongPress) {
+            onValueChangeFinished(lastProgress)
         }
     }
 }

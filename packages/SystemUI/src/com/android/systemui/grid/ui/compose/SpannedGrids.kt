@@ -340,3 +340,25 @@ private fun calculateCellsCrossAxisSize(
         outArray[index] = slotSize + if (index < remainingPixels) 1 else 0
     }
 }
+
+@Composable
+fun CustomVerticalSpannedGrid(
+    columns: Int,
+    rowSpacing: Dp,
+    spans: List<Int>,
+    modifier: Modifier = Modifier,
+    keys: (spanIndex: Int) -> Any = { it },
+    composables:
+        @Composable
+        BoxScope.(spanIndex: Int, column: Int, isFirstInRow: Boolean, isLastInRow: Boolean) -> Unit,
+) {
+    VerticalSpannedGrid(
+        columns = columns,
+        columnSpacing = androidx.compose.ui.res.dimensionResource(com.android.systemui.res.R.dimen.qs_tile_margin_horizontal),
+        rowSpacing = rowSpacing,
+        spans = spans,
+        modifier = modifier,
+        keys = keys,
+        composables = composables,
+    )
+}

@@ -73,10 +73,14 @@ constructor(
 
     private val currentTiles by tilesInteractor.currentTiles.hydratedStateOf()
 
+    val allSizedTiles by derivedStateOf {
+        currentTiles.map {
+            SizedTileImpl(TileViewModel(it.tile, it.spec, it.expandable), it.spec.width())
+        }
+    }
+
     val tileViewModels by derivedStateOf {
-        currentTiles
-            .map { SizedTileImpl(TileViewModel(it.tile, it.spec, it.expandable), it.spec.width()) }
-            .let { splitInRowsSequence(it, columns).take(rows).toList().flatten() }
+        allSizedTiles.let { splitInRowsSequence(it, columns).take(rows).toList().flatten() }
     }
 
     override suspend fun onActivated() {

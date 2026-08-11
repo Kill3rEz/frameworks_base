@@ -177,6 +177,7 @@ import com.android.systemui.qs.panels.ui.compose.dragAndDropTileSource
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.InactiveTileCornerRadius
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.TileArrangementPadding
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.TileHeight
+import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.tileHeight
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.ToggleTargetSize
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.EditModeTileDefaults.AUTO_SCROLL_DISTANCE
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.EditModeTileDefaults.AUTO_SCROLL_SPEED
@@ -607,7 +608,7 @@ private fun CurrentTilesGrid(
     val totalRows = listState.tiles.lastOrNull()?.row ?: 0
     val totalHeight by
         animateDpAsState(
-            gridHeight(totalRows + 1, TileHeight, TileArrangementPadding, CurrentTilesGridPadding),
+            gridHeight(totalRows + 1, tileHeight(), TileArrangementPadding, CurrentTilesGridPadding),
             label = "QSEditCurrentTilesGridHeight",
         )
     val gridState = rememberLazyGridState()
@@ -1161,7 +1162,7 @@ private fun AvailableTileGridCell(
                 }
                 .sysuiResTag(AVAILABLE_TILE_TEST_TAG),
     ) {
-        Box(Modifier.fillMaxWidth().height(TileHeight)) {
+        Box(Modifier.fillMaxWidth().height(tileHeight())) {
             val draggableModifier =
                 if (cell.isCurrent || !canLayoutTile) {
                     Modifier
@@ -1268,7 +1269,7 @@ private fun BoxScope.AppIconText(
 @Composable
 private fun SpacerGridCell(modifier: Modifier = Modifier) {
     // By default, spacers are invisible and exist purely to catch drag movements
-    Box(modifier.height(TileHeight).fillMaxWidth())
+    Box(modifier.height(tileHeight()).fillMaxWidth())
 }
 
 @Composable
