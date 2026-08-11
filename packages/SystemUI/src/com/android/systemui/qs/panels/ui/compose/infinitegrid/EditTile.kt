@@ -68,6 +68,7 @@ import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -406,9 +407,65 @@ private fun EditModeScrollableColumn(
                     }
                 },
     ) {
+        QsHeaderPreview(modifier = Modifier.fillMaxWidth())
+
         content()
 
         Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.systemBars))
+    }
+}
+
+@Composable
+private fun QsHeaderPreview(modifier: Modifier = Modifier) {
+    val tileHeight = dimensionResource(id = R.dimen.custom_qs_tile_height)
+    val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+    val headerHeight = tileHeight * 2 + tileSpacing
+    val horizontalSpacing = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
+    val glass = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(modifier = modifier.height(headerHeight), verticalAlignment = Alignment.Top) {
+        Box(
+            modifier =
+                Modifier.weight(1f)
+                    .fillMaxHeight()
+                    .padding(end = horizontalSpacing / 2)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(glass),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "Media",
+                color = labelColor,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+        Row(
+            modifier = Modifier.weight(1f).fillMaxHeight().padding(start = horizontalSpacing / 2),
+            horizontalArrangement = spacedBy(horizontalSpacing, Alignment.CenterHorizontally),
+        ) {
+            HeaderSliderPreview(iconRes = R.drawable.ic_qs_brightness_auto_off_new, tint = labelColor)
+            HeaderSliderPreview(iconRes = R.drawable.ic_volume_media, tint = labelColor)
+        }
+    }
+}
+
+@Composable
+private fun HeaderSliderPreview(iconRes: Int, tint: Color) {
+    Box(
+        modifier =
+            Modifier.width(75.dp)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(percent = 50))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.padding(bottom = 16.dp).size(24.dp),
+        )
     }
 }
 
