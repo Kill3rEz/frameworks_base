@@ -1372,6 +1372,9 @@ public class KeyguardViewMediator implements CoreStartable,
                         //mOccludeByDreamAnimator.setInterpolator(Interpolators.LINEAR);
                         mOccludeByDreamAnimator.addUpdateListener(
                                 animation -> {
+                                    if (primary.leash == null || !primary.leash.isValid()) {
+                                        return;
+                                    }
                                     SyncRtSurfaceTransactionApplier.SurfaceParams.Builder
                                             paramsBuilder =
                                             new SyncRtSurfaceTransactionApplier.SurfaceParams
@@ -1489,6 +1492,9 @@ public class KeyguardViewMediator implements CoreStartable,
                         mUnoccludeAnimator.setInterpolator(Interpolators.TOUCH_RESPONSE);
                         mUnoccludeAnimator.addUpdateListener(
                                 animation -> {
+                                    if (mRemoteAnimationTarget == null || mRemoteAnimationTarget.leash == null || !mRemoteAnimationTarget.leash.isValid()) {
+                                        return;
+                                    }
                                     final float animatedValue =
                                             (float) animation.getAnimatedValue();
 
@@ -3701,6 +3707,9 @@ public class KeyguardViewMediator implements CoreStartable,
                     anim.setDuration(400 /* duration */);
                     anim.setInterpolator(Interpolators.LINEAR);
                     anim.addUpdateListener((ValueAnimator animation) -> {
+                        if (primary.leash == null || !primary.leash.isValid()) {
+                            return;
+                        }
                         SyncRtSurfaceTransactionApplier.SurfaceParams surfaceParams =
                                 new SyncRtSurfaceTransactionApplier.SurfaceParams.Builder(
                                         primary.leash)
