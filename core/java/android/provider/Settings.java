@@ -14404,7 +14404,9 @@ public final class Settings {
 
         public static final String SPOOF_TRICKYSTORE_KEYBOX = "spoof_trickystore_keybox";
 
-        public static final String SPOOF_TRICKYSTORE_PATCH = "spoof_trickystore_patch";        
+        public static final String SPOOF_TRICKYSTORE_PATCH = "spoof_trickystore_patch";
+
+        public static final String SPOOF_PIF_TARGETS = "spoof_pif_targets";
 
     }
 
