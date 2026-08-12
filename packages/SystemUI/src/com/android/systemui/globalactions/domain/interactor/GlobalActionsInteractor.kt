@@ -23,6 +23,7 @@ import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.deviceentry.domain.interactor.DeviceUnlockedInteractor
 import com.android.systemui.globalactions.data.repository.GlobalActionsRepository
 import com.android.systemui.globalactions.shared.model.GlobalActionType
+import com.android.systemui.globalactions.shared.model.RestartActionType
 import com.android.systemui.plugins.GlobalActions.GlobalActionsManager
 import com.android.systemui.statusbar.policy.domain.interactor.DeviceProvisioningInteractor
 import com.android.systemui.user.data.repository.UserRepository
@@ -55,6 +56,13 @@ constructor(
      */
     val possibleGlobalActions: List<GlobalActionType>
         get() = repository.possibleGlobalActions
+
+    /**
+     * The ordered list of restart submenu actions configured via config_restartActionsList.
+     * Unknown keys are already filtered out at the repository layer.
+     */
+    val possibleRestartActions: List<RestartActionType>
+        get() = repository.possibleRestartActions
 
     /**
      * The list of global actions that are currently available to be displayed to the user.

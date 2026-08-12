@@ -23,6 +23,7 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.globalactions.data.repository.GlobalActionsRepository
 import com.android.systemui.globalactions.shared.model.GlobalActionType
+import com.android.systemui.globalactions.shared.model.RestartActionType
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,6 +52,18 @@ constructor(@param:Application private val context: Context) : GlobalActionsRepo
             actionType
         }
 
+    /** The ordered list of restart submenu actions. */
+    override val possibleRestartActions: List<RestartActionType> =
+        context.resources
+            .getStringArray(com.android.internal.R.array.config_restartActionsList)
+            .mapNotNull { key ->
+                val actionType = RestartActionType.fromConfigKey(key)
+                if (actionType == null) {
+                    Log.e(TAG, "Invalid restart action key in config_restartActionsList: $key")
+                }
+                actionType
+            }
+
     /** Actions not available when device is unprovisioned */
     override val unprovisionedDeviceStateBlockList: List<GlobalActionType> =
         listOf(
@@ -72,3 +85,4 @@ constructor(@param:Application private val context: Context) : GlobalActionsRepo
         private const val TAG = "GlobalActionsRepositoryImpl"
     }
 }
+
