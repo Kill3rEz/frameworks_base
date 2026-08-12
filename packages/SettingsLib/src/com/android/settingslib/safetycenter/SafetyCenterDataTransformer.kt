@@ -41,14 +41,26 @@ object SafetyCenterDataTransformer {
         val entriesByUserIdAndSourceId =
             processEntries(
                 data.entriesOrGroups.flatMap { it.entryGroup?.entries ?: listOfNotNull(it.entry) },
-                getUser = { entry -> entry.user },
+                getUser = { entry ->
+                    try {
+                        entry.user
+                    } catch (e: NoSuchMethodError) {
+                        android.os.Process.myUserHandle()
+                    }
+                },
                 getSourceId = { entry -> entry.safetySourceId },
             )
 
         val staticEntriesByUserIdAndSourceId =
             processEntries(
                 data.staticEntryGroups.flatMap { it.staticEntries },
-                getUser = { entry -> entry.user },
+                getUser = { entry ->
+                    try {
+                        entry.user
+                    } catch (e: NoSuchMethodError) {
+                        android.os.Process.myUserHandle()
+                    }
+                },
                 getSourceId = { entry -> entry.safetySourceId },
             )
 
