@@ -14398,6 +14398,14 @@ public final class Settings {
 
         public static final String SPOOF_PIF_PHOTOS = "spoof_pif_photos";
 
+        public static final String SPOOF_PIF_PROPS = "pif_spoof_props";
+
+        public static final String SPOOF_PIF_PROVIDER = "pif_spoof_provider";
+
+        public static final String SPOOF_PIF_SIGNATURE = "pif_spoof_signature";
+
+        public static final String SPOOF_PIF_VENDING_BUILD = "pif_spoof_vending_build";
+
         public static final String SPOOF_GAMEPROPS_CONFIG = "spoof_gameprops_config";
 
         public static final String SPOOF_TRICKYSTORE_TARGET = "spoof_trickystore_target";
