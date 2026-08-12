@@ -17,4 +17,7 @@
 
     <!-- Location indicator -->
     <java-symbol type="drawable" name="stat_sys_location" />
+
+    <!-- Defines the actions shown in advanced reboot submenu -->
+   <java-symbol type="array" name="config_restartActionsList" />
 </resources>
