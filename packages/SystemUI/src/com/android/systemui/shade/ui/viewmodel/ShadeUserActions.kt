@@ -75,7 +75,20 @@ fun dualShadeActions(
             allPointerTypesButMouse {
                 // Don't add the "single pointer swipe down" actions for PointerType.Mouse because
                 // it is easy to accidentally trigger them when trying to dragging windows.
-                add(Swipe.Down(pointerType = it) to Overlays.NotificationsShade)
+                // Left half of the screen opens notifications.
+                add(
+                    Swipe.Down(fromSource = SceneContainerArea.StartHalf, pointerType = it) to
+                        Overlays.NotificationsShade
+                )
+                add(
+                    Swipe.Down(fromSource = SceneContainerArea.TopEdgeStartHalf, pointerType = it) to
+                        Overlays.NotificationsShade
+                )
+                // Right half of the screen opens quick settings.
+                add(
+                    Swipe.Down(fromSource = SceneContainerArea.EndHalf, pointerType = it) to
+                        Overlays.QuickSettingsShade
+                )
                 add(
                     Swipe.Down(fromSource = SceneContainerArea.TopEdgeEndHalf, pointerType = it) to
                         Overlays.QuickSettingsShade

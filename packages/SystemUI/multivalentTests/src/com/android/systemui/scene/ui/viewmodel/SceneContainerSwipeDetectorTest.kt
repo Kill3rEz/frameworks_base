@@ -47,7 +47,7 @@ class SceneContainerSwipeDetectorTest : SysuiTestCase() {
     private val edgeSize = 40
     private val screenWidth = 800
     private val screenHeight = 600
-    private val invocationGestureSplitRatio = 0.75f
+    private val invocationGestureSplitRatio = 0.5f
 
     private val underTest =
         SceneContainerSwipeDetector(
