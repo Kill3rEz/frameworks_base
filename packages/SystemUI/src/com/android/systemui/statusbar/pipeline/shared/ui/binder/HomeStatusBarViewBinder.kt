@@ -19,10 +19,12 @@ package com.android.systemui.statusbar.pipeline.shared.ui.binder
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.view.View
+import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.android.app.animation.Interpolators
+import com.android.internal.statusbar.NetworkTraffic
 import com.android.systemui.clock.ClockModernization
 import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent.PerDisplaySingleton
 import com.android.systemui.lifecycle.repeatWhenAttached
@@ -35,7 +37,10 @@ import com.android.systemui.statusbar.events.shared.model.SystemEventAnimationSt
 import com.android.systemui.statusbar.events.shared.model.SystemEventAnimationState.RunningChipAnim
 import com.android.systemui.statusbar.pipeline.shared.ui.model.VisibilityModel
 import com.android.systemui.statusbar.pipeline.shared.ui.viewmodel.HomeStatusBarViewModel
+import com.android.systemui.statusbar.pipeline.shared.ui.viewmodel.StatusBarTintColor
+import com.android.systemui.util.view.viewBoundsOnScreen
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 /**
@@ -74,6 +79,7 @@ class HomeStatusBarViewBinderImpl @Inject constructor() : HomeStatusBarViewBinde
         val systemInfoView = view.requireViewById<View>(R.id.status_bar_end_side_content)
         val clockView = view.requireViewById<View>(R.id.clock)
         val notificationIconsArea = view.requireViewById<View>(R.id.notificationIcons)
+        val networkTrafficView = view.requireViewById<NetworkTraffic>(R.id.network_traffic)
 
         // GONE because this shouldn't take space in the layout
         systemInfoView.hideInitially()
@@ -175,6 +181,18 @@ class HomeStatusBarViewBinderImpl @Inject constructor() : HomeStatusBarViewBinde
                         } else {
                             systemInfoView.adjustVisibility(baseVis)
                         }
+                        // Notify network traffic of the container visibility change
+                        networkTrafficView.onVisibilityChanged(
+                            systemInfoView.visibility == View.VISIBLE
+                        )
+                    }
+                }
+
+                launch {
+                    viewModel.areaTint.collect { statusBarTintColors ->
+                        networkTrafficView.setNetworkTrafficTint(
+                            statusBarTintColors.tint(networkTrafficView.viewBoundsOnScreen())
+                        )
                     }
                 }
             }

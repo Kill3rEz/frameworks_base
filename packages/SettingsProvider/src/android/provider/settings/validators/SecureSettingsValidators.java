@@ -559,6 +559,13 @@ public class SecureSettingsValidators {
         VALIDATORS.put(Secure.UI_NIGHT_MODE_DIM_WALL_ACTIVATED, BOOLEAN_VALIDATOR);
         VALIDATORS.put(Secure.UI_NIGHT_LIGHT_DIM_WALL, BOOLEAN_VALIDATOR);
         VALIDATORS.put(Secure.UI_NIGHT_LIGHT_DIM_WALL_AMOUNT, new InclusiveIntegerRangeValidator(1, 100));
-        VALIDATORS.put(Secure.UI_NIGHT_LIGHT_DIM_WALL_ACTIVATED, BOOLEAN_VALIDATOR);        
+        VALIDATORS.put(Secure.UI_NIGHT_LIGHT_DIM_WALL_ACTIVATED, BOOLEAN_VALIDATOR);
+        VALIDATORS.put(Secure.NETWORK_TRAFFIC_MODE, new InclusiveIntegerRangeValidator(0, 3));
+        VALIDATORS.put(Secure.NETWORK_TRAFFIC_AUTOHIDE, BOOLEAN_VALIDATOR);
+        VALIDATORS.put(Secure.NETWORK_TRAFFIC_UNITS, new InclusiveIntegerRangeValidator(0, 4));
+        VALIDATORS.put(Secure.NETWORK_TRAFFIC_SHOW_UNITS, BOOLEAN_VALIDATOR);
+        VALIDATORS.put(Secure.NETWORK_TRAFFIC_NUMBER_SIZE, new InclusiveIntegerRangeValidator(20, 100));
+        VALIDATORS.put(Secure.NETWORK_TRAFFIC_UNIT_SIZE, new InclusiveIntegerRangeValidator(20, 100));
+        VALIDATORS.put(Secure.NETWORK_TRAFFIC_DISPLAY_STYLE, new InclusiveIntegerRangeValidator(0, 1));
     }
 }

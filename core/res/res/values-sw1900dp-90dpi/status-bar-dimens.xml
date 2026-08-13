@@ -58,4 +58,7 @@
     <dimen name="notification_small_icon_size">96dp</dimen>
     <!-- The maximum size of the small notification icon on low memory devices. -->
     <dimen name="notification_small_icon_size_low_ram">@dimen/notification_small_icon_size</dimen>
+
+    <!-- Status bar network traffic text size (2x of base) -->
+    <dimen name="net_traffic_text_size">28sp</dimen>
 </resources>

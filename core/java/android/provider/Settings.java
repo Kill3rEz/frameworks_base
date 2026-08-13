@@ -14757,6 +14757,60 @@ public final class Settings {
 
         public static final String SPOOF_PIF_TARGETS = "spoof_pif_targets";
 
+        /**
+         * Network traffic indicator mode
+         * 0 = Don't show network traffic indicator
+         * 1 = Display up-stream traffic only
+         * 2 = Display down-stream traffic only
+         * 3 = Display both up- and down-stream traffic
+         * @hide
+         */
+        public static final String NETWORK_TRAFFIC_MODE = "network_traffic_mode";
+
+        /**
+         * Whether or not to hide the network traffic indicator when there is no activity
+         * @hide
+         */
+        public static final String NETWORK_TRAFFIC_AUTOHIDE = "network_traffic_autohide";
+
+        /**
+         * Measurement unit preference for network traffic
+         * 0 = kBit/s
+         * 1 = MBit/s
+         * 2 = kByte/s
+         * 3 = MByte/s
+         * 4 = automatic kByte/s or MByte/s
+         * @hide
+         */
+        public static final String NETWORK_TRAFFIC_UNITS = "network_traffic_units";
+
+        /**
+         * Whether to show measurement units (kB/s, etc.) after the traffic value
+         * @hide
+         */
+        public static final String NETWORK_TRAFFIC_SHOW_UNITS = "network_traffic_show_units";
+
+        /**
+         * Size of the number text as a percentage of the base dimension (20-100)
+         * @hide
+         */
+        public static final String NETWORK_TRAFFIC_NUMBER_SIZE = "network_traffic_number_size";
+
+        /**
+         * Size of the unit text as a percentage of the number text size (20-100)
+         * Only applies when NETWORK_TRAFFIC_SHOW_UNITS is enabled.
+         * @hide
+         */
+        public static final String NETWORK_TRAFFIC_UNIT_SIZE = "network_traffic_unit_size";
+
+        /**
+         * Display style for network traffic when mode=3 (both directions)
+         * 0 = combined (show total on one line, default)
+         * 1 = separate (show upload/download on separate lines)
+         * @hide
+         */
+        public static final String NETWORK_TRAFFIC_DISPLAY_STYLE = "network_traffic_display_style";
+
     }
 
     /**

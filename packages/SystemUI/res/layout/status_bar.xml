@@ -150,6 +150,15 @@
                 android:gravity="center_vertical|end"
                 android:clipChildren="false">
 
+                <com.android.internal.statusbar.NetworkTraffic
+                    android:id="@+id/network_traffic"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:paddingEnd="2dp"
+                    android:singleLine="true"
+                />
+
                 <include
                     android:id="@+id/user_switcher_container"
                     android:layout_width="wrap_content"
