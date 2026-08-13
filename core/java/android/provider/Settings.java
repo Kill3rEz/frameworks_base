@@ -6820,6 +6820,27 @@ public final class Settings {
         public static final String SHOW_BATTERY_PERCENT = "status_bar_show_battery_percent";
 
         /**
+         * Extra padding at the start of the status bar, in dp.
+         * @hide
+         */
+        @Readable
+        public static final String STATUSBAR_EXTRA_PADDING_START = "statusbar_extra_padding_start";
+
+        /**
+         * Extra padding at the top of the status bar, in dp.
+         * @hide
+         */
+        @Readable
+        public static final String STATUSBAR_EXTRA_PADDING_TOP = "statusbar_extra_padding_top";
+
+        /**
+         * Extra padding at the end of the status bar, in dp.
+         * @hide
+         */
+        @Readable
+        public static final String STATUSBAR_EXTRA_PADDING_END = "statusbar_extra_padding_end";
+
+        /**
          * Whether or not to enable multiple audio focus.
          * When enabled, requires more management by user over application playback activity,
          * for instance pausing media apps when another starts.
@@ -7290,6 +7311,9 @@ public final class Settings {
             PRIVATE_SETTINGS.add(LOCK_TO_APP_ENABLED);
             PRIVATE_SETTINGS.add(EGG_MODE);
             PRIVATE_SETTINGS.add(SHOW_BATTERY_PERCENT);
+            PRIVATE_SETTINGS.add(STATUSBAR_EXTRA_PADDING_START);
+            PRIVATE_SETTINGS.add(STATUSBAR_EXTRA_PADDING_TOP);
+            PRIVATE_SETTINGS.add(STATUSBAR_EXTRA_PADDING_END);
             PRIVATE_SETTINGS.add(DISPLAY_COLOR_MODE);
             PRIVATE_SETTINGS.add(DISPLAY_COLOR_MODE_VENDOR_HINT);
             PRIVATE_SETTINGS.add(LOCALE_PREFERENCES);

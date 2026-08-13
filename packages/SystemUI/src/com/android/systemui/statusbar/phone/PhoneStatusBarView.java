@@ -74,6 +74,10 @@ public class PhoneStatusBarView extends FrameLayout {
     private StatusBarLongPressGestureDetector mStatusBarLongPressGestureDetector;
     private final Region mTouchableRegion = Region.obtain();
 
+    private int mStatusBarExtraPaddingStart = 0;
+    private int mStatusBarExtraPaddingTop = 0;
+    private int mStatusBarExtraPaddingEnd = 0;
+
     /**
      * Draw this many pixels into the left/right side of the cutout to optimally use the space
      */
@@ -109,6 +113,17 @@ public class PhoneStatusBarView extends FrameLayout {
     void init(StatusBarUserChipViewModel viewModel) {
         StatusBarUserSwitcherContainer container = findViewById(R.id.user_switcher_container);
         StatusBarUserChipViewBinder.bind(container, viewModel);
+    }
+
+    void setExtraStatusBarPaddingDp(int startDp, int topDp, int endDp) {
+        mStatusBarExtraPaddingStart = convertToDip(startDp);
+        mStatusBarExtraPaddingTop = convertToDip(topDp);
+        mStatusBarExtraPaddingEnd = convertToDip(endDp);
+        updatePaddings();
+    }
+
+    private int convertToDip(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density);
     }
 
     /** Updates the status bar's touchable region. */
@@ -318,9 +333,11 @@ public class PhoneStatusBarView extends FrameLayout {
                 R.dimen.status_bar_padding_start);
 
         findViewById(R.id.status_bar_contents).setPaddingRelative(
-                statusBarPaddingStart,
-                getResources().getDimensionPixelSize(R.dimen.status_bar_padding_top),
-                getResources().getDimensionPixelSize(R.dimen.status_bar_padding_end),
+                statusBarPaddingStart + mStatusBarExtraPaddingStart,
+                getResources().getDimensionPixelSize(R.dimen.status_bar_padding_top)
+                        + mStatusBarExtraPaddingTop,
+                getResources().getDimensionPixelSize(R.dimen.status_bar_padding_end)
+                        + mStatusBarExtraPaddingEnd,
                 0);
 
         findViewById(R.id.notification_lights_out)
