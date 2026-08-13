@@ -502,6 +502,10 @@ constructor(
             }
     }
 
+    override fun disableWifi() {
+        wifiManager.setWifiEnabled(false)
+    }
+
     override fun enableWifi() {
         wifiManager.setWifiEnabled(true)
         scanForWifi()
