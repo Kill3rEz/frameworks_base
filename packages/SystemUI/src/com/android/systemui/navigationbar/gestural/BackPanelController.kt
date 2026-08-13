@@ -236,6 +236,9 @@ constructor(
     private var longSwipeThreshold = 0f
     private var wasAlmostLongSwipe = false
 
+    private var backArrowVisibility = false
+    private var edgeHapticEnabled = true
+
     /** Used for initialization and configuration changes */
     private fun updateConfiguration() {
         params.update(resources)
@@ -666,6 +669,14 @@ constructor(
         windowManager.addView(mView, layoutParams)
     }
 
+    override fun setBackArrowVisibility(enabled: Boolean) {
+        backArrowVisibility = enabled
+    }
+
+    override fun setEdgeHapticEnabled(enabled: Boolean) {
+        edgeHapticEnabled = enabled
+    }
+
     private fun isFlungAwayFromEdge(endX: Float, startX: Float = touchDeltaStartX): Boolean {
         val flingDistance = if (mView.isLeftPanel) endX - startX else startX - endX
         val flingVelocity =
@@ -920,7 +931,7 @@ constructor(
                 mView.isVisible = false
             }
             GestureState.ENTRY -> {
-                mView.isVisible = true
+                mView.isVisible = backArrowVisibility
 
                 updateRestingArrowDimens()
                 gestureEntryTime = systemClock.uptimeMillis()
@@ -1000,6 +1011,7 @@ constructor(
     }
 
     private fun performDeactivatedHapticFeedback() {
+        if (!edgeHapticEnabled) return
         vibratorHelper.performHapticFeedback(
             mView,
             HapticFeedbackConstants.GESTURE_THRESHOLD_DEACTIVATE,
@@ -1007,6 +1019,7 @@ constructor(
     }
 
     private fun performActivatedHapticFeedback() {
+        if (!edgeHapticEnabled) return
         vibratorHelper.performHapticFeedback(
             mView,
             HapticFeedbackConstants.GESTURE_THRESHOLD_ACTIVATE,
