@@ -63,6 +63,17 @@ public class GlobalActionsPowerDialog {
                 context.getTheme()));
         window.addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
 
+        boolean translucentPowerMenu = res.getBoolean(
+                com.android.systemui.res.R.bool.config_translucentStandalonePowerMenu);
+        if (com.android.systemui.shared.system.BlurUtils.isVolumeAndPowerBlurEnabled()
+                && translucentPowerMenu) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
+            WindowManager.LayoutParams attrs = window.getAttributes();
+            attrs.setBlurBehindRadius(res.getDimensionPixelSize(
+                    com.android.systemui.res.R.dimen.global_actions_blur_radius));
+            window.setAttributes(attrs);
+        }
+
         return dialog;
     }
 }
