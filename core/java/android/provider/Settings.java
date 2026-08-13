@@ -13797,6 +13797,26 @@ public final class Settings {
         public static final String SYSTEM_BLACK_THEME = "system_black_theme";
 
         /**
+         * Per-apps device spoofing
+         * @hide
+         */
+        @Readable
+        public static final String PER_APPS_DEVICE_SPOOF = "per_apps_device_spoof";
+
+        /**
+         * Custom device spoof profiles for per-app spoofing
+         * @hide
+         */
+        @Readable
+        public static final String CUSTOM_SPOOF_PROFILES = "custom_spoof_profiles";
+
+        @Readable
+        public static final String PER_APPS_DEVICE_SPOOF_ENABLED = "per_apps_device_spoof_enabled";
+
+        @Readable
+        public static final String PER_APPS_DEVICE_SPOOF_CACHE = "per_apps_device_spoof_cache";
+
+        /**
          * Keys we no longer back up under the current schema, but want to continue to
          * process when restoring historical backup datasets.
          *
