@@ -196,6 +196,7 @@ public class CommandQueue extends IStatusBar.Stub implements
     private static final int MSG_ON_DISPLAY_INFO_CHANGED = 90 << MSG_SHIFT;
     private static final int MSG_ON_CONFIGURATION_CHANGED = 91 << MSG_SHIFT;
     private static final int MSG_RESTART_SYSTEMUI = 92 << MSG_SHIFT;
+    private static final int MSG_TOGGLE_CAMERA_FLASH = 93 << MSG_SHIFT;
 
     public static final int FLAG_EXCLUDE_NONE = 0;
     public static final int FLAG_EXCLUDE_SEARCH_PANEL = 1 << 0;
@@ -626,6 +627,11 @@ public class CommandQueue extends IStatusBar.Stub implements
         default void onConfigurationChanged() {}
 
         default void restartSystemUI() {}
+
+        /**
+         * @see IStatusBar#toggleCameraFlash
+         */
+        default void toggleCameraFlash() {}
     }
 
     @VisibleForTesting
@@ -1625,6 +1631,14 @@ public class CommandQueue extends IStatusBar.Stub implements
         }
     }
 
+    @Override
+    public void toggleCameraFlash() {
+        synchronized (mLock) {
+            mHandler.removeMessages(MSG_TOGGLE_CAMERA_FLASH);
+            mHandler.sendEmptyMessage(MSG_TOGGLE_CAMERA_FLASH);
+        }
+    }
+
     private final class H extends Handler {
         private H(Looper l) {
             super(l);
@@ -2204,7 +2218,13 @@ public class CommandQueue extends IStatusBar.Stub implements
                     for (int i = 0; i < mCallbacks.size(); i++) {
                         mCallbacks.get(i).restartSystemUI();
                     }
-                    break;  
+                    break;
+                    
+                case MSG_TOGGLE_CAMERA_FLASH:
+                    for (int i = 0; i < mCallbacks.size(); i++) {
+                        mCallbacks.get(i).toggleCameraFlash();
+                    }
+                    break;      
             }
         }
     }

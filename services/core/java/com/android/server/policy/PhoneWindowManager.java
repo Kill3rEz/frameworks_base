@@ -623,6 +623,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
     private boolean mHandleVolumeKeysInWM;
 
+    private boolean mTorchGesture;
+
     private boolean mPendingKeyguardOccluded;
 
     Intent mHomeIntent;
@@ -938,7 +940,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.THREE_FINGER_GESTURE), false, this,
-                    UserHandle.USER_ALL);        
+                    UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.TORCH_POWER_BUTTON_GESTURE), false, this,
+                    UserHandle.USER_ALL);                
             updateSettings();
         }
 
@@ -1119,7 +1124,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
         if (!mPowerKeyHandled) {
             if (!interactive) {
-                wakeUpFromWakeKey(event);
+                if (!mTorchGesture) {
+                    wakeUpFromWakeKey(event);
+                }
             }
         } else {
             // handled by another power key policy.
@@ -1157,6 +1164,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
 
         final boolean interactive = mDefaultDisplayPolicy.isAwake();
+        final boolean beganFromNonInteractive = mSingleKeyGestureDetector.beganFromNonInteractive();
 
         Slog.d(
                 TAG,
@@ -1273,6 +1281,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     break;
                 }
             }
+        } else if (mTorchGesture && beganFromNonInteractive) {
+            wakeUpFromWakeKey(eventTime, KEYCODE_POWER, /* isDown= */ false);
         }
     }
 
@@ -1516,6 +1526,18 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     }
 
     private void powerLongPress(long eventTime) {
+        if (mSingleKeyGestureDetector.beganFromNonInteractive() || isFlashLightIsOn()) {
+            if (mTorchGesture) {
+                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS,
+                        "Power - Long Press - Torch");
+                toggleCameraFlash();
+                return;
+            }
+            if (!mSupportLongPressPowerWhenNonInteractive) {
+                Slog.v(TAG, "Not support long press power when device is not interactive.");
+                return;
+            }
+        }
         final int behavior = getResolvedLongPressOnPowerBehavior();
         Slog.d(TAG, "powerLongPress: eventTime=" + eventTime
                 + " mLongPressOnPowerBehavior=" + mLongPressOnPowerBehavior);
@@ -2701,6 +2723,22 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
     }
 
+    private boolean isFlashLightIsOn() {
+        return Settings.Secure.getInt(mContext.getContentResolver(),
+                Settings.Secure.FLASHLIGHT_ENABLED, 0) != 0;
+    }
+
+    public void toggleCameraFlash() {
+        IStatusBarService service = getStatusBarService();
+        if (service != null) {
+            try {
+                service.toggleCameraFlash();
+            } catch (RemoteException e) {
+                Log.e(TAG, "Unable to toggle camera flash:", e);
+            }
+        }
+    }
+
     /**
      * Rule for single back key gesture.
      */
@@ -3130,6 +3168,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             mStylusButtonsEnabled = Settings.Secure.getIntForUser(resolver,
                     Secure.STYLUS_BUTTONS_ENABLED, 1, UserHandle.USER_CURRENT) == 1;
             mInputManagerInternal.setStylusButtonMotionEventsEnabled(mStylusButtonsEnabled);
+
+            mTorchGesture = Settings.System.getIntForUser(resolver,
+                    Settings.System.TORCH_POWER_BUTTON_GESTURE,
+                    0, UserHandle.USER_CURRENT) != 0;
 
             kidsModeEnabled = Settings.Secure.getIntForUser(resolver,
                     Settings.Secure.NAV_BAR_KIDS_MODE, 0, UserHandle.USER_CURRENT) == 1;
