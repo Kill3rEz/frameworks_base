@@ -12695,6 +12695,24 @@ public final class Settings {
         public static final String DISPLAY_COLOR_SATURATION = "display_color_saturation";
 
         /**
+         * Display hue adjustment in degrees, from -180 to 180, defaults to 0.
+         * @hide
+         */
+        public static final String DISPLAY_COLOR_HUE = "display_color_hue";
+
+        /**
+         * Display picture contrast adjustment in int, from 50 to 200, defaults to 100.
+         * @hide
+         */
+        public static final String DISPLAY_COLOR_CONTRAST = "display_color_contrast";
+
+        /**
+         * Display picture brightness adjustment in int, from 50 to 200, defaults to 100.
+         * @hide
+         */
+        public static final String DISPLAY_COLOR_BRIGHTNESS = "display_color_brightness";
+
+        /**
          * Control whether display white balance is currently enabled.
          * @hide
          */

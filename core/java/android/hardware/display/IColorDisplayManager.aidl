@@ -62,6 +62,15 @@ interface IColorDisplayManager {
     int getUserSaturationLevel();
     @EnforcePermission("CONTROL_DISPLAY_COLOR_TRANSFORMS")
     boolean setUserSaturationLevel(int value);
+    int getColorHue();
+    @EnforcePermission("CONTROL_DISPLAY_COLOR_TRANSFORMS")
+    boolean setColorHue(int value);
+    int getColorContrast();
+    @EnforcePermission("CONTROL_DISPLAY_COLOR_TRANSFORMS")
+    boolean setColorContrast(int value);
+    int getColorBrightness();
+    @EnforcePermission("CONTROL_DISPLAY_COLOR_TRANSFORMS")
+    boolean setColorBrightness(int value);
 
     boolean isDisplayWhiteBalanceEnabled();
     @EnforcePermission("CONTROL_DISPLAY_COLOR_TRANSFORMS")
