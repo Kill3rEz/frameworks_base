@@ -232,6 +232,10 @@ constructor(
     // Minimum of the screen's width or the predefined threshold
     private var fullyStretchedThreshold = 0f
 
+    private var isExtendedSwipe = false
+    private var longSwipeThreshold = 0f
+    private var wasAlmostLongSwipe = false
+
     /** Used for initialization and configuration changes */
     private fun updateConfiguration() {
         params.update(resources)
@@ -267,6 +271,10 @@ constructor(
         configurationController.removeCallback(configurationListener)
     }
 
+    override fun setLongSwipeEnabled(enabled: Boolean) {
+        isExtendedSwipe = enabled
+    }
+
     override fun onMotionEvent(event: MotionEvent) {
         velocityTracker!!.addMovement(event)
         when (event.actionMasked) {
@@ -281,6 +289,8 @@ constructor(
                 // reset animation properties
                 startIsLeft = mView.isLeftPanel
                 hasPassedDragSlop = false
+                wasAlmostLongSwipe = false
+                mView.setDrawDoubleArrow(false)
                 mView.resetStretch()
             }
             MotionEvent.ACTION_MOVE -> {
@@ -491,6 +501,18 @@ constructor(
 
         setArrowStrokeAlpha(gestureProgress)
         setVerticalTranslation(yOffset)
+
+        val touchTranslation = MathUtils.abs(x - startX)
+        val almostLongSwipe = isExtendedSwipe && (touchTranslation > longSwipeThreshold)
+        mView.setDrawDoubleArrow(almostLongSwipe)
+        if (wasAlmostLongSwipe != almostLongSwipe) {
+            wasAlmostLongSwipe = almostLongSwipe
+            if (almostLongSwipe) {
+                performActivatedHapticFeedback()
+            } else {
+                performDeactivatedHapticFeedback()
+            }
+        }
     }
 
     private fun setArrowStrokeAlpha(gestureProgress: Float?) {
@@ -702,6 +724,7 @@ constructor(
     override fun setDisplaySize(displaySize: Point) {
         this.displaySize.set(displaySize.x, displaySize.y)
         fullyStretchedThreshold = min(displaySize.x.toFloat(), params.swipeProgressThreshold)
+        longSwipeThreshold = displaySize.x * 0.45f
     }
 
     /** Updates resting arrow and background size not accounting for stretch */

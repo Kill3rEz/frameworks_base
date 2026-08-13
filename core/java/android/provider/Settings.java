@@ -7006,6 +7006,122 @@ public final class Settings {
         public static final String TORCH_POWER_BUTTON_GESTURE = "torch_power_button_gesture";
 
         /**
+         * Gestures nav: left long back swipe action.
+         * @hide
+         */
+        public static final String LEFT_LONG_BACK_SWIPE_ACTION = "left_long_back_swipe_action";
+
+        /**
+         * Gestures nav: left long back swipe app package.
+         * @hide
+         */
+        public static final String LEFT_LONG_BACK_SWIPE_APP_ACTION =
+                "left_long_back_swipe_app_action";
+
+        /**
+         * Gestures nav: left long back swipe app friendly name.
+         * @hide
+         */
+        public static final String LEFT_LONG_BACK_SWIPE_APP_FR_ACTION =
+                "left_long_back_swipe_app_fr_action";
+
+        /**
+         * Gestures nav: left long back swipe app activity.
+         * @hide
+         */
+        public static final String LEFT_LONG_BACK_SWIPE_APP_ACTIVITY_ACTION =
+                "left_long_back_swipe_app_activity_action";
+
+        /**
+         * Gestures nav: right long back swipe action.
+         * @hide
+         */
+        public static final String RIGHT_LONG_BACK_SWIPE_ACTION = "right_long_back_swipe_action";
+
+        /**
+         * Gestures nav: right long back swipe app package.
+         * @hide
+         */
+        public static final String RIGHT_LONG_BACK_SWIPE_APP_ACTION =
+                "right_long_back_swipe_app_action";
+
+        /**
+         * Gestures nav: right long back swipe app friendly name.
+         * @hide
+         */
+        public static final String RIGHT_LONG_BACK_SWIPE_APP_FR_ACTION =
+                "right_long_back_swipe_app_fr_action";
+
+        /**
+         * Gestures nav: right long back swipe app activity.
+         * @hide
+         */
+        public static final String RIGHT_LONG_BACK_SWIPE_APP_ACTIVITY_ACTION =
+                "right_long_back_swipe_app_activity_action";
+
+        /**
+         * Gestures nav: whether extended swipe triggers custom actions instead of timeout.
+         * @hide
+         */
+        public static final String BACK_SWIPE_EXTENDED = "back_swipe_extended";
+
+        /**
+         * Gestures nav: left vertical L-swipe action.
+         * @hide
+         */
+        public static final String LEFT_VERTICAL_BACK_SWIPE_ACTION =
+                "left_vertical_back_swipe_action";
+
+        /**
+         * Gestures nav: left vertical L-swipe app package.
+         * @hide
+         */
+        public static final String LEFT_VERTICAL_BACK_SWIPE_APP_ACTION =
+                "left_vertical_back_swipe_app_action";
+
+        /**
+         * Gestures nav: left vertical L-swipe app friendly name.
+         * @hide
+         */
+        public static final String LEFT_VERTICAL_BACK_SWIPE_APP_FR_ACTION =
+                "left_vertical_back_swipe_app_fr_action";
+
+        /**
+         * Gestures nav: left vertical L-swipe app activity.
+         * @hide
+         */
+        public static final String LEFT_VERTICAL_BACK_SWIPE_APP_ACTIVITY_ACTION =
+                "left_vertical_back_swipe_app_activity_action";
+
+        /**
+         * Gestures nav: right vertical L-swipe action.
+         * @hide
+         */
+        public static final String RIGHT_VERTICAL_BACK_SWIPE_ACTION =
+                "right_vertical_back_swipe_action";
+
+        /**
+         * Gestures nav: right vertical L-swipe app package.
+         * @hide
+         */
+        public static final String RIGHT_VERTICAL_BACK_SWIPE_APP_ACTION =
+                "right_vertical_back_swipe_app_action";
+
+        /**
+         * Gestures nav: right vertical L-swipe app friendly name.
+         * @hide
+         */
+        public static final String RIGHT_VERTICAL_BACK_SWIPE_APP_FR_ACTION =
+                "right_vertical_back_swipe_app_fr_action";
+
+        /**
+         * Gestures nav: right vertical L-swipe app activity.
+         * @hide
+         */
+        public static final String RIGHT_VERTICAL_BACK_SWIPE_APP_ACTIVITY_ACTION =
+                "right_vertical_back_swipe_app_activity_action";
+
+        /**
          * Keys we no longer back up under the current schema, but want to continue to
          * process when restoring historical backup datasets.
          *
@@ -7157,6 +7273,23 @@ public final class Settings {
             PRIVATE_SETTINGS.add(PREFERRED_REGION);
             PRIVATE_SETTINGS.add(MOUSE_SCROLLING_ACCELERATION);
             PRIVATE_SETTINGS.add(MOUSE_SCROLLING_SPEED);
+            PRIVATE_SETTINGS.add(LEFT_LONG_BACK_SWIPE_ACTION);
+            PRIVATE_SETTINGS.add(LEFT_LONG_BACK_SWIPE_APP_ACTION);
+            PRIVATE_SETTINGS.add(LEFT_LONG_BACK_SWIPE_APP_FR_ACTION);
+            PRIVATE_SETTINGS.add(LEFT_LONG_BACK_SWIPE_APP_ACTIVITY_ACTION);
+            PRIVATE_SETTINGS.add(RIGHT_LONG_BACK_SWIPE_ACTION);
+            PRIVATE_SETTINGS.add(RIGHT_LONG_BACK_SWIPE_APP_ACTION);
+            PRIVATE_SETTINGS.add(RIGHT_LONG_BACK_SWIPE_APP_FR_ACTION);
+            PRIVATE_SETTINGS.add(RIGHT_LONG_BACK_SWIPE_APP_ACTIVITY_ACTION);
+            PRIVATE_SETTINGS.add(BACK_SWIPE_EXTENDED);
+            PRIVATE_SETTINGS.add(LEFT_VERTICAL_BACK_SWIPE_ACTION);
+            PRIVATE_SETTINGS.add(LEFT_VERTICAL_BACK_SWIPE_APP_ACTION);
+            PRIVATE_SETTINGS.add(LEFT_VERTICAL_BACK_SWIPE_APP_FR_ACTION);
+            PRIVATE_SETTINGS.add(LEFT_VERTICAL_BACK_SWIPE_APP_ACTIVITY_ACTION);
+            PRIVATE_SETTINGS.add(RIGHT_VERTICAL_BACK_SWIPE_ACTION);
+            PRIVATE_SETTINGS.add(RIGHT_VERTICAL_BACK_SWIPE_APP_ACTION);
+            PRIVATE_SETTINGS.add(RIGHT_VERTICAL_BACK_SWIPE_APP_FR_ACTION);
+            PRIVATE_SETTINGS.add(RIGHT_VERTICAL_BACK_SWIPE_APP_ACTIVITY_ACTION);
             PRIVATE_SETTINGS.add(GESTURES_ENABLED);
             PRIVATE_SETTINGS.add(GESTURE_DOUBLE_TAP);
             PRIVATE_SETTINGS.add(GESTURE_SINGLE_TAP);

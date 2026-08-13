@@ -18,8 +18,11 @@ package com.android.internal.policy;
 
 import static com.android.internal.config.sysui.SystemUiDeviceConfigFlags.BACK_GESTURE_EDGE_WIDTH;
 
+import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.os.Handler;
@@ -30,6 +33,8 @@ import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 
+import com.android.internal.util.custom.CustomUtils;
+
 /**
  * @hide
  */
@@ -38,6 +43,7 @@ public class GestureNavigationSettingsObserver extends ContentObserver {
     private Runnable mOnChangeRunnable;
     private Handler mMainHandler;
     private Handler mBgHandler;
+    private IntentFilter mIntentFilter;
 
     public GestureNavigationSettingsObserver(
             Handler mainHandler, Handler bgHandler, Context context, Runnable onChangeRunnable) {
@@ -46,6 +52,9 @@ public class GestureNavigationSettingsObserver extends ContentObserver {
         mBgHandler = bgHandler;
         mContext = context;
         mOnChangeRunnable = onChangeRunnable;
+        mIntentFilter = new IntentFilter();
+        mIntentFilter.addAction(Intent.ACTION_PACKAGE_REMOVED);
+        mIntentFilter.addDataScheme("package");
     }
 
     private final DeviceConfig.OnPropertiesChangedListener mOnPropertiesChangedListener =
@@ -58,6 +67,49 @@ public class GestureNavigationSettingsObserver extends ContentObserver {
             }
         }
     };
+
+    private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (!Intent.ACTION_PACKAGE_REMOVED.equals(intent.getAction())
+                    || intent.getData() == null) {
+                return;
+            }
+            String packageName = intent.getData().getSchemeSpecificPart();
+            if (CustomUtils.isPackageInstalled(context, packageName)) {
+                return;
+            }
+            ContentResolver resolver = context.getContentResolver();
+            resetApplicationActionIfNeeded(resolver, packageName,
+                    Settings.System.LEFT_LONG_BACK_SWIPE_APP_ACTION,
+                    Settings.System.LEFT_LONG_BACK_SWIPE_ACTION,
+                    Settings.System.LEFT_LONG_BACK_SWIPE_APP_FR_ACTION);
+            resetApplicationActionIfNeeded(resolver, packageName,
+                    Settings.System.RIGHT_LONG_BACK_SWIPE_APP_ACTION,
+                    Settings.System.RIGHT_LONG_BACK_SWIPE_ACTION,
+                    Settings.System.RIGHT_LONG_BACK_SWIPE_APP_FR_ACTION);
+            resetApplicationActionIfNeeded(resolver, packageName,
+                    Settings.System.LEFT_VERTICAL_BACK_SWIPE_APP_ACTION,
+                    Settings.System.LEFT_VERTICAL_BACK_SWIPE_ACTION,
+                    Settings.System.LEFT_VERTICAL_BACK_SWIPE_APP_FR_ACTION);
+            resetApplicationActionIfNeeded(resolver, packageName,
+                    Settings.System.RIGHT_VERTICAL_BACK_SWIPE_APP_ACTION,
+                    Settings.System.RIGHT_VERTICAL_BACK_SWIPE_ACTION,
+                    Settings.System.RIGHT_VERTICAL_BACK_SWIPE_APP_FR_ACTION);
+        }
+    };
+
+    private void resetApplicationActionIfNeeded(ContentResolver resolver, String removedPackage,
+            String packageSetting, String actionSetting, String friendlyNameSetting) {
+        String configuredPackage = Settings.System.getStringForUser(resolver, packageSetting,
+                UserHandle.USER_CURRENT);
+        if (!removedPackage.equals(configuredPackage)) {
+            return;
+        }
+        Settings.System.putIntForUser(resolver, actionSetting, 0, UserHandle.USER_CURRENT);
+        Settings.System.putStringForUser(resolver, friendlyNameSetting, "",
+                UserHandle.USER_CURRENT);
+    }
 
     /**
      * Registers the observer for all users.
@@ -74,6 +126,8 @@ public class GestureNavigationSettingsObserver extends ContentObserver {
             r.registerContentObserver(
                     Settings.Secure.getUriFor(Settings.Secure.USER_SETUP_COMPLETE),
                     false, this, UserHandle.USER_ALL);
+            registerAdvancedGestureObservers(r, UserHandle.USER_ALL);
+            mContext.registerReceiver(mBroadcastReceiver, mIntentFilter);
             DeviceConfig.addOnPropertiesChangedListener(
                     DeviceConfig.NAMESPACE_SYSTEMUI,
                     runnable -> mMainHandler.post(runnable),
@@ -96,6 +150,7 @@ public class GestureNavigationSettingsObserver extends ContentObserver {
             r.registerContentObserver(
                     Settings.Secure.getUriFor(Settings.Secure.USER_SETUP_COMPLETE),
                     false, this);
+            registerAdvancedGestureObservers(r, UserHandle.myUserId());
             DeviceConfig.addOnPropertiesChangedListener(
                     DeviceConfig.NAMESPACE_SYSTEMUI,
                     runnable -> mMainHandler.post(runnable),
@@ -106,8 +161,30 @@ public class GestureNavigationSettingsObserver extends ContentObserver {
     public void unregister() {
         mBgHandler.post(() -> {
             mContext.getContentResolver().unregisterContentObserver(this);
+            try {
+                mContext.unregisterReceiver(mBroadcastReceiver);
+            } catch (IllegalArgumentException ignored) {
+            }
             DeviceConfig.removeOnPropertiesChangedListener(mOnPropertiesChangedListener);
         });
+    }
+
+    private void registerAdvancedGestureObservers(ContentResolver resolver, int userHandle) {
+        resolver.registerContentObserver(
+                Settings.System.getUriFor(Settings.System.LEFT_LONG_BACK_SWIPE_ACTION),
+                false, this, userHandle);
+        resolver.registerContentObserver(
+                Settings.System.getUriFor(Settings.System.RIGHT_LONG_BACK_SWIPE_ACTION),
+                false, this, userHandle);
+        resolver.registerContentObserver(
+                Settings.System.getUriFor(Settings.System.BACK_SWIPE_EXTENDED),
+                false, this, userHandle);
+        resolver.registerContentObserver(
+                Settings.System.getUriFor(Settings.System.LEFT_VERTICAL_BACK_SWIPE_ACTION),
+                false, this, userHandle);
+        resolver.registerContentObserver(
+                Settings.System.getUriFor(Settings.System.RIGHT_VERTICAL_BACK_SWIPE_ACTION),
+                false, this, userHandle);
     }
 
     @Override
@@ -182,5 +259,30 @@ public class GestureNavigationSettingsObserver extends ContentObserver {
         final float inset = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, backGestureInset,
                 dm);
         return inset;
+    }
+
+    public int getLeftLongSwipeAction() {
+        return Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.LEFT_LONG_BACK_SWIPE_ACTION, 0, UserHandle.USER_CURRENT);
+    }
+
+    public int getRightLongSwipeAction() {
+        return Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.RIGHT_LONG_BACK_SWIPE_ACTION, 0, UserHandle.USER_CURRENT);
+    }
+
+    public boolean getIsExtendedSwipe() {
+        return Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.BACK_SWIPE_EXTENDED, 0, UserHandle.USER_CURRENT) != 0;
+    }
+
+    public int getLeftLSwipeAction() {
+        return Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.LEFT_VERTICAL_BACK_SWIPE_ACTION, 0, UserHandle.USER_CURRENT);
+    }
+
+    public int getRightLSwipeAction() {
+        return Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.RIGHT_VERTICAL_BACK_SWIPE_ACTION, 0, UserHandle.USER_CURRENT);
     }
 }
