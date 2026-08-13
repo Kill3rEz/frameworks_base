@@ -41,6 +41,7 @@ import android.os.Looper;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.SystemProperties;
+import android.provider.Settings;
 import android.util.AndroidRuntimeException;
 import android.util.ArrayMap;
 import android.util.ArraySet;
@@ -538,6 +539,14 @@ public final class WindowManagerGlobal {
                         windowlessSession, new WindowlessWindowLayout());
             }
 
+            boolean ignoreSecure = Settings.Global.getInt(
+                    view.getContext().getContentResolver(),
+                    Settings.Global.WINDOW_IGNORE_SECURE, 0) == 1;
+
+            if (ignoreSecure) {
+                wparams.flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
+            }
+
             view.setLayoutParams(wparams);
 
 // QTI_BEGIN: 2023-02-15: Core: perf: recover the pre-rendering feature in the U
@@ -581,6 +590,14 @@ public final class WindowManagerGlobal {
         }
         if (!(params instanceof WindowManager.LayoutParams wparams)) {
             throw new IllegalArgumentException("Params must be WindowManager.LayoutParams");
+        }
+
+        boolean ignoreSecure = Settings.Global.getInt(
+                view.getContext().getContentResolver(),
+                Settings.Global.WINDOW_IGNORE_SECURE, 0) == 1;
+
+        if (ignoreSecure) {
+            wparams.flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
         }
 
         view.setLayoutParams(wparams);
