@@ -266,4 +266,9 @@ interface IStatusBarService
     void endMotionCuesSession();
 
     void restartSystemUI();
+
+    /**
+     * Toggle recent apps.
+     */
+    void toggleRecentApps();
 }
