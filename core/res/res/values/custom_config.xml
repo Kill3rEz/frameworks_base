@@ -33,4 +33,6 @@
     <string name="config_usbFunctionActivity" translatable="false"
             >com.android.systemui/com.android.systemui.usb.UsbFunctionActivity</string>
 
+    <!-- Whether device has an alert slider. -->
+    <bool name="config_hasAlertSlider">false</bool>
 </resources>
