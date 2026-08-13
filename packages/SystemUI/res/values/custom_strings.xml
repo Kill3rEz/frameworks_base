@@ -93,4 +93,10 @@
     <string name="usb_use_tethering">USB tethering</string>
     <string name="usb_use_MIDI">MIDI</string>
     <string name="usb_use">Use USB for</string>
+
+    <!-- DataSwitch Tile -->
+    <string name="qs_data_switch_label">Switch data card</string>
+    <string name="qs_data_switch_sim_label">SIM %d</string>
+    <string name="qs_data_switch_sim_desc">SIM %d is the preferred mobile data SIM</string>
+    <string name="qs_data_switch_sim_transient">Switching\u2026</string>
 </resources>
