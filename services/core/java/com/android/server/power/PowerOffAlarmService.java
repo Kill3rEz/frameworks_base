@@ -29,7 +29,10 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.database.ContentObserver;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.UserHandle;
 import android.util.Slog;
 
@@ -89,6 +92,19 @@ public class PowerOffAlarmService extends SystemService {
             return;
         }
         mIsAvailable = true;
+        mContext.getContentResolver().registerContentObserver(
+                android.provider.Settings.Secure.getUriFor(
+                        android.provider.Settings.Secure.POWER_OFF_ALARM_ENABLED),
+                false,
+                new ContentObserver(new Handler(Looper.getMainLooper())) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        if (mSystemReady) {
+                            updateAlarms(mAlarmManager, true);
+                        }
+                    }
+                },
+                UserHandle.USER_ALL);
         final IntentFilter intentFilter = new IntentFilter(Intent.ACTION_TIME_CHANGED);
         intentFilter.addAction(AlarmManager.ACTION_NEXT_ALARM_CLOCK_CHANGED);
         mContext.registerReceiver(mAlarmChangedReceiver, intentFilter);
@@ -134,6 +150,11 @@ public class PowerOffAlarmService extends SystemService {
     }
 
     private synchronized void updateAlarms(AlarmManager alarmManager, boolean user) {
+        if (!isPowerOffAlarmEnabled()) {
+            cancelPowerOffAlarm();
+            updateNotification(false);
+            return;
+        }
         final AlarmManager.AlarmClockInfo alarmInfo = alarmManager.getNextAlarmClock();
         cancelPowerOffAlarm();
         final boolean isSet = alarmInfo != null;
@@ -211,5 +232,11 @@ public class PowerOffAlarmService extends SystemService {
         intent.setPackage(ALARM_PACKAGE);
         intent.putExtra(EXTRA_TIME, time);
         return intent;
+    }
+
+    private boolean isPowerOffAlarmEnabled() {
+        final int def = mContext.getResources().getBoolean(R.bool.config_powerOffAlarmEnabled) ? 1 : 0;
+        return android.provider.Settings.Secure.getIntForUser(mContext.getContentResolver(),
+                android.provider.Settings.Secure.POWER_OFF_ALARM_ENABLED, def, UserHandle.USER_CURRENT) != 0;
     }
 }

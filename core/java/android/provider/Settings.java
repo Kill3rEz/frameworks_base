@@ -8333,6 +8333,12 @@ public final class Settings {
         }
 
         /**
+         * Whether the power off alarm is enabled.
+         * @hide
+         */
+        public static final String POWER_OFF_ALARM_ENABLED = "power_off_alarm_enabled";
+
+        /**
          * Control whether to enable adaptive sleep mode.
          * @hide
          */
