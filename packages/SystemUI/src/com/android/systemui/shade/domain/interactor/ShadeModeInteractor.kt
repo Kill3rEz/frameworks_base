@@ -16,12 +16,15 @@
 
 package com.android.systemui.shade.domain.interactor
 
+import android.content.res.Resources
 import android.util.Log
 import androidx.compose.ui.Alignment
 import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.log.table.TableLogBuffer
 import com.android.systemui.log.table.logDiffsForTable
+import com.android.systemui.res.R
 import com.android.systemui.scene.domain.SceneFrameworkTableLog
+import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shade.data.repository.ShadeConfigRepository
 import com.android.systemui.shade.shared.flag.DualShadeFlag
 import com.android.systemui.shade.shared.model.ShadeMode
@@ -65,6 +68,9 @@ interface ShadeModeInteractor {
      */
     val notificationStackHorizontalAlignment: StateFlow<Alignment.Horizontal>
 
+    /** The split ratio between notification and Quick Settings panels for swipe-down gestures. */
+    val dualShadeGestureSplitRatio: StateFlow<Float>
+
     /** Convenience shortcut for querying whether the current [shadeMode] is [ShadeMode.Dual]. */
     val isDualShade: Boolean
         get() = shadeMode.value is ShadeMode.Dual
@@ -81,7 +87,16 @@ constructor(
     @Background applicationScope: CoroutineScope,
     private val shadeConfigRepository: ShadeConfigRepository,
     @SceneFrameworkTableLog private val tableLogBuffer: TableLogBuffer,
+    @ShadeDisplayAware private val resources: Resources,
 ) : ShadeModeInteractor {
+
+    override val dualShadeGestureSplitRatio: StateFlow<Float> =
+        shadeConfigRepository.dualShadeSplitRatio
+            .stateIn(
+                applicationScope,
+                SharingStarted.Eagerly,
+                initialValue = resources.getFloat(R.dimen.config_invocationGestureSplitRatio),
+            )
 
     private val isDualShadeEnabled: StateFlow<Boolean> =
         if (DualShadeFlag.isEnabled) {
@@ -203,4 +218,6 @@ open class ShadeModeInteractorEmptyImpl @Inject constructor() : ShadeModeInterac
 
     override val notificationStackHorizontalAlignment: StateFlow<Alignment.Horizontal> =
         MutableStateFlow(Alignment.CenterHorizontally)
+
+    override val dualShadeGestureSplitRatio: StateFlow<Float> = MutableStateFlow(0.5f)
 }

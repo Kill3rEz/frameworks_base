@@ -6863,6 +6863,15 @@ public final class Settings {
         public static final String STATUS_BAR_BATTERY_STYLE = "status_bar_battery_style";
 
         /**
+         * The split ratio between notification and Quick Settings panels for swipe-down gestures.
+         * Default value is 50.
+         * @hide
+         */
+        @Readable
+        public static final String STATUS_BAR_SHADE_SPLIT_PERCENTAGE =
+                "status_bar_shade_split_percentage";
+
+        /**
          * Whether or not to enable multiple audio focus.
          * When enabled, requires more management by user over application playback activity,
          * for instance pausing media apps when another starts.
@@ -7338,6 +7347,7 @@ public final class Settings {
             PRIVATE_SETTINGS.add(STATUSBAR_EXTRA_PADDING_END);
             PRIVATE_SETTINGS.add(STATUS_BAR_SHOW_BATTERY_PERCENT);
             PRIVATE_SETTINGS.add(STATUS_BAR_BATTERY_STYLE);
+            PRIVATE_SETTINGS.add(STATUS_BAR_SHADE_SPLIT_PERCENTAGE);
             PRIVATE_SETTINGS.add(DISPLAY_COLOR_MODE);
             PRIVATE_SETTINGS.add(DISPLAY_COLOR_MODE_VENDOR_HINT);
             PRIVATE_SETTINGS.add(LOCALE_PREFERENCES);

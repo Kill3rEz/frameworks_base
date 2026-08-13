@@ -140,7 +140,8 @@ public class SystemSettings {
                 Settings.System.STATUSBAR_EXTRA_PADDING_TOP,
                 Settings.System.STATUSBAR_EXTRA_PADDING_END,
                 Settings.System.STATUS_BAR_SHOW_BATTERY_PERCENT,
-                Settings.System.STATUS_BAR_BATTERY_STYLE
+                Settings.System.STATUS_BAR_BATTERY_STYLE,
+                Settings.System.STATUS_BAR_SHADE_SPLIT_PERCENTAGE
         ));
         return settings.toArray(new String[0]);
     }
