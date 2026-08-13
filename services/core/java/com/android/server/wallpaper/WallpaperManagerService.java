@@ -2984,7 +2984,11 @@ public class WallpaperManagerService extends IWallpaperManager.Stub
                 if (displayId < 0) {
                     WallpaperData lockWallpaper = mLockWallpaperMap.get(userId);
 
-                    // remove gone UIDs from the map
+                if (wallpaper == null || wallpaper.mUidToDimAmount == null) {
+                    return;
+                }
+
+                // remove gone UIDs from the map
                 boolean arrayChanged = false;
                 final int uidCount = wallpaper.mUidToDimAmount.size();
                 int[] uids = new int[uidCount];
