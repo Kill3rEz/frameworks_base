@@ -264,4 +264,6 @@ interface IStatusBarService
 
     /** Terminates the started motion cues session */
     void endMotionCuesSession();
+
+    void restartSystemUI();
 }
