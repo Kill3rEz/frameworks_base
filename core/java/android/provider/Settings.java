@@ -6841,6 +6841,28 @@ public final class Settings {
         public static final String STATUSBAR_EXTRA_PADDING_END = "statusbar_extra_padding_end";
 
         /**
+         * Status bar battery %
+         * 0: Hide the battery percentage
+         * 1: Display the battery percentage inside the icon
+         * 2: Display the battery percentage next to the icon
+         * @hide
+         */
+        @Readable
+        public static final String STATUS_BAR_SHOW_BATTERY_PERCENT =
+                "status_bar_show_battery_percent";
+
+        /**
+         * Style of battery to show.
+         * 0 = default
+         * 1 = circle
+         * 2 = text
+         * 3 = circle dotted
+         * @hide
+         */
+        @Readable
+        public static final String STATUS_BAR_BATTERY_STYLE = "status_bar_battery_style";
+
+        /**
          * Whether or not to enable multiple audio focus.
          * When enabled, requires more management by user over application playback activity,
          * for instance pausing media apps when another starts.
@@ -7314,6 +7336,8 @@ public final class Settings {
             PRIVATE_SETTINGS.add(STATUSBAR_EXTRA_PADDING_START);
             PRIVATE_SETTINGS.add(STATUSBAR_EXTRA_PADDING_TOP);
             PRIVATE_SETTINGS.add(STATUSBAR_EXTRA_PADDING_END);
+            PRIVATE_SETTINGS.add(STATUS_BAR_SHOW_BATTERY_PERCENT);
+            PRIVATE_SETTINGS.add(STATUS_BAR_BATTERY_STYLE);
             PRIVATE_SETTINGS.add(DISPLAY_COLOR_MODE);
             PRIVATE_SETTINGS.add(DISPLAY_COLOR_MODE_VENDOR_HINT);
             PRIVATE_SETTINGS.add(LOCALE_PREFERENCES);

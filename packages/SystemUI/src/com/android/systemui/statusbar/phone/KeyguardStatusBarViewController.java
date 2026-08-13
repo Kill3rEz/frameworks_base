@@ -137,7 +137,7 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
     private final UserInfoController mUserInfoController;
     private final StatusBarIconController mStatusBarIconController;
     private final TintedIconManager.Factory mTintedIconManagerFactory;
-    private final BatteryViewModel.ShowPercentWhenChargingOrSetting.Factory mBatteryViewModel;
+    private final BatteryViewModel.BasedOnUserSetting.Factory mBatteryViewModel;
     private final ShadeViewStateProvider mShadeViewStateProvider;
     private final KeyguardStateController mKeyguardStateController;
     private final KeyguardBypassController mKeyguardBypassController;
@@ -356,7 +356,7 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
             UserInfoController userInfoController,
             StatusBarIconController statusBarIconController,
             TintedIconManager.Factory tintedIconManagerFactory,
-            BatteryViewModel.ShowPercentWhenChargingOrSetting.Factory batteryViewModel,
+            BatteryViewModel.BasedOnUserSetting.Factory batteryViewModel,
             ShadeViewStateProvider shadeViewStateProvider,
             KeyguardStateController keyguardStateController,
             KeyguardBypassController bypassController,

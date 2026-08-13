@@ -18,6 +18,7 @@ package com.android.systemui.statusbar.pipeline.battery.ui.composable
 
 import android.graphics.Rect
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,6 +34,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.inset
@@ -54,6 +56,7 @@ import androidx.compose.ui.util.fastFirstOrNull
 import com.android.systemui.common.ui.compose.load
 import com.android.systemui.compose.modifiers.sysuiResTag
 import com.android.systemui.statusbar.phone.domain.interactor.IsAreaDark
+import com.android.systemui.statusbar.pipeline.battery.data.repository.BatteryRepository
 import com.android.systemui.statusbar.pipeline.battery.shared.ui.BatteryColors
 import com.android.systemui.statusbar.pipeline.battery.shared.ui.BatteryFrame
 import com.android.systemui.statusbar.pipeline.battery.shared.ui.BatteryGlyph
@@ -169,6 +172,8 @@ fun UnifiedBattery(
 ) {
     var bounds by remember { mutableStateOf(Rect()) }
 
+    val style = viewModel.batteryIconStyle
+
     val colorProvider = {
         if (isDarkProvider().isDarkTheme(bounds)) {
             viewModel.colorProfile.dark
@@ -183,9 +188,10 @@ fun UnifiedBattery(
         isFullProvider = { viewModel.isFull },
         glyphsProvider = { viewModel.glyphList },
         colorsProvider = colorProvider,
+        style = style,
         modifier =
             modifier.sysuiResTag(BatteryViewModel.TEST_TAG).onLayoutRectChanged {
-                relativeLayoutBounds ->
+                    relativeLayoutBounds ->
                 bounds =
                     with(relativeLayoutBounds.boundsInScreen) { Rect(left, top, right, bottom) }
             },
@@ -200,42 +206,59 @@ fun BatteryLayout(
     isFullProvider: () -> Boolean,
     glyphsProvider: () -> List<BatteryGlyph>,
     colorsProvider: () -> BatteryColors,
+    style: Int = BatteryRepository.ICON_STYLE_DEFAULT,
     modifier: Modifier,
     contentDescription: String = "",
 ) {
-    Layout(
-        content = {
-            BatteryBody(
-                pathSpec = BatteryFrame.bodyPathSpec,
-                levelProvider = levelProvider,
-                glyphsProvider = glyphsProvider,
-                isFullProvider = isFullProvider,
-                colorsProvider = colorsProvider,
-                modifier = Modifier.layoutId(BatteryMeasurePolicy.LayoutId.Frame),
-                contentDescription = contentDescription,
-            )
-            if (attribution != null) {
-                BatteryAttribution(
-                    attr = attribution,
-                    colorsProvider = colorsProvider,
-                    modifier =
-                        Modifier.layoutId(
-                            BatteryMeasurePolicy.LayoutId.Attribution(wrapped = attribution)
-                        ),
-                )
-            } else {
-                BatteryCap(
-                    colorsProvider = colorsProvider,
-                    isFullProvider = isFullProvider,
+    val isCircle = style == BatteryRepository.ICON_STYLE_CIRCLE
+    val isCircleDotted = style == BatteryRepository.ICON_STYLE_CIRCLE_DOTTED
+
+    if (isCircle || isCircleDotted) {
+        CircleBattery(
+            level = levelProvider(),
+            isFull = isFullProvider(),
+            glyphs = glyphsProvider(),
+            attribution = attribution,
+            isDotted = isCircleDotted,
+            colorsProvider = colorsProvider,
+            modifier = modifier,
+            contentDescription = contentDescription,
+        )
+    } else {
+        Layout(
+            content = {
+                BatteryBody(
+                    pathSpec = BatteryFrame.bodyPathSpec,
+                    levelProvider = levelProvider,
                     glyphsProvider = glyphsProvider,
-                    modifier = Modifier.layoutId(BatteryMeasurePolicy.LayoutId.Cap),
+                    isFullProvider = isFullProvider,
+                    colorsProvider = colorsProvider,
+                    modifier = Modifier.layoutId(BatteryMeasurePolicy.LayoutId.Frame),
+                    contentDescription = contentDescription,
                 )
-            }
-        },
-        measurePolicy = BatteryMeasurePolicy(),
-        // [Offscreen] Enables the BlendMode.Clear usage for the battery attribution
-        modifier = modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
-    )
+                if (attribution != null) {
+                    BatteryAttribution(
+                        attr = attribution,
+                        colorsProvider = colorsProvider,
+                        modifier =
+                            Modifier.layoutId(
+                                BatteryMeasurePolicy.LayoutId.Attribution(wrapped = attribution)
+                            ),
+                    )
+                } else {
+                    BatteryCap(
+                        colorsProvider = colorsProvider,
+                        isFullProvider = isFullProvider,
+                        glyphsProvider = glyphsProvider,
+                        modifier = Modifier.layoutId(BatteryMeasurePolicy.LayoutId.Cap),
+                    )
+                }
+            },
+            measurePolicy = BatteryMeasurePolicy(),
+            // [Offscreen] Enables the BlendMode.Clear usage for the battery attribution
+            modifier = modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen },
+        )
+    }
 }
 
 class BatteryMeasurePolicy : MeasurePolicy {
@@ -512,5 +535,169 @@ private fun getBatteryFrameColor(
         isFull -> colors.fill
         hasGlyphs -> colors.backgroundWithGlyph
         else -> colors.backgroundOnly
+    }
+}
+
+/**
+ * Draws a circular battery icon. The battery is represented as a circle with a ring-like outline,
+ * a small cap circle at the top, and the fill level drawn as an arc clockwise from the top.
+ * For the dotted variant, the outline uses a dashed stroke.
+ */
+@Composable
+fun CircleBattery(
+    level: Int?,
+    isFull: Boolean,
+    glyphs: List<BatteryGlyph>,
+    attribution: BatteryGlyph?,
+    isDotted: Boolean,
+    colorsProvider: () -> BatteryColors,
+    modifier: Modifier = Modifier,
+    contentDescription: String = "",
+) {
+    Canvas(
+        modifier = modifier.aspectRatio(1f),
+        contentDescription = contentDescription,
+    ) {
+        val colors = colorsProvider()
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val diameter = minOf(size.width, size.height) * 0.9f
+        val radius = diameter / 2f
+        val strokeWidth = diameter * 0.12f
+        val innerRadius = radius - strokeWidth / 2f
+
+        val frameColor =
+            getBatteryFrameColor(
+                isFull = isFull,
+                hasGlyphs = glyphs.isNotEmpty(),
+                colors = colors,
+            )
+
+        // Draw the circle ring
+        if (isFull) {
+            if (isDotted) {
+                drawArc(
+                    color = colors.fill,
+                    startAngle = -90f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = Offset(cx - radius, cy - radius),
+                    size = Size(radius * 2f, radius * 2f),
+                    style =
+                        Stroke(
+                            width = strokeWidth,
+                            pathEffect =
+                                PathEffect.dashPathEffect(
+                                    floatArrayOf(strokeWidth * 1.5f, strokeWidth * 1.5f),
+                                    0f,
+                                ),
+                        ),
+                )
+            } else {
+                drawCircle(
+                    color = colors.fill,
+                    radius = radius,
+                    center = Offset(cx, cy),
+                    style = Stroke(width = strokeWidth),
+                )
+            }
+        } else {
+            if (isDotted) {
+                drawArc(
+                    color = frameColor,
+                    startAngle = -90f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = Offset(cx - radius, cy - radius),
+                    size = Size(radius * 2f, radius * 2f),
+                    style =
+                        Stroke(
+                            width = strokeWidth,
+                            pathEffect =
+                                PathEffect.dashPathEffect(
+                                    floatArrayOf(strokeWidth * 1.5f, strokeWidth * 1.5f),
+                                    0f,
+                                ),
+                        ),
+                )
+            } else {
+                drawCircle(
+                    color = frameColor,
+                    radius = radius,
+                    center = Offset(cx, cy),
+                    style = Stroke(width = strokeWidth),
+                )
+            }
+
+            // Draw the fill level as an arc around the circumference
+            if (level != null && level > 0) {
+                val sweepAngle = (level.toFloat() / 100f) * 360f
+                drawArc(
+                    color = colors.fill,
+                    startAngle = -90f,
+                    sweepAngle = sweepAngle,
+                    useCenter = false,
+                    topLeft = Offset(cx - radius, cy - radius),
+                    size = Size(radius * 2f, radius * 2f),
+                    style =
+                        Stroke(
+                            width = strokeWidth,
+                            pathEffect =
+                                if (isDotted) {
+                                    PathEffect.dashPathEffect(
+                                        floatArrayOf(strokeWidth * 1.5f, strokeWidth * 1.5f),
+                                        0f,
+                                    )
+                                } else {
+                                    null
+                                },
+                        ),
+                )
+            }
+        }
+
+        // Draw attribution glyph or digit glyphs centered in the circle
+        if (attribution != null) {
+            val s =
+                minOf(
+                    innerRadius * 0.6f / attribution.width,
+                    innerRadius * 0.6f / attribution.height,
+                )
+            val left = cx - attribution.width * s / 2f
+            val top = cy - attribution.height * s / 2f
+            inset(
+                minOf(left, size.width / 2),
+                minOf(top, size.height / 2),
+            ) {
+                scale(s, Offset.Zero) {
+                    drawPath(attribution.path, color = colors.attribution)
+                }
+            }
+        } else if (glyphs.isNotEmpty()) {
+            val totalWidth =
+                glyphs.drop(1).fold(glyphs.first().width) { acc: Float, next: BatteryGlyph ->
+                    acc + INTER_GLYPH_PADDING_PX + next.width
+                }
+            val maxHeight = glyphs.maxOf { it.height }
+            val glyphScale =
+                minOf(
+                    innerRadius * 0.7f / totalWidth,
+                    innerRadius * 0.7f / maxHeight,
+                    1f,
+                )
+            var horizontalOffset = cx - totalWidth * glyphScale / 2f
+            for (glyph in glyphs) {
+                val verticalOffset = cy - glyph.height * glyphScale / 2f
+                inset(
+                    minOf(horizontalOffset, size.width / 2),
+                    minOf(verticalOffset, size.height / 2),
+                ) {
+                    scale(glyphScale, Offset.Zero) {
+                        drawPath(glyph.path, color = colors.attribution)
+                    }
+                }
+                horizontalOffset += (glyph.width + INTER_GLYPH_PADDING_PX) * glyphScale
+            }
+        }
     }
 }

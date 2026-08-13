@@ -29,8 +29,6 @@ import com.android.systemui.kosmos.testDispatcher
 import com.android.systemui.kosmos.testScope
 import com.android.systemui.kosmos.useStandardTestDispatcher
 import com.android.systemui.log.table.logcatTableLogBuffer
-import com.android.systemui.shared.settings.data.repository.fakeSystemSettingsRepository
-import com.android.systemui.shared.settings.data.repository.systemSettingsRepository
 import com.android.systemui.statusbar.policy.batteryController
 import com.android.systemui.statusbar.policy.fake
 import com.android.systemui.testKosmos
@@ -56,7 +54,6 @@ class BatteryRepositoryTest : SysuiTestCase() {
                 backgroundScope,
                 testDispatcher,
                 batteryController,
-                systemSettingsRepository,
                 logcatTableLogBuffer(this, "BatteryTableLog"),
             )
         }
@@ -136,25 +133,13 @@ class BatteryRepositoryTest : SysuiTestCase() {
         }
 
     @Test
-    fun showBatteryPercentSetting() =
+    fun showBatteryPercentSetting_defaultValue() =
         kosmos.runTest {
-            // Set the default to true, so it's detectable in test
-            testableContext.orCreateTestableResources.addOverride(
-                com.android.internal.R.bool.config_defaultBatteryPercentageSetting,
-                true,
-            )
+            val latest by collectLastValue(underTest.showBatteryPercentMode)
 
-            val latest by collectLastValue(underTest.isShowBatteryPercentSettingEnabled)
+            runCurrent()
 
-            assertThat(latest).isTrue()
-
-            fakeSystemSettingsRepository.setInt(Settings.System.SHOW_BATTERY_PERCENT, 0)
-
-            assertThat(latest).isFalse()
-
-            fakeSystemSettingsRepository.setInt(Settings.System.SHOW_BATTERY_PERCENT, 1)
-
-            assertThat(latest).isTrue()
+            assertThat(latest).isEqualTo(BatteryRepository.SHOW_PERCENT_HIDDEN)
         }
 
     @Test

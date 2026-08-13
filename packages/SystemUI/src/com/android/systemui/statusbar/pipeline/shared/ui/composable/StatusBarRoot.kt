@@ -110,7 +110,7 @@ import com.android.systemui.statusbar.phone.domain.interactor.IsAreaDark
 import com.android.systemui.statusbar.phone.ui.DarkIconManager
 import com.android.systemui.statusbar.phone.ui.StatusBarIconController
 import com.android.systemui.statusbar.phone.ui.TintedIconManager
-import com.android.systemui.statusbar.pipeline.battery.ui.composable.UnifiedBattery
+import com.android.systemui.statusbar.pipeline.battery.ui.composable.BatteryWithPercent
 import com.android.systemui.statusbar.pipeline.battery.ui.viewmodel.BatteryViewModel
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.HomeStatusBarIconBlockListBinder
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.HomeStatusBarTouchExclusionRegionBinder
@@ -599,10 +599,10 @@ private fun addBatteryComposable(
                     rememberViewModel(traceName = "UnifiedBattery") {
                         statusBarViewModel.unifiedBatteryViewModel.create()
                     }
-                UnifiedBattery(
-                    modifier = Modifier.sysUiResTagContainer().height(height).wrapContentWidth(),
+                BatteryWithPercent(
                     viewModel = viewModel,
                     isDarkProvider = { statusBarViewModel.areaDark },
+                    modifier = Modifier.sysUiResTagContainer().height(height).wrapContentWidth(),
                 )
             }
         }
@@ -649,7 +649,7 @@ private fun addEndSideComposable(
                         rememberViewModel(traceName = "UnifiedBattery") {
                             statusBarViewModel.unifiedBatteryViewModel.create()
                         }
-                    UnifiedBattery(
+                    BatteryWithPercent(
                         viewModel = viewModel,
                         isDarkProvider = { statusBarViewModel.areaDark },
                         modifier = Modifier.height(height).wrapContentWidth(),

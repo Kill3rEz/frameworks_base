@@ -27,6 +27,7 @@ import com.android.systemui.statusbar.BatteryStatusChip
 import com.android.systemui.statusbar.ConnectedDisplayChip
 import com.android.systemui.statusbar.core.NewStatusBarIcons
 import com.android.systemui.statusbar.events.ui.view.BatteryStatusEventComposeChip
+import com.android.systemui.statusbar.pipeline.battery.data.repository.BatteryRepository
 
 typealias ViewCreator = (context: Context) -> BackgroundAnimatableView
 
@@ -74,7 +75,11 @@ class BGImageView(context: Context) : ImageView(context), BackgroundAnimatableVi
     }
 }
 
-class BatteryEvent(@IntRange(from = 0, to = 100) val batteryLevel: Int) : StatusEvent {
+class BatteryEvent(
+    @IntRange(from = 0, to = 100) val batteryLevel: Int,
+    val batteryIconStyle: Int = BatteryRepository.ICON_STYLE_DEFAULT,
+    val showPercentNextToIcon: Boolean = false,
+) : StatusEvent {
     override val priority = 50
     override var forceVisible = false
     override val showAnimation = true
@@ -83,7 +88,12 @@ class BatteryEvent(@IntRange(from = 0, to = 100) val batteryLevel: Int) : Status
 
     override val viewCreator: ViewCreator = { context ->
         if (NewStatusBarIcons.isEnabled) {
-            BatteryStatusEventComposeChip(batteryLevel, context)
+            BatteryStatusEventComposeChip(
+                level = batteryLevel,
+                context = context,
+                iconStyle = batteryIconStyle,
+                showPercentNextToIcon = showPercentNextToIcon,
+            )
         } else {
             BatteryStatusChip(context).apply { setBatteryLevel(batteryLevel) }
         }

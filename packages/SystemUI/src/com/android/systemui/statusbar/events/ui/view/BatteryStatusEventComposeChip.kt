@@ -22,8 +22,13 @@ import android.util.AttributeSet
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
@@ -34,6 +39,7 @@ import com.android.systemui.res.R
 import com.android.systemui.statusbar.core.NewStatusBarIcons
 import com.android.systemui.statusbar.events.BackgroundAnimatableView
 import com.android.systemui.statusbar.pipeline.battery.domain.interactor.BatteryInteractor
+import com.android.systemui.statusbar.pipeline.battery.data.repository.BatteryRepository
 import com.android.systemui.statusbar.pipeline.battery.shared.ui.BatteryColors
 import com.android.systemui.statusbar.pipeline.battery.shared.ui.BatteryGlyph
 import com.android.systemui.statusbar.pipeline.battery.ui.composable.BatteryLayout
@@ -49,7 +55,13 @@ import com.android.systemui.statusbar.pipeline.battery.ui.viewmodel.BatteryViewM
 @SuppressLint("ViewConstructor")
 class BatteryStatusEventComposeChip
 @JvmOverloads
-constructor(level: Int, context: Context, attrs: AttributeSet? = null) :
+constructor(
+    level: Int,
+    context: Context,
+    attrs: AttributeSet? = null,
+    private val iconStyle: Int = BatteryRepository.ICON_STYLE_DEFAULT,
+    private val showPercentNextToIcon: Boolean = false,
+) :
     FrameLayout(context, attrs), BackgroundAnimatableView {
     private val roundedContainer: LinearLayout
     private val composeInner: ComposeView
@@ -62,7 +74,17 @@ constructor(level: Int, context: Context, attrs: AttributeSet? = null) :
         inflate(context, R.layout.status_bar_event_chip_compose, this)
         roundedContainer = requireViewById(R.id.rounded_container)
         composeInner = requireViewById(R.id.compose_view)
-        composeInner.apply { setContent { PlatformTheme { UnifiedBatteryChip(level) } } }
+        composeInner.apply {
+            setContent {
+                PlatformTheme {
+                    UnifiedBatteryChip(
+                        level = level,
+                        iconStyle = iconStyle,
+                        showPercentNextToIcon = showPercentNextToIcon,
+                    )
+                }
+            }
+        }
         updateResources()
     }
 
@@ -82,20 +104,46 @@ constructor(level: Int, context: Context, attrs: AttributeSet? = null) :
 }
 
 @Composable
-private fun UnifiedBatteryChip(level: Int) {
+private fun UnifiedBatteryChip(
+    level: Int,
+    iconStyle: Int = BatteryRepository.ICON_STYLE_DEFAULT,
+    showPercentNextToIcon: Boolean = false,
+) {
     val isFull = BatteryInteractor.isBatteryFull(level)
     val height =
         with(LocalDensity.current) {
             BatteryViewModel.getStatusBarBatteryHeight(LocalContext.current).toDp()
         }
-    BatteryLayout(
-        attribution = BatteryGlyph.Bolt, // Always charging
-        levelProvider = { level },
-        isFullProvider = { isFull },
-        glyphsProvider = { level.glyphRepresentation() },
-        colorsProvider = { BatteryColors.DarkTheme.Charging },
-        modifier = Modifier.height(height).wrapContentWidth(),
-        // TODO(b/394659067): get a content description for this chip
-        contentDescription = "",
-    )
+
+    if (iconStyle == BatteryRepository.ICON_STYLE_TEXT) {
+        Text(
+            text = "$level%",
+            color = BatteryColors.DarkTheme.Charging.fill,
+            style = BatteryViewModel.getStatusBarBatteryTextStyle(LocalContext.current),
+            maxLines = 1,
+        )
+    } else {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BatteryLayout(
+                attribution = BatteryGlyph.Bolt, // Always charging
+                levelProvider = { level },
+                isFullProvider = { isFull },
+                glyphsProvider = { level.glyphRepresentation() },
+                colorsProvider = { BatteryColors.DarkTheme.Charging },
+                modifier = Modifier.height(height).wrapContentWidth(),
+                contentDescription = "",
+            )
+            if (showPercentNextToIcon) {
+                Text(
+                    text = "$level%",
+                    color = BatteryColors.DarkTheme.Charging.fill,
+                    style = BatteryViewModel.getStatusBarBatteryTextStyle(LocalContext.current),
+                    maxLines = 1,
+                )
+            }
+        }
+    }
 }

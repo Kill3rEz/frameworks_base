@@ -138,7 +138,9 @@ public class SystemSettings {
                 Settings.System.FP_ERROR_VIBRATE,
                 Settings.System.STATUSBAR_EXTRA_PADDING_START,
                 Settings.System.STATUSBAR_EXTRA_PADDING_TOP,
-                Settings.System.STATUSBAR_EXTRA_PADDING_END
+                Settings.System.STATUSBAR_EXTRA_PADDING_END,
+                Settings.System.STATUS_BAR_SHOW_BATTERY_PERCENT,
+                Settings.System.STATUS_BAR_BATTERY_STYLE
         ));
         return settings.toArray(new String[0]);
     }

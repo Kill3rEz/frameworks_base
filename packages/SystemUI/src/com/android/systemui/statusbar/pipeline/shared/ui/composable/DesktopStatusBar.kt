@@ -73,7 +73,7 @@ import com.android.systemui.statusbar.phone.StatusIconContainer
 import com.android.systemui.statusbar.phone.domain.interactor.IsAreaDark
 import com.android.systemui.statusbar.phone.ui.StatusBarIconController
 import com.android.systemui.statusbar.phone.ui.TintedIconManager
-import com.android.systemui.statusbar.pipeline.battery.ui.composable.UnifiedBattery
+import com.android.systemui.statusbar.pipeline.battery.ui.composable.BatteryWithPercent
 import com.android.systemui.statusbar.pipeline.battery.ui.viewmodel.BatteryViewModel
 import com.android.systemui.statusbar.pipeline.shared.ui.viewmodel.HomeStatusBarViewModel
 import com.android.systemui.statusbar.quickactions.popups.StatusBarPopupChips
@@ -379,7 +379,7 @@ private fun QuickSettingsChip(
                     ChipHighlightModel.Transparent -> viewModel.areaDark
                     ChipHighlightModel.Weak -> viewModel.areaDark
                 }
-            UnifiedBattery(
+            BatteryWithPercent(
                 viewModel =
                     rememberViewModel("DesktopStatusBar.BatteryViewModel") {
                         viewModel.unifiedBatteryViewModel.create()

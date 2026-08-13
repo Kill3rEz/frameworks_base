@@ -71,8 +71,19 @@ class BatteryInteractor @Inject constructor(repo: BatteryRepository) {
     /** @see [BatteryRepository.isPowerSaveEnabled] */
     val powerSave = repo.isPowerSaveEnabled
 
-    /** @see [BatteryRepository.isShowBatteryPercentSettingEnabled] */
-    val isBatteryPercentSettingEnabled = repo.isShowBatteryPercentSettingEnabled
+    /** @see [BatteryRepository.batteryIconStyle] */
+    val batteryIconStyle = repo.batteryIconStyle
+
+    /** @see [BatteryRepository.showBatteryPercentMode] */
+    val showBatteryPercentMode = repo.showBatteryPercentMode
+
+    /** True if the user has enabled showing percentage inside the battery icon */
+    val isBatteryPercentInsideIconSettingEnabled =
+        showBatteryPercentMode.map { it == BatteryRepository.SHOW_PERCENT_INSIDE }
+
+    /** True if the user has enabled showing percentage next to the battery icon */
+    val isShowPercentNextToIconEnabled =
+        showBatteryPercentMode.map { it == BatteryRepository.SHOW_PERCENT_NEXT_TO }
 
     /**
      * The battery attribution (@see [BatteryAttributionModel]) describes the attribution that best
