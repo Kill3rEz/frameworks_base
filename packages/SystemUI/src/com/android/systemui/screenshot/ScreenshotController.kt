@@ -17,6 +17,7 @@ package com.android.systemui.screenshot
 
 import android.animation.Animator
 import android.app.ActivityOptions
+import android.app.StatusBarManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -86,6 +87,7 @@ internal constructor(
     private val broadcastSender: BroadcastSender,
     private val broadcastDispatcher: BroadcastDispatcher,
     private val packageManager: PackageManager,
+    private val statusBarManager: StatusBarManager,
     private val userManager: UserManager,
     private val assistContentRequester: AssistContentRequester,
     private val messageContainerController: MessageContainerController,
@@ -436,6 +438,8 @@ internal constructor(
                 val options = ActivityOptions.makeBasic()
                 options.setLaunchDisplayId(context.displayId)
                 context.startActivity(intent, options.toBundle())
+
+                statusBarManager.collapsePanels()
             },
             { _: Rect, onTransitionEnd: Runnable, _: LongScreenshot ->
                 onTransitionEnd.run()
