@@ -35,6 +35,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.view.WindowManager.LayoutParams.SYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS
 import android.widget.ArrayAdapter
 import android.widget.CheckedTextView
@@ -88,7 +89,15 @@ class UsbFunctionActivity @Inject constructor(
         dlog("onCreate()")
         super.onCreate(savedInstanceState)
 
-        window.addSystemFlags(SYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS)
+        window.apply {
+            addSystemFlags(SYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS)
+            addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            attributes = attributes.apply {
+                blurBehindRadius = resources.getDimensionPixelSize(
+                    R.dimen.global_actions_blur_radius
+                )
+            }
+        }
 
         usbManager = getSystemService(UsbManager::class.java) ?: return
         userManager = getSystemService(UserManager::class.java) ?: return
