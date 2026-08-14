@@ -73,4 +73,7 @@
    <java-symbol type="string" name="power_insight_notif_charging" />
    <java-symbol type="string" name="power_insight_notif_discharging" />
    <java-symbol type="drawable" name="ic_power_insight_notify" />
+   
+   <!-- GameSpace -->
+   <java-symbol type="string" name="gamespace_new_game_added" />
 </resources>
