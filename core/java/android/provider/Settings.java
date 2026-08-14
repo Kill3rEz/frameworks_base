@@ -13206,6 +13206,13 @@ public final class Settings {
         public static final String STATUS_BAR_SHOW_VIBRATE_ICON = "status_bar_show_vibrate_icon";
 
         /**
+         * Whether to show the Bluetooth battery level in the Status Bar (default on)
+         *
+         * @hide
+         */
+        public static final String STATUS_BAR_BLUETOOTH_BATTERY = "status_bar_bluetooth_battery";
+
+        /**
          * Specifies whether the web action API is enabled.
          *
          * @hide

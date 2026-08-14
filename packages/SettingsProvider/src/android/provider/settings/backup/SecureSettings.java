@@ -265,6 +265,7 @@ public class SecureSettings {
         Settings.Secure.LOCK_SCREEN_SHOW_QR_CODE_SCANNER,
         Settings.Secure.LOCKSCREEN_USE_DOUBLE_LINE_CLOCK,
         Settings.Secure.STATUS_BAR_SHOW_VIBRATE_ICON,
+        Settings.Secure.STATUS_BAR_BLUETOOTH_BATTERY,
         Settings.Secure.WEAR_TALKBACK_ENABLED,
         Settings.Secure.HBM_SETTING_KEY,
         Settings.Secure.ASSIST_TOUCH_GESTURE_ENABLED,
