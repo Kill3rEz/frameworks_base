@@ -2993,6 +2993,7 @@ public class KeyguardViewMediator implements CoreStartable,
                     message = "KEYGUARD_TIMEOUT";
                     synchronized (KeyguardViewMediator.this) {
                         doKeyguardLocked((Bundle) msg.obj);
+                        notifyDefaultDisplayCallbacks(mShowing);
                     }
                     break;
                 case DISMISS:
