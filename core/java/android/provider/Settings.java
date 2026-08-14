@@ -13250,6 +13250,27 @@ public final class Settings {
         public static final String STATUS_BAR_BLUETOOTH_BATTERY = "status_bar_bluetooth_battery";
 
         /**
+         * Whether to show the mic/camera privacy indicator in the Status Bar (default on)
+         *
+         * @hide
+         */
+        public static final String ENABLE_CAMERA_PRIVACY_INDICATOR = "enable_camera_privacy_indicator";
+
+        /**
+         * Whether to show the location privacy indicator in the Status Bar (default on)
+         *
+         * @hide
+         */
+        public static final String ENABLE_LOCATION_PRIVACY_INDICATOR = "enable_location_privacy_indicator";
+
+        /**
+         * Whether to show the projection privacy indicator in the Status Bar (default on)
+         *
+         * @hide
+         */
+        public static final String ENABLE_PROJECTION_PRIVACY_INDICATOR = "enable_projection_privacy_indicator";
+
+        /**
          * Specifies whether the web action API is enabled.
          *
          * @hide

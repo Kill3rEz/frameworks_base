@@ -27,9 +27,12 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.res.R
+import android.database.ContentObserver
+import android.provider.Settings
 import com.android.systemui.util.DeviceConfigProxy
 import com.android.systemui.util.asIndenting
 import com.android.systemui.util.concurrency.DelayableExecutor
+import com.android.systemui.util.settings.SecureSettings
 import com.android.systemui.util.withIncreasedIndent
 import java.io.PrintWriter
 import java.lang.ref.WeakReference
@@ -41,6 +44,7 @@ class PrivacyConfig
 constructor(
     @Main private val uiExecutor: DelayableExecutor,
     private val deviceConfigProxy: DeviceConfigProxy,
+    private val secureSettings: SecureSettings,
     dumpManager: DumpManager,
 ) : Dumpable {
 
@@ -82,13 +86,44 @@ constructor(
 
     private val callbacks = mutableListOf<WeakReference<Callback>>()
 
-    var micCameraAvailable = isMicCameraEnabled()
+    private fun isCameraIndicatorEnabled(): Boolean {
+        return secureSettings.getBool(Settings.Secure.ENABLE_CAMERA_PRIVACY_INDICATOR, true)
+    }
+
+    private fun isLocationIndicatorEnabled(): Boolean {
+        return secureSettings.getBool(Settings.Secure.ENABLE_LOCATION_PRIVACY_INDICATOR, true)
+    }
+
+    private fun isProjectionIndicatorEnabled(): Boolean {
+        return secureSettings.getBool(Settings.Secure.ENABLE_PROJECTION_PRIVACY_INDICATOR, true)
+    }
+
+    private fun updatePrivacyIndicators() {
+        val newMicCamera = isMicCameraEnabled() && isCameraIndicatorEnabled()
+        val newLocation = locationIndicatorsEnabled() && isLocationIndicatorEnabled()
+        val newProjection = isMediaProjectionEnabled() && isProjectionIndicatorEnabled()
+
+        if (newMicCamera != micCameraAvailable) {
+            micCameraAvailable = newMicCamera
+            callbacks.forEach { it.get()?.onFlagMicCameraChanged(micCameraAvailable) }
+        }
+        if (newLocation != locationAvailable) {
+            locationAvailable = newLocation
+            callbacks.forEach { it.get()?.onFlagLocationChanged(locationAvailable) }
+        }
+        if (newProjection != mediaProjectionAvailable) {
+            mediaProjectionAvailable = newProjection
+            callbacks.forEach { it.get()?.onFlagMediaProjectionChanged(mediaProjectionAvailable) }
+        }
+    }
+
+    var micCameraAvailable = isMicCameraEnabled() && isCameraIndicatorEnabled()
         private set
 
-    var locationAvailable = locationIndicatorsEnabled()
+    var locationAvailable = locationIndicatorsEnabled() && isLocationIndicatorEnabled()
         private set
 
-    var mediaProjectionAvailable = isMediaProjectionEnabled()
+    var mediaProjectionAvailable = isMediaProjectionEnabled() && isProjectionIndicatorEnabled()
         private set
 
     private val devicePropertiesChangedListener =
@@ -96,7 +131,7 @@ constructor(
             if (DeviceConfig.NAMESPACE_PRIVACY == properties.namespace) {
                 // Running on the ui executor so can iterate on callbacks
                 if (properties.keyset.contains(MIC_CAMERA)) {
-                    micCameraAvailable = properties.getBoolean(MIC_CAMERA, DEFAULT_MIC_CAMERA)
+                    micCameraAvailable = properties.getBoolean(MIC_CAMERA, DEFAULT_MIC_CAMERA) && isCameraIndicatorEnabled()
                     callbacks.forEach { it.get()?.onFlagMicCameraChanged(micCameraAvailable) }
                 }
 
@@ -106,7 +141,7 @@ constructor(
 
                 if (properties.keyset.contains(MEDIA_PROJECTION)) {
                     mediaProjectionAvailable =
-                        properties.getBoolean(MEDIA_PROJECTION, DEFAULT_MEDIA_PROJECTION)
+                        properties.getBoolean(MEDIA_PROJECTION, DEFAULT_MEDIA_PROJECTION) && isProjectionIndicatorEnabled()
                     callbacks.forEach {
                         it.get()?.onFlagMediaProjectionChanged(mediaProjectionAvailable)
                     }
@@ -120,6 +155,25 @@ constructor(
             DeviceConfig.NAMESPACE_PRIVACY,
             uiExecutor,
             devicePropertiesChangedListener,
+        )
+        val contentObserver = object : ContentObserver(null) {
+            override fun onChange(selfChange: Boolean) {
+                uiExecutor.execute {
+                    updatePrivacyIndicators()
+                }
+            }
+        }
+        secureSettings.registerContentObserverAsync(
+            Settings.Secure.ENABLE_CAMERA_PRIVACY_INDICATOR,
+            contentObserver
+        )
+        secureSettings.registerContentObserverAsync(
+            Settings.Secure.ENABLE_LOCATION_PRIVACY_INDICATOR,
+            contentObserver
+        )
+        secureSettings.registerContentObserverAsync(
+            Settings.Secure.ENABLE_PROJECTION_PRIVACY_INDICATOR,
+            contentObserver
         )
     }
 

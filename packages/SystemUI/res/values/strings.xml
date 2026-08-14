@@ -3164,6 +3164,10 @@
 
     <string name="bluetooth_battery_title">Bluetooth battery level</string>
 
+    <string name="mic_camera_privacy_indicator_title">Mic and camera privacy indicator</string>
+    <string name="location_privacy_indicator_title">Location privacy indicator</string>
+    <string name="projection_privacy_indicator_title">Media projection privacy indicator</string>
+
     <!-- SysUI Tuner: Other section -->
     <string name="other">Other</string>
 
