@@ -24,6 +24,8 @@ import android.view.Display
 import androidx.annotation.VisibleForTesting
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import com.android.app.tracing.coroutines.launchTraced
 import com.android.internal.logging.UiEventLogger
 import com.android.systemui.dagger.qualifiers.Background
@@ -256,6 +258,8 @@ constructor(
         val lowQuality = recordDetailsParametersViewModel.lowQuality
         val longerDuration = recordDetailsParametersViewModel.longerDuration
         val hevc = recordDetailsParametersViewModel.hevc
+        val skipTimer = recordDetailsParametersViewModel.skipTimer
+        val delay = if (skipTimer) Duration.ZERO else 3.seconds
         when (target) {
             is ScreenCaptureTarget.Fullscreen -> {
                 val shouldShowTaps = recordDetailsParametersViewModel.shouldShowTaps
@@ -268,7 +272,8 @@ constructor(
                         lowQuality = lowQuality,
                         longerDuration = longerDuration,
                         hevc = hevc,
-                    )
+                    ),
+                    delay = delay
                 )
             }
             is ScreenCaptureTarget.App -> {
@@ -300,14 +305,15 @@ constructor(
                             MediaProjectionCaptureTarget(
                                 launchCookie = cookie,
                                 taskId = target.taskId,
-                            ),
+                              ),
                         displayId = displayId,
                         shouldShowTaps = false,
                         audioSource = audioSource,
                         lowQuality = lowQuality,
                         longerDuration = longerDuration,
                         hevc = hevc,
-                    )
+                    ),
+                    delay = delay
                 )
             }
             else -> error("Unsupported target=$target")

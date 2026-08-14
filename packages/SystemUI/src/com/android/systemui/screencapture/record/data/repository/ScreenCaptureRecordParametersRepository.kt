@@ -32,4 +32,5 @@ class ScreenCaptureRecordParametersRepository @Inject constructor() {
     var lowQuality: Boolean by mutableStateOf(false)
     var longerDuration: Boolean by mutableStateOf(false)
     var hevc: Boolean by mutableStateOf(false)
+    var skipTimer: Boolean by mutableStateOf(false)
 }

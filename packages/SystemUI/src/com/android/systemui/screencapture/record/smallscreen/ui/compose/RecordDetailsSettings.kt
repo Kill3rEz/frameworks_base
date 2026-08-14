@@ -167,6 +167,58 @@ fun RecordDetailsSettings(
                 onCheckedChange = { parametersViewModel.shouldShowTaps = it },
                 modifier = Modifier,
             )
+            RichSwitch(
+                visible = true,
+                icon =
+                    loadIcon(
+                        viewModel = drawableLoaderViewModel,
+                        resId = R.drawable.ic_screenrecord,
+                        contentDescription = null,
+                    ),
+                label = stringResource(R.string.screenrecord_lowquality_label),
+                checked = parametersViewModel.lowQuality,
+                onCheckedChange = { parametersViewModel.lowQuality = it },
+                modifier = Modifier,
+            )
+            RichSwitch(
+                visible = true,
+                icon =
+                    loadIcon(
+                        viewModel = drawableLoaderViewModel,
+                        resId = R.drawable.ic_screenrecord,
+                        contentDescription = null,
+                    ),
+                label = stringResource(R.string.screenrecord_longer_timeout_switch_label),
+                checked = parametersViewModel.longerDuration,
+                onCheckedChange = { parametersViewModel.longerDuration = it },
+                modifier = Modifier,
+            )
+            RichSwitch(
+                visible = parametersViewModel.isHevcSupported,
+                icon =
+                    loadIcon(
+                        viewModel = drawableLoaderViewModel,
+                        resId = R.drawable.ic_screenrecord,
+                        contentDescription = null,
+                    ),
+                label = stringResource(R.string.screenrecord_hevc_switch_label),
+                checked = parametersViewModel.hevc,
+                onCheckedChange = { parametersViewModel.hevc = it },
+                modifier = Modifier,
+            )
+            RichSwitch(
+                visible = true,
+                icon =
+                    loadIcon(
+                        viewModel = drawableLoaderViewModel,
+                        resId = R.drawable.ic_screenrecord,
+                        contentDescription = null,
+                    ),
+                label = stringResource(R.string.screenrecord_skip_time_label),
+                checked = parametersViewModel.skipTimer,
+                onCheckedChange = { parametersViewModel.skipTimer = it },
+                modifier = Modifier,
+            )
             SettingsRow(visible = true, modifier = Modifier.padding(top = 4.dp)) {
                 Crossfade(
                     targetState = targetViewModel.warningMessageRes,

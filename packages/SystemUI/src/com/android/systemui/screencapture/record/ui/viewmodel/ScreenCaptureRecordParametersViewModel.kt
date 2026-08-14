@@ -16,6 +16,8 @@
 
 package com.android.systemui.screencapture.record.ui.viewmodel
 
+import android.media.MediaCodecList
+import android.media.MediaFormat
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import com.android.internal.logging.UiEventLogger
@@ -90,6 +92,30 @@ constructor(
         set(value) {
             interactor.hevc = value
         }
+
+    var skipTimer: Boolean
+        get() = interactor.skipTimer
+        set(value) {
+            interactor.skipTimer = value
+        }
+
+    val isHevcSupported: Boolean by lazy {
+        val mediaCodecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+        var supported = false
+        for (codecInfo in mediaCodecList.codecInfos) {
+            if (!codecInfo.isEncoder || !codecInfo.isHardwareAccelerated) {
+                continue
+            }
+            for (type in codecInfo.supportedTypes) {
+                if (type.equals(MediaFormat.MIMETYPE_VIDEO_HEVC, ignoreCase = true)) {
+                    supported = true
+                    break
+                }
+            }
+            if (supported) break
+        }
+        supported
+    }
 
     var shouldRecordDevice: Boolean
         get() =
