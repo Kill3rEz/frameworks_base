@@ -1857,7 +1857,9 @@ public final class PowerManagerService extends SystemService
         mWakeUpWhenPluggedOrUnpluggedSetting = Settings.Global.getInt(resolver,
                 Settings.Global.WAKE_WHEN_PLUGGED_OR_UNPLUGGED,
                 (mWakeUpWhenPluggedOrUnpluggedConfig ? 1 : 0)) == 1;
-        mAlwaysOnEnabled = mAmbientDisplayConfiguration.alwaysOnEnabled(UserHandle.USER_CURRENT);
+        mAlwaysOnEnabled = mAmbientDisplayConfiguration.alwaysOnEnabledSetting(UserHandle.USER_CURRENT)
+            || (mAmbientDisplayConfiguration.alwaysOnChargingEnabledSetting(
+                    UserHandle.USER_CURRENT) && mIsPowered);
 
         boolean gesturesEnabled = Settings.System.getIntForUser(resolver,
                 Settings.System.GESTURES_ENABLED, 1, UserHandle.USER_CURRENT) != 0;
