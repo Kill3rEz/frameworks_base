@@ -70,6 +70,7 @@ class PulseRenderer(
             "minimal" -> style !is MinimalStyleRenderer
             "sparkle" -> style !is SparkleStyleRenderer
             "matrix" -> style !is MatrixStyleRenderer
+            "dotwave" -> style !is DotWaveStyleRenderer
             else -> false
         }
 
@@ -92,6 +93,7 @@ class PulseRenderer(
             "minimal" -> MinimalStyleRenderer(settingsRepo)
             "sparkle" -> SparkleStyleRenderer(settingsRepo)
             "matrix" -> MatrixStyleRenderer(settingsRepo)
+            "dotwave" -> DotWaveStyleRenderer(settingsRepo)
             else -> SolidLineStyleRenderer(settingsRepo)
         }
     }
