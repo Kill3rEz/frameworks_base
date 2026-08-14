@@ -14573,6 +14573,12 @@ public final class Settings {
         public static final String UI_NIGHT_LIGHT_DIM_WALL_ACTIVATED = "ui_night_light_dim_wall_activated";
 
         /**
+         * Whether to trigger doze for new notifications
+         * @hide
+         */
+        public static final String DOZE_FOR_NOTIFICATIONS = "doze_for_notifications";
+
+        /**
          * Whether to show ambient instead of waking for the tap gesture
          * @hide
          */
