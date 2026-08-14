@@ -568,5 +568,7 @@ public class SecureSettingsValidators {
         VALIDATORS.put(Secure.NETWORK_TRAFFIC_NUMBER_SIZE, new InclusiveIntegerRangeValidator(20, 100));
         VALIDATORS.put(Secure.NETWORK_TRAFFIC_UNIT_SIZE, new InclusiveIntegerRangeValidator(20, 100));
         VALIDATORS.put(Secure.NETWORK_TRAFFIC_DISPLAY_STYLE, new InclusiveIntegerRangeValidator(0, 1));
+        VALIDATORS.put(Secure.DOZE_TAP_GESTURE_AMBIENT, BOOLEAN_VALIDATOR);
+        VALIDATORS.put(Secure.DOZE_PICK_UP_GESTURE_AMBIENT, BOOLEAN_VALIDATOR);
     }
 }
