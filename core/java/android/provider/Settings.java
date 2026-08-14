@@ -12148,6 +12148,15 @@ public final class Settings {
         @android.provider.Settings.Readable
         public static final String DUAL_SHADE = "dual_shade";
 
+        /**
+         * Whether Dual Shade is enabled in landscape orientation.
+         * Type: int (0 for false, 1 for true)
+         *
+         * @hide
+         */
+        @android.provider.Settings.Readable
+        public static final String DUAL_SHADE_LANDSCAPE = "dual_shade_landscape";
+
        /**
          * 1 if it is allowed to remove the primary GAIA account. 0 by default.
          * @hide

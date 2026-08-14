@@ -83,12 +83,24 @@ constructor(
      * Shade. If no preference was set explicitly, this emits the same values as
      * [isDualShadeEnabledByDefault].
      */
+    private val isLandscape: Flow<Boolean> =
+        configurationRepository.configurationValues
+            .map { it.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE }
+            .distinctUntilChanged()
+
     val isDualShadeSettingEnabled: Flow<Boolean> =
         if (SceneContainerFlag.isEnabled) {
             isDualShadeEnabledByDefault.flatMapLatest { defaultValue ->
-                secureSettingsRepository
-                    .boolSetting(Settings.Secure.DUAL_SHADE, defaultValue = defaultValue)
-                    .flowOn(backgroundDispatcher)
+                isLandscape.flatMapLatest { landscape ->
+                    val settingKey = if (landscape) {
+                        Settings.Secure.DUAL_SHADE_LANDSCAPE
+                    } else {
+                        Settings.Secure.DUAL_SHADE
+                    }
+                    secureSettingsRepository
+                        .boolSetting(settingKey, defaultValue = defaultValue)
+                        .flowOn(backgroundDispatcher)
+                }
             }
         } else {
             flowOf(false)

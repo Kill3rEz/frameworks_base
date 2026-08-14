@@ -324,6 +324,7 @@ public class SecureSettings {
         Settings.Secure.FINGERPRINT_APP_ENABLED,
         Settings.Secure.FINGERPRINT_KEYGUARD_ENABLED,
         Settings.Secure.DUAL_SHADE,
+        Settings.Secure.DUAL_SHADE_LANDSCAPE,
         Settings.Secure.BROWSER_CONTENT_FILTERS_ENABLED,
         Settings.Secure.SEARCH_CONTENT_FILTERS_ENABLED,
         Settings.Secure.SPELL_CHECKER_ENABLED,
