@@ -51,6 +51,7 @@ import android.annotation.SpecialUsers.CannotBeSpecialUser;
 import android.annotation.UserIdInt;
 import android.app.ActivityManager;
 import android.app.AppGlobals;
+import android.app.ObscuraManager;
 import android.app.backup.BackupManager;
 import android.app.compat.CompatChanges;
 import android.app.job.JobInfo;
@@ -463,6 +464,12 @@ public class SettingsProvider extends ContentProvider {
     public Bundle call(String method, String name, Bundle args) {
         final @CanBeCURRENT @UserIdInt int requestingUserId = getRequestingUserId(args);
         final int callingDeviceId = getDeviceId();
+        if (method != null && method.startsWith("GET_")) {
+            String spoofed = getSpoofedValue(name);
+            if (spoofed != null) {
+                return Bundle.forPair(Settings.NameValueTable.VALUE, spoofed);
+            }
+        }
         switch (method) {
             case Settings.CALL_METHOD_GET_CONFIG -> {
                 Setting setting = getConfigSetting(name);
@@ -635,6 +642,24 @@ public class SettingsProvider extends ContentProvider {
         return null;
     }
 
+    private String getSpoofedValue(String name) {
+        String callingPackage = getCallingPackage();
+        if (callingPackage == null) return null;
+        if (callingPackage.startsWith("com.android.")
+                || callingPackage.startsWith("com.google.android.")) {
+            return null;
+        }
+        String settings = null;
+        try {
+            ObscuraManager obscuraManager =
+                    getContext().getSystemService(ObscuraManager.class);
+            if (obscuraManager != null) {
+                settings = obscuraManager.getSpoofedSetting(callingPackage, name);
+            }
+        } catch (Exception e) {}
+        return settings;
+    }
+
     @Override
     public String getType(Uri uri) {
         Arguments args = new Arguments(uri, null, null, true);
@@ -661,6 +686,17 @@ public class SettingsProvider extends ContentProvider {
         }
 
         final int callingDeviceId = getDeviceId();
+        if (args.name != null) {
+            String spoofed = getSpoofedValue(args.name);
+            if (spoofed != null) {
+                synchronized (mLock) {
+                    SettingsState state = mSettingsRegistry.getSettingsLocked(
+                            SettingsState.SETTINGS_TYPE_GLOBAL, UserHandle.USER_SYSTEM, Context.DEVICE_ID_DEFAULT);
+                    SettingsState.Setting s = state.new Setting(args.name, spoofed, true, null, null);
+                    return packageSettingForQuery(s, normalizedProjection, null);
+                }
+            }
+        }
         switch (args.table) {
             case TABLE_GLOBAL -> {
                 if (args.name != null) {

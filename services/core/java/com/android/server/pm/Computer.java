@@ -292,6 +292,7 @@ public interface Computer extends PackageDataSnapshot {
      */
     boolean shouldFilterApplicationIncludingUninstalled(@NonNull SharedUserSetting sus,
             int callingUid, int userId);
+    boolean shouldHideFromCaller(int callingUid, String targetPackage);
     int checkUidPermission(String permName, int uid);
     int getPackageUidInternal(String packageName, long flags, int userId, int callingUid);
 

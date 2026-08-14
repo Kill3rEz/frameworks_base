@@ -323,6 +323,7 @@ import com.android.internal.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.app.IAppOpsService;
 import com.android.internal.app.IBatteryStats;
+import com.android.internal.app.IObscuraManager;
 import com.android.internal.app.ISoundTriggerService;
 import com.android.internal.app.IVoiceInteractionManagerService;
 import com.android.internal.appwidget.IAppWidgetService;
@@ -1046,6 +1047,16 @@ public final class SystemServiceRegistry {
                 IBinder b = ServiceManager.getServiceOrThrow(Context.APP_OPS_SERVICE);
                 IAppOpsService service = IAppOpsService.Stub.asInterface(b);
                 return new AppOpsManager(ctx, service);
+            }});
+
+        registerService(Context.OBSCURA_SERVICE, ObscuraManager.class,
+                new CachedServiceFetcher<ObscuraManager>() {
+            @Override
+            public ObscuraManager createService(ContextImpl ctx) {
+                IBinder b = ServiceManager.getService(Context.OBSCURA_SERVICE);
+                if (b == null) return null;
+                IObscuraManager service = IObscuraManager.Stub.asInterface(b);
+                return new ObscuraManager(ctx.getOuterContext(), service);
             }});
 
         registerService(Context.CAMERA_SERVICE, CameraManager.class,

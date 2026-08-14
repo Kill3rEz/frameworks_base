@@ -131,6 +131,7 @@ import com.android.server.SystemService;
 import com.android.server.pm.pkg.AndroidPackage;
 import com.android.server.pm.pkg.ArchiveState;
 import com.android.server.pm.pkg.PackageStateInternal;
+import com.android.server.obscura.ObscuraService;
 import com.android.server.wm.ActivityTaskManagerInternal;
 
 import java.io.DataInputStream;
@@ -1049,6 +1050,10 @@ public class LauncherAppsService extends SystemService {
                 final String packageName = ri.activityInfo.packageName;
                 if (packageName == null) {
                     // should not happen
+                    continue;
+                }
+                if (ObscuraService.get().isPackageHidden(packageName) 
+                        || ObscuraService.get().isPackageLauncherHidden(packageName)) {
                     continue;
                 }
                 final IncrementalStatesInfo incrementalStatesInfo =
