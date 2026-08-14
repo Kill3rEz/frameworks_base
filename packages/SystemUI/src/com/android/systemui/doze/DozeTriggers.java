@@ -388,6 +388,8 @@ public class DozeTriggers implements DozeMachine.Part {
                 return mConfig.pickupGestureAmbient(UserHandle.USER_CURRENT);
             case DozeLog.REASON_SENSOR_TAP:
                 return mConfig.tapGestureAmbient(UserHandle.USER_CURRENT);
+            case DozeLog.REASON_SENSOR_DOUBLE_TAP:
+                return mConfig.doubleTapGestureAmbient(UserHandle.USER_CURRENT);
         }
         return false;
     }
