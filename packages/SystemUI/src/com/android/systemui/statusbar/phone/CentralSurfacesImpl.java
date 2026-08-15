@@ -65,6 +65,7 @@ import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.Trace;
 import android.os.UserHandle;
+import android.provider.Settings;
 import android.service.dreams.IDreamManager;
 import android.service.notification.StatusBarNotification;
 import android.util.ArraySet;
