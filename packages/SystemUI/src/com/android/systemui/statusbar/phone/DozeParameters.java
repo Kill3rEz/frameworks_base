@@ -100,6 +100,14 @@ public class DozeParameters implements
     private final Optional<MinModeManager> mMinModeManager;
     private final ShakeAodController mShakeAodController;
 
+    private final ShakeAodController.Callback mShakeCallback =
+            new ShakeAodController.Callback() {
+                @Override
+                public void onShakeAodPolicyChanged() {
+                    dispatchAlwaysOnEvent();
+                }
+            };
+
     private boolean mControlScreenOffAnimation;
     private boolean mIsQuickPickupEnabled;
     private boolean mScreenOffPeekActive;
@@ -167,6 +175,9 @@ public class DozeParameters implements
         mSecureSettings = secureSettings;
         mMinModeManager = minModeManager;
         mShakeAodController = shakeAodController;
+        if (mShakeAodController != null) {
+            mShakeAodController.addCallback(mShakeCallback);
+        }
 
         if (DisplayComponentRepositoryFlag.INSTANCE.isEagerInitializationEnabled()) {
             uiExecutor.execute(
