@@ -770,7 +770,7 @@ public class PocketService extends SystemService implements IBinder.DeathRecipie
                 if (DEBUG) Log.d(TAG, "Event has no values! event.values null ? " + (sensorEvent.values == null));
                 mVendorSensorState = VENDOR_SENSOR_UNKNOWN;
             } else {
-                final boolean isVendorPocket = sensorEvent.values[0] == mVendorPocketSensorValue;
+                final boolean isVendorPocket = sensorEvent.values[0] >= mVendorPocketSensorValue;
                 if (DEBUG) {
                     final long time = SystemClock.uptimeMillis();
                     Log.d(TAG, "Event: time=" + time + ", value=" + sensorEvent.values[0]
