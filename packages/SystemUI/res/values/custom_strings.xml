@@ -122,4 +122,10 @@
 
     <!-- Face unlock -->
     <string name="face_unlock_recognizing">Recognizing face...</string>
+
+    <!-- Screenshot -->
+    <string name="quick_settings_screenshot_label">Screenshot</string>
+
+    <!-- Dream / Screen saver -->
+    <string name="quick_settings_screensaver_label">Screen saver</string>
 </resources>
