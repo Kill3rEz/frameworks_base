@@ -178,11 +178,11 @@ class NotificationsShadeOverlayContentViewModelTest : SysuiTestCase() {
         }
 
     @Test
-    fun showMedia_activeMedia_true() =
+    fun showMedia_activeMedia_false() =
         kosmos.runTest {
             mediaPipelineRepository.addCurrentUserMediaEntry(MediaData(active = true))
 
-            assertThat(underTest.showMedia).isTrue()
+            assertThat(underTest.showMedia).isFalse()
         }
 
     @Test
