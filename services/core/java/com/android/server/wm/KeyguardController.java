@@ -241,7 +241,10 @@ class KeyguardController {
         state.writeEventLog("setKeyguardShown");
 
         if (displayId == DEFAULT_DISPLAY && keyguardChanged) {
-            GameSpaceService.get().onKeyguardChanged(keyguardShowing);
+            final GameSpaceService gameSpaceService = GameSpaceService.get();
+            if (gameSpaceService != null) {
+                gameSpaceService.onKeyguardChanged(keyguardShowing);
+            }
         }
 
         if (keyguardChanged || (Flags.aodTransition() && aodChanged)) {
