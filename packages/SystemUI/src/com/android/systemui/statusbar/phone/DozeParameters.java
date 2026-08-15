@@ -515,6 +515,7 @@ public class DozeParameters implements
     protected DozeParameters(
             Context context,
             @Background Handler handler,
+            @Main Executor uiExecutor,
             @Main Resources resources,
             AmbientDisplayConfiguration ambientDisplayConfiguration,
             AlwaysOnDisplayPolicy alwaysOnDisplayPolicy,
@@ -533,7 +534,7 @@ public class DozeParameters implements
             KeyguardTransitionInteractor transitionInteractor,
             SecureSettings secureSettings,
             Optional<MinModeManager> minModeManager) {
-        this(context, handler, resources, ambientDisplayConfiguration, alwaysOnDisplayPolicy,
+        this(context, handler, uiExecutor, resources, ambientDisplayConfiguration, alwaysOnDisplayPolicy,
                 powerManager, batteryController, tunerService, dumpManager,
                 screenOffAnimationController, sysUiUnfoldComponent,
                 unlockedScreenOffAnimationController, keyguardUpdateMonitor,
