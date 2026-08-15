@@ -367,5 +367,8 @@ public class SecureSettings {
         Settings.Secure.UI_NIGHT_LIGHT_DIM_WALL_AMOUNT,
         Settings.Secure.POWER_OFF_ALARM_ENABLED,
         Settings.Secure.VPN_ENFORCE_DNS,
+        Settings.Secure.DOZE_DOUBLE_TAP_GESTURE_VIBRATE,
+        Settings.Secure.DOZE_TAP_GESTURE_VIBRATE,
+        Settings.Secure.DOZE_PICK_UP_GESTURE_VIBRATE,
     };
 }

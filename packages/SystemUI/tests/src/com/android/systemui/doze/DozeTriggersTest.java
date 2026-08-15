@@ -56,6 +56,7 @@ import com.android.systemui.settings.UserTracker;
 import com.android.systemui.statusbar.phone.DozeParameters;
 import com.android.systemui.statusbar.policy.DevicePostureController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
+import com.android.systemui.statusbar.VibratorHelper;
 import com.android.systemui.user.domain.interactor.SelectedUserInteractor;
 import com.android.systemui.util.concurrency.FakeExecutor;
 import com.android.systemui.util.concurrency.FakeThreadFactory;
@@ -111,6 +112,8 @@ public class DozeTriggersTest extends SysuiTestCase {
     private SelectedUserInteractor mSelectedUserInteractor;
     @Mock
     private SessionTracker mSessionTracker;
+    @Mock
+    private VibratorHelper mVibratorHelper;
     @Captor
     private ArgumentCaptor<DozeHost.Callback> mHostCallbackCaptor;
 
@@ -153,7 +156,8 @@ public class DozeTriggersTest extends SysuiTestCase {
                 asyncSensorManager, wakeLock, mDockManager, mProximitySensor,
                 mProximityCheck, mDozeLog, mBroadcastDispatcher, new FakeSettings(),
                 mAuthController, mUiEventLogger, mSessionTracker, mKeyguardStateController,
-                mDevicePostureController, mUserTracker, mSelectedUserInteractor);
+                mDevicePostureController, mUserTracker, mSelectedUserInteractor,
+                mVibratorHelper);
         mTriggers.setDozeMachine(mMachine);
         waitForSensorManager();
     }
