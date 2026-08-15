@@ -24,9 +24,13 @@ import android.content.res.Configuration;
 import android.graphics.Insets;
 import android.graphics.Rect;
 import android.graphics.Region;
+import android.os.PowerManager;
+import android.os.SystemClock;
+import android.provider.Settings;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.DisplayCutout;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -74,6 +78,10 @@ public class PhoneStatusBarView extends FrameLayout {
     private StatusBarLongPressGestureDetector mStatusBarLongPressGestureDetector;
     private final Region mTouchableRegion = Region.obtain();
 
+    // Double-tap to sleep
+    @Nullable
+    private GestureDetector mDoubleTapGestureDetector;
+
     private int mStatusBarExtraPaddingStart = 0;
     private int mStatusBarExtraPaddingTop = 0;
     private int mStatusBarExtraPaddingEnd = 0;
@@ -85,6 +93,29 @@ public class PhoneStatusBarView extends FrameLayout {
 
     public PhoneStatusBarView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        mDoubleTapGestureDetector = new GestureDetector(context,
+                new GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onDoubleTap(MotionEvent e) {
+                        if (isDoubleTapToSleepEnabled()) {
+                            PowerManager pm = (PowerManager) context
+                                    .getSystemService(Context.POWER_SERVICE);
+                            if (pm != null) {
+                                pm.goToSleep(SystemClock.uptimeMillis());
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                });
+    }
+
+    private boolean isDoubleTapToSleepEnabled() {
+        return Settings.Secure.getIntForUser(
+                getContext().getContentResolver(),
+                Settings.Secure.DOUBLE_TAP_TO_SLEEP,
+                0,
+                android.os.UserHandle.USER_CURRENT) != 0;
     }
 
     void setLongPressGestureDetector(
@@ -270,6 +301,10 @@ public class PhoneStatusBarView extends FrameLayout {
         if (event.getAction() == MotionEvent.ACTION_DOWN
                 && !mTouchableRegion.contains((int) event.getX(), (int) event.getY())) {
             return false;
+        }
+
+        if (mDoubleTapGestureDetector != null && mDoubleTapGestureDetector.onTouchEvent(event)) {
+            return true;
         }
 
         if (mStatusBarLongPressGestureDetector != null && !Flags.scrollToTop()) {
