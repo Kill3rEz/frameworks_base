@@ -14273,6 +14273,8 @@ public final class Settings {
         @Readable
         public static final String PER_APPS_DEVICE_SPOOF_CACHE = "per_apps_device_spoof_cache";
 
+        public static final String IDLE_MANAGER_SLEEP_MODE_TRIGGER = "idle_manager_sleep_mode_trigger";
+
         /**
          * Idle Manager
          * @hide
