@@ -47,6 +47,7 @@ import com.android.systemui.Gefingerpoken;
 import com.android.systemui.res.R;
 import com.android.systemui.statusbar.gesture.StatusBarLongPressGestureDetector;
 import com.android.systemui.statusbar.phone.userswitcher.StatusBarUserSwitcherContainer;
+import com.android.systemui.statusbar.policy.StatusBarBrightnessGesture;
 import com.android.systemui.user.ui.binder.StatusBarUserChipViewBinder;
 import com.android.systemui.user.ui.viewmodel.StatusBarUserChipViewModel;
 import com.android.systemui.util.leak.RotationUtils;
@@ -302,12 +303,16 @@ public class PhoneStatusBarView extends FrameLayout {
                 && !mTouchableRegion.contains((int) event.getX(), (int) event.getY())) {
             return false;
         }
-
         if (mDoubleTapGestureDetector != null && mDoubleTapGestureDetector.onTouchEvent(event)) {
             return true;
         }
 
-        if (mStatusBarLongPressGestureDetector != null && !Flags.scrollToTop()) {
+        // Suppress the shade-expand long press when the user has opted into
+        // the status-bar brightness gesture; the two share the same gesture
+        // and the brightness handler will receive the touch via the touch
+        // event handler below.
+        if (mStatusBarLongPressGestureDetector != null && !Flags.scrollToTop()
+                && !StatusBarBrightnessGesture.isEnabled(getContext().getContentResolver())) {
             mStatusBarLongPressGestureDetector.handleTouch(event);
         }
         if (mTouchEventHandler == null) {

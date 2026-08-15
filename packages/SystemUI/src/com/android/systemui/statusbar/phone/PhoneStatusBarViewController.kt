@@ -47,6 +47,7 @@ import com.android.systemui.statusbar.gesture.StatusBarLongPressGestureDetector
 import com.android.systemui.statusbar.layout.StatusBarContentInsetsProvider
 import com.android.systemui.statusbar.policy.Clock
 import com.android.systemui.statusbar.policy.ConfigurationController
+import com.android.systemui.statusbar.policy.StatusBarBrightnessGesture
 import com.android.systemui.statusbar.window.StatusBarWindowControllerStore
 import com.android.systemui.statusbar.window.StatusBarWindowStateController
 import com.android.systemui.unfold.UNFOLD_STATUS_BAR
@@ -313,14 +314,22 @@ private constructor(
 
     /** Called when a touch event occurred on {@link PhoneStatusBarView}. */
     fun onTouch(event: MotionEvent) {
-        if (statusBarWindowStateController.windowIsShowing()) {
-            val upOrCancel =
+        if (StatusBarBrightnessGesture.isEnabled(mView.context.contentResolver)) {
+            centralSurfaces.brightnessControl(event)
+            if (!centralSurfaces.commandQueuePanelsEnabled) return
+        }
+
+        val upOrCancel =
                 event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL
+
+        if (statusBarWindowStateController.windowIsShowing()) {
             centralSurfaces.setInteracting(
                 WINDOW_STATUS_BAR,
                 !upOrCancel || shadeController.isExpandedVisible,
             )
         }
+
+        centralSurfaces.onBrightnessChanged(upOrCancel)
     }
 
     private fun addDarkReceivers() {
