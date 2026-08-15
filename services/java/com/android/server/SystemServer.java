@@ -512,9 +512,6 @@ public final class SystemServer implements Dumpable {
             "/apex/com.android.uwb/javalib/service-ranging.jar";
     private static final String RANGING_SERVICE_CLASS = "com.android.server.ranging.RangingService";
 
-    private static final String SLEEP_MODE_SERVICE_CLASS =
-            "com.android.server.power.SleepModeService";
-
     private static final String TETHERING_CONNECTOR_CLASS = "android.net.ITetheringConnector";
 
     private static final String DEVICE_TO_DEVICE_SERVICE_CLASS =
@@ -3566,7 +3563,7 @@ public final class SystemServer implements Dumpable {
         t.traceEnd();
 
         t.traceBegin("SleepModeService");
-        mSystemServiceManager.startService(SLEEP_MODE_SERVICE_CLASS);
+        mSystemServiceManager.startService(SleepModeService.class.getName());
         t.traceEnd();
 
         t.traceBegin("HealthConnectManagerService");
