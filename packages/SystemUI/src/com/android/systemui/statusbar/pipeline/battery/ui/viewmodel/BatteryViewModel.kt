@@ -20,8 +20,13 @@ import android.content.Context
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.createFontFamilyResolver
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.TextUnit
@@ -307,6 +312,17 @@ sealed class BatteryViewModel(
                 '9' -> BatteryGlyph.Nine
                 else -> throw IllegalArgumentException("cannot make glyph from char ($this)")
             }
+
+        @Composable
+        fun FontResolverWrapper(content: @Composable () -> Unit) {
+            val context = LocalContext.current
+            val fontName = remember { android.graphics.Typeface.getFontName() }
+            val resolver = remember(fontName) { createFontFamilyResolver(context) }
+            CompositionLocalProvider(
+                LocalFontFamilyResolver provides resolver,
+                content = content
+            )
+        }
     }
 }
 

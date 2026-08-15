@@ -109,40 +109,42 @@ private fun UnifiedBatteryChip(
     iconStyle: Int = BatteryRepository.ICON_STYLE_DEFAULT,
     showPercentNextToIcon: Boolean = false,
 ) {
-    val isFull = BatteryInteractor.isBatteryFull(level)
-    val height =
-        with(LocalDensity.current) {
-            BatteryViewModel.getStatusBarBatteryHeight(LocalContext.current).toDp()
-        }
+    BatteryViewModel.FontResolverWrapper {
+        val isFull = BatteryInteractor.isBatteryFull(level)
+        val height =
+            with(LocalDensity.current) {
+                BatteryViewModel.getStatusBarBatteryHeight(LocalContext.current).toDp()
+            }
 
-    if (iconStyle == BatteryRepository.ICON_STYLE_TEXT) {
-        Text(
-            text = "$level%",
-            color = BatteryColors.DarkTheme.Charging.fill,
-            style = BatteryViewModel.getStatusBarBatteryTextStyle(LocalContext.current),
-            maxLines = 1,
-        )
-    } else {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BatteryLayout(
-                attribution = BatteryGlyph.Bolt, // Always charging
-                levelProvider = { level },
-                isFullProvider = { isFull },
-                glyphsProvider = { level.glyphRepresentation() },
-                colorsProvider = { BatteryColors.DarkTheme.Charging },
-                modifier = Modifier.height(height).wrapContentWidth(),
-                contentDescription = "",
+        if (iconStyle == BatteryRepository.ICON_STYLE_TEXT) {
+            Text(
+                text = "$level%",
+                color = BatteryColors.DarkTheme.Charging.fill,
+                style = BatteryViewModel.getStatusBarBatteryTextStyle(LocalContext.current),
+                maxLines = 1,
             )
-            if (showPercentNextToIcon) {
-                Text(
-                    text = "$level%",
-                    color = BatteryColors.DarkTheme.Charging.fill,
-                    style = BatteryViewModel.getStatusBarBatteryTextStyle(LocalContext.current),
-                    maxLines = 1,
+        } else {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BatteryLayout(
+                    attribution = BatteryGlyph.Bolt, // Always charging
+                    levelProvider = { level },
+                    isFullProvider = { isFull },
+                    glyphsProvider = { level.glyphRepresentation() },
+                    colorsProvider = { BatteryColors.DarkTheme.Charging },
+                    modifier = Modifier.height(height).wrapContentWidth(),
+                    contentDescription = "",
                 )
+                if (showPercentNextToIcon) {
+                    Text(
+                        text = "$level%",
+                        color = BatteryColors.DarkTheme.Charging.fill,
+                        style = BatteryViewModel.getStatusBarBatteryTextStyle(LocalContext.current),
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }

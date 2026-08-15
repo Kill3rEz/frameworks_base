@@ -41,35 +41,37 @@ fun BatteryWithEstimate(
     modifier: Modifier = Modifier,
     showIcon: Boolean = true,
 ) {
-    val viewModel =
-        rememberViewModel(traceName = "BatteryWithEstimate") { viewModelFactory.create() }
+    BatteryViewModel.FontResolverWrapper {
+        val viewModel =
+            rememberViewModel(traceName = "BatteryWithEstimate") { viewModelFactory.create() }
 
-    val batteryHeight =
-        with(LocalDensity.current) {
-            BatteryViewModel.getStatusBarBatteryHeight(LocalContext.current).toDp()
-        }
+        val batteryHeight =
+            with(LocalDensity.current) {
+                BatteryViewModel.getStatusBarBatteryHeight(LocalContext.current).toDp()
+            }
 
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (showIcon) {
-            UnifiedBattery(
-                viewModel = viewModel,
-                isDarkProvider = isDarkProvider,
-                modifier = Modifier.height(batteryHeight).align(Alignment.CenterVertically),
-            )
-        }
-        if (showEstimate) {
-            viewModel.batteryTimeRemainingEstimate?.let {
-                Text(
-                    text = it,
-                    color = textColor,
-                    style = BatteryViewModel.getStatusBarBatteryTextStyle(LocalContext.current),
-                    maxLines = 1,
-                    modifier = Modifier.basicMarquee(iterations = 1),
+        Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (showIcon) {
+                UnifiedBattery(
+                    viewModel = viewModel,
+                    isDarkProvider = isDarkProvider,
+                    modifier = Modifier.height(batteryHeight).align(Alignment.CenterVertically),
                 )
+            }
+            if (showEstimate) {
+                viewModel.batteryTimeRemainingEstimate?.let {
+                    Text(
+                        text = it,
+                        color = textColor,
+                        style = BatteryViewModel.getStatusBarBatteryTextStyle(LocalContext.current),
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee(iterations = 1),
+                    )
+                }
             }
         }
     }
