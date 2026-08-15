@@ -1727,6 +1727,7 @@ public class Typeface {
             swapTypeface.accept(Typeface.create(sansSerif, 500, false), "sans-serif-medium");
             swapTypeface.accept(Typeface.create(sansSerif, 700, false), "sans-serif-bold");
             swapTypeface.accept(Typeface.create(sansSerif, 900, false), "sans-serif-black");
+            swapTypeface.accept(sansSerif, "system-ui");
 
             swapTypeface.accept(genericFamilies.get(1), "serif");
             swapTypeface.accept(genericFamilies.get(2), "monospace");
