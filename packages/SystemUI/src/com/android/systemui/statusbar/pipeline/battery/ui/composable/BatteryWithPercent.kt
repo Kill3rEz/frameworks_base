@@ -18,6 +18,7 @@ package com.android.systemui.statusbar.pipeline.battery.ui.composable
 
 import android.graphics.Rect
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
@@ -64,16 +65,20 @@ fun BatteryWithPercent(
     val textColor = colorProvider().fill
 
     if (viewModel.batteryIconStyle == BatteryRepository.ICON_STYLE_TEXT) {
-        Text(
-            text = percentText,
-            color = textColor,
-            style = textStyle,
-            maxLines = 1,
+        Box(
             modifier =
                 modifier.onLayoutRectChanged {
                     boundsState.value = with(it.boundsInScreen) { Rect(left, top, right, bottom) }
                 },
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = percentText,
+                color = textColor,
+                style = textStyle,
+                maxLines = 1,
+            )
+        }
     } else {
         Row(
             modifier =
@@ -95,6 +100,7 @@ fun BatteryWithPercent(
                     color = textColor,
                     style = textStyle,
                     maxLines = 1,
+                    modifier = Modifier.align(Alignment.CenterVertically),
                 )
             }
         }

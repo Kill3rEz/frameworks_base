@@ -22,6 +22,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import com.android.systemui.common.shared.model.ContentDescription
@@ -271,7 +273,15 @@ sealed class BatteryViewModel(
         @Composable
         fun getStatusBarBatteryTextStyle(context: Context): TextStyle {
             val baseStyle = MaterialTheme.typography.bodyMediumEmphasized
-            return baseStyle.copy(fontSize = baseStyle.fontSize * getScaleFactor(context))
+            return baseStyle.copy(
+                fontSize = baseStyle.fontSize * getScaleFactor(context),
+                lineHeight = TextUnit.Unspecified,
+                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                lineHeightStyle = LineHeightStyle(
+                    alignment = LineHeightStyle.Alignment.Center,
+                    trim = LineHeightStyle.Trim.Both,
+                ),
+            )
         }
 
         private fun getScaleFactor(context: Context): Float {
