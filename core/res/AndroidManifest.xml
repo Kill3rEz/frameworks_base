@@ -921,6 +921,9 @@
     <protected-broadcast android:name="android.app.action.DYNAMIC_BUNDLE_MODIFIED" />
     <protected-broadcast android:name="android.app.action.BRIDGED_NOTIFICATION_PREFERENCES" />
 
+    <!-- Sleep Mode -->
+    <protected-broadcast android:name="android.intent.action.SLEEP_MODE_TURN_OFF" />
+
     <!-- ====================================================================== -->
     <!--                          RUNTIME PERMISSIONS                           -->
     <!-- ====================================================================== -->
