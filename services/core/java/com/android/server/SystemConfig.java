@@ -2189,6 +2189,15 @@ public class SystemConfig {
                 addFeature(PackageManager.FEATURE_EROFS_LEGACY, 0);
             }
         }
+
+        try {
+            int version = Integer.parseInt(Build.VERSION.INCREMENTAL);
+            if (version > 0) {
+                addFeature("grapheneos.version", version);
+            }
+        } catch (NumberFormatException e) {
+            Slog.w(TAG, "unable to parse Build.VERSION.INCREMENTAL", e);
+        }
     }
 
     private @Nullable SignedPackage parseEnhancedConfirmationTrustedPackage(XmlPullParser parser,
