@@ -255,7 +255,7 @@ public enum ScrimState {
     AOD {
         @Override
         public void prepare(ScrimState previousState) {
-            final boolean alwaysOnEnabled = mDozeParameters.getAlwaysOn();
+            final boolean alwaysOnEnabled = mDozeParameters.shouldShowAodUi();
             final boolean quickPickupEnabled = mDozeParameters.isQuickPickupEnabled();
             final boolean isDocked = mDockManager.isDocked();
             mBlankScreen = mDisplayRequiresBlanking;
