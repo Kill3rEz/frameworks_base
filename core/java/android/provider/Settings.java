@@ -7237,6 +7237,14 @@ public final class Settings {
         public static final String AMBIENT_SHOW_SETTINGS_ICONS = "ambient_show_settings_icons";
 
         /**
+         * Whether allowing pocket service to register sensors and dispatch informations.
+         *   0 = disabled
+         *   1 = enabled
+         * @hide
+         */
+        public static final String POCKET_JUDGE = "pocket_judge";
+
+        /**
          * Keys we no longer back up under the current schema, but want to continue to
          * process when restoring historical backup datasets.
          *
