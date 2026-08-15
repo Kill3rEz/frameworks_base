@@ -14285,6 +14285,8 @@ public final class Settings {
 
         public static final String IDLE_MANAGER_KILL_STATS = "idle_manager_kill_stats";
 
+        public static final String IDLE_MANAGER_RESTORE_PENDING = "idle_manager_restore_pending";
+
         /**
          * Keys we no longer back up under the current schema, but want to continue to
          * process when restoring historical backup datasets.
