@@ -11295,6 +11295,36 @@ public final class Settings {
         public static final String DOZE_PEEK_DURATION = "doze_peek_duration";
 
         /**
+         * Indicates whether doze should show on shake gesture.
+         * <p>
+         * Type: int (0 for false, 1 for true)
+         *
+         * @hide
+         */
+        @Readable
+        public static final String DOZE_SHAKE_TO_SHOW = "doze_shake_to_show";
+
+        /**
+         * Indicates how long doze should stay visible on shake gesture.
+         * <p>
+         * Type: int (seconds)
+         *
+         * @hide
+         */
+        @Readable
+        public static final String DOZE_SHAKE_TO_SHOW_DURATION = "doze_shake_to_show_duration";
+
+        /**
+         * Indicates the shake sensor intensity/threshold.
+         * <p>
+         * Type: int (0 for gentle, 1 for medium, 2 for strong)
+         *
+         * @hide
+         */
+        @Readable
+        public static final String DOZE_SHAKE_INTENSITY = "doze_shake_intensity";
+
+        /**
          * Indicates whether ambient wallpaper is visible with AOD.
          * <p>
          * Type: int (0 for false, 1 for true)

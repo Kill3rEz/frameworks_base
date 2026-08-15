@@ -58,9 +58,10 @@ import com.android.systemui.statusbar.notification.headsup.StatusBarHeadsUpChang
 import com.android.systemui.stylus.StylusUsiPowerStartable
 import com.android.systemui.temporarydisplay.chipbar.ChipbarCoordinator
 import com.android.systemui.usb.StorageNotification
-import com.android.systemui.util.NotificationChannels
+import com.android.systemui.doze.ShakeAodController
 import com.android.systemui.wmshell.WMShell
 import com.google.android.systemui.smartspace.KeyguardSmartspaceStartable
+import com.android.systemui.util.NotificationChannels
 import dagger.Binds
 import dagger.Module
 import dagger.multibindings.ClassKey
@@ -342,4 +343,9 @@ abstract class SystemUICoreStartableModule {
     @IntoMap
     @ClassKey(AxPlatformServiceImpl::class)
     abstract fun bindAxPlatformService(impl: AxPlatformServiceImpl): CoreStartable
+
+    @Binds
+    @IntoMap
+    @ClassKey(ShakeAodController::class)
+    abstract fun bindShakeAodController(impl: ShakeAodController): CoreStartable
 }
