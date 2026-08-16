@@ -88,6 +88,7 @@ import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.view.WindowManagerGlobal;
 import android.view.accessibility.AccessibilityManager;
+import android.view.LayoutInflater;
 import android.widget.DateTimeView;
 import android.window.IRemoteTransition;
 import android.widget.FrameLayout;
@@ -1215,6 +1216,7 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
         // Private API call to make the shadows look better for Recents
         ThreadedRenderer.overrideProperty("ambientRatio", String.valueOf(1.5f));
     }
+
 
     private void setBrightnessMirrorShowing(boolean showing) {
         mBrightnessMirrorVisible = showing;
