@@ -257,26 +257,18 @@ public class NetworkTraffic extends TextView {
                         unitid = R.string.kilobitspersecond_short;
                         break;
                     case UNITS_MEGABITS:
-                        value = String.format("%.1f", (float) kbps / 1000);
+                        value = formatSpeed((float) kbps / 1000);
                         unitid = R.string.megabitspersecond_short;
                         break;
                     case UNITS_KILOBYTES:
                     case UNITS_AUTOBYTES:
                         if (kbps < 8000 || mUnits == UNITS_KILOBYTES) {
-                            value = String.format("%.0f", (float) kbps / 8);
+                            value = formatSpeed((float) kbps / 8);
                             unitid = R.string.kilobytespersecond_short;
                             break;
                         }
                     case UNITS_MEGABYTES: {
-                        final String format;
-                        if (kbps < 80000) {
-                            format = "%.2f";
-                        } else if (kbps < 800000) {
-                            format = "%.1f";
-                        } else {
-                            format = "%.0f";
-                        }
-                        value = String.format(format, (float) kbps / 8000);
+                        value = formatSpeed((float) kbps / 8000);
                     }
                         unitid = R.string.megabytespersecond_short;
                         break;
@@ -523,6 +515,15 @@ public class NetworkTraffic extends TextView {
 
     private void updateViewState() {
         mTrafficHandler.sendEmptyMessage(MESSAGE_TYPE_UPDATE_VIEW);
+    }
+
+    private String formatSpeed(float val) {
+        int roundedVal = Math.round(val * 10);
+        if (roundedVal % 10 == 0) {
+            return String.valueOf(roundedVal / 10);
+        } else {
+            return String.format("%.1f", (float) roundedVal / 10);
+        }
     }
 
     private static class LinkPropertiesHolder {
