@@ -14320,6 +14320,12 @@ public final class Settings {
         public static final String HBM_SETTING_KEY =
                 "com.android.server.display.HBM_SETTING_KEY";
 
+	/**
+         * Custom time when user is scheduled to deactivate
+         * @hide
+         */
+        public static final String USER_ACTIVITY_END_TIME = "user_activity_end_time";
+
         /**
          * Whether to turn on black theme
          * @hide
