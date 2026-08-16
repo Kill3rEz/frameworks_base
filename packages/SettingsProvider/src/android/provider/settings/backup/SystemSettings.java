@@ -136,6 +136,7 @@ public class SystemSettings {
                 Settings.System.ADVANCED_REBOOT,
                 Settings.System.FP_SUCCESS_VIBRATE,
                 Settings.System.FP_ERROR_VIBRATE,
+                Settings.System.NAVBAR_LONG_PRESS_GESTURE,
                 Settings.System.STATUSBAR_EXTRA_PADDING_START,
                 Settings.System.STATUSBAR_EXTRA_PADDING_TOP,
                 Settings.System.STATUSBAR_EXTRA_PADDING_END,
