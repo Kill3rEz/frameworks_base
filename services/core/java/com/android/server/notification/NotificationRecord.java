@@ -404,8 +404,14 @@ public final class NotificationRecord {
         }
 
         if (com.android.server.notification.Flags.channelVibrationIgnoreInvalidPattern()) {
-            VibrationEffect vibrationFromPattern = VibratorHelper.createWaveformVibration(
-                    channel.getVibrationPattern(), insistent);
+            VibrationEffect vibrationFromPattern;
+            if (channel.getVibrationPattern() == null) {
+                vibrationFromPattern = VibratorHelper.createWaveformVibration(
+                        channel.getCustomVibrationPattern(), insistent);
+            } else {
+                vibrationFromPattern = VibratorHelper.createWaveformVibration(
+                        channel.getVibrationPattern(), insistent);
+            }
             if (vibrationFromPattern != null) {
                 return vibrationFromPattern;
             }
@@ -413,6 +419,10 @@ public final class NotificationRecord {
             final long[] vibrationPattern = channel.getVibrationPattern();
             if (vibrationPattern != null) {
                 return helper.createWaveformVibration(vibrationPattern, insistent);
+            }
+            final long[] customVibrationPattern = channel.getCustomVibrationPattern();
+            if (customVibrationPattern != null) {
+                return helper.createWaveformVibration(customVibrationPattern, insistent);
             }
         }
 
