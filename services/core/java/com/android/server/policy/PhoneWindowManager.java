@@ -245,6 +245,7 @@ import com.android.internal.statusbar.IStatusBarService;
 import com.android.internal.util.NamedLock;
 import com.android.internal.util.ScreenshotHelper;
 import com.android.internal.widget.LockPatternUtils;
+import com.android.internal.util.custom.CustomUtils;
 import com.android.server.AccessibilityManagerInternal;
 import com.android.server.DockObserverInternal;
 import com.android.server.ExtconStateObserver;
@@ -595,6 +596,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private boolean mShouldEarlyShortPressOnPower;
     boolean mShouldEarlyShortPressOnStemPrimary;
     int mLongPressOnPowerBehavior;
+    private boolean mTorchLongPressPowerEnabled;
     long mLongPressOnPowerAssistantTimeoutMs;
     int mVeryLongPressOnPowerBehavior;
     int mDoublePressOnPowerBehavior;
@@ -1005,6 +1007,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.ALERT_SLIDER_ORDER), false, this,
                     UserHandle.USER_ALL);                                        
+            resolver.registerContentObserver(Settings.Secure.getUriFor(
+                    Settings.Secure.TORCH_LONG_PRESS_POWER), false, this,
+                    UserHandle.USER_ALL);
             updateSettings();
         }
 
@@ -1191,7 +1196,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
         if (!mPowerKeyHandled) {
             if (!interactive) {
-                if (!mTorchGesture) {
+                if (!mTorchGesture && !mTorchLongPressPowerEnabled) {
                     wakeUpFromWakeKey(event);
                 }
             }
@@ -1348,7 +1353,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     break;
                 }
             }
-        } else if (mTorchGesture && beganFromNonInteractive) {
+        } else if ((mTorchGesture || mTorchLongPressPowerEnabled) && beganFromNonInteractive) {
             wakeUpFromWakeKey(displayId, eventTime, KEYCODE_POWER, /* isDown= */ false,
                     /* keyEventFlags= */ 0);
         }
@@ -1659,6 +1664,25 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 mPocketManager.setListeningExternal(false);
                 break;
         }
+    }
+
+    private boolean powerLongPressGestures(long eventTime, boolean nonInteractive) {
+        if (DEBUG_INPUT) Slog.d(TAG, "powerLongPressGestures: eventTime = " + eventTime
+                + ", nonInteractive = " + nonInteractive +
+                ", mTorchLongPressPowerEnabled = " + mTorchLongPressPowerEnabled);
+        if (mTorchLongPressPowerEnabled && (nonInteractive || isFlashlightOn())) {
+            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS,
+                    "Power - Long Press - Toggle flashlight");
+            CustomUtils.toggleCameraFlash();
+            mPowerKeyHandled = true;
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isFlashlightOn() {
+        return Settings.Secure.getInt(mContext.getContentResolver(),
+            Settings.Secure.FLASHLIGHT_ENABLED, 0) == 1;
     }
 
     private void powerVeryLongPress() {
@@ -2766,7 +2790,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
         @Override
         public long getLongPressTimeoutMs() {
-            if (getResolvedLongPressOnPowerBehavior() == LONG_PRESS_POWER_ASSISTANT) {
+            if (getResolvedLongPressOnPowerBehavior() == LONG_PRESS_POWER_ASSISTANT
+                    || mTorchLongPressPowerEnabled) {
                 return mLongPressOnPowerAssistantTimeoutMs;
             } else {
                 return super.getLongPressTimeoutMs();
@@ -2774,11 +2799,18 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
 
         private void onLongPress(@NonNull SingleKeyGestureEvent event) {
-            if (mSingleKeyGestureDetector.beganFromNonInteractive()
-                    && !mSupportLongPressPowerWhenNonInteractive) {
+            final boolean nonInteractive = mSingleKeyGestureDetector.beganFromNonInteractive();
+            if (nonInteractive && !mSupportLongPressPowerWhenNonInteractive) {
                 Slog.v(TAG, "Not support long press power when device is not interactive.");
                 return;
             }
+
+            if (event.getAction() == ACTION_COMPLETE) {
+                if (powerLongPressGestures(event.getStartTime(), nonInteractive)) {
+                    return;
+                }
+            }
+
             // If Assistant mapped to long press, we send start, complete and cancel gesture
             // This is done to allow Assistant launch animation in SysUI. Will extend
             // this to all single key gestures after moving Single key gestures to
@@ -3266,6 +3298,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             mGlobalActionsOnLockEnable = Settings.System.getIntForUser(resolver,
                     Settings.System.LOCKSCREEN_ENABLE_POWER_MENU, 1,
                     UserHandle.USER_CURRENT) != 0;
+
+            mTorchLongPressPowerEnabled = Settings.Secure.getIntForUser(resolver,
+                    Settings.Secure.TORCH_LONG_PRESS_POWER, 0,
+                    UserHandle.USER_CURRENT) == 1;        
 
             kidsModeEnabled = Settings.Secure.getIntForUser(resolver,
                     Settings.Secure.NAV_BAR_KIDS_MODE, 0, UserHandle.USER_CURRENT) == 1;
@@ -6902,6 +6938,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         pw.print(prefix);
                 pw.print("mLongPressOnPowerBehavior=");
                 pw.println(longPressOnPowerBehaviorToString(mLongPressOnPowerBehavior));
+        pw.print(prefix);
+                pw.print("mTorchLongPressPowerEnabled=");
+                pw.println(String.valueOf(mTorchLongPressPowerEnabled));
         pw.print(prefix);
         pw.print("mLongPressOnPowerAssistantTimeoutMs=");
         pw.println(mLongPressOnPowerAssistantTimeoutMs);
