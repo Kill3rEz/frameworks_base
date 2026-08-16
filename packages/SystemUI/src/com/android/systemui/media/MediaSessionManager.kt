@@ -15,6 +15,9 @@
  */
 package com.android.systemui.media
 
+import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
@@ -90,6 +93,17 @@ class MediaSessionManager private constructor() {
             artist = newArtist
             listenerManager.notifyOnBackground { it.onMetadataChanged(trackTitle, artist) }
         }
+
+        extractAlbumArt(metadata)?.let { bitmap ->
+            val drawable = BitmapDrawable(Resources.getSystem(), bitmap)
+            onAlbumArtChanged(drawable)
+        }
+    }
+
+    private fun extractAlbumArt(metadata: MediaMetadata): Bitmap? {
+        metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)?.let { return it }
+        metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)?.let { return it }
+        return null
     }
 
     companion object {
