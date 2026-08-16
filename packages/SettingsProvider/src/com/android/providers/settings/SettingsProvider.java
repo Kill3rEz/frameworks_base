@@ -909,6 +909,8 @@ public class SettingsProvider extends ContentProvider {
         final String cacheRingtoneSetting;
         if (Settings.System.RINGTONE_CACHE_URI.equals(uri)) {
             cacheRingtoneSetting = Settings.System.RINGTONE;
+        } else if (Settings.System.RINGTONE2_CACHE_URI.equals(uri)) {
+            cacheRingtoneSetting = Settings.System.RINGTONE2;
         } else if (uri != null && ContentResolver.SCHEME_CONTENT.equals(uri.getScheme())
                 && Settings.AUTHORITY.equals(
                         ContentProvider.getAuthorityWithoutUserId(uri.getAuthority()))
@@ -937,6 +939,8 @@ public class SettingsProvider extends ContentProvider {
             return null;
         } else if (Settings.System.RINGTONE.equals(setting)) {
             return Settings.System.RINGTONE_CACHE;
+        } else if (Settings.System.RINGTONE2.equals(setting)) {
+            return Settings.System.RINGTONE2_CACHE;
         } else if (setting.startsWith(Settings.System.RINGTONE
                 + RingtoneManager.RINGTONE_DELIMITER_FOR_PHONE_ACCOUNT_HANDLE)) {
             return setting.replace(Settings.System.RINGTONE, Settings.System.RINGTONE_CACHE);
