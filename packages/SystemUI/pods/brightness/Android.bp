@@ -27,6 +27,7 @@ java_library {
         "kotlinx_coroutines",
         "com.android.systemui.util.kotlin",
         "com.android.systemui.util.policy-api",
+        "com.android.systemui.util.settings_api",
         "SettingsLibDisplayUtils",
     ],
 }
@@ -41,6 +42,7 @@ java_library {
         "com.android.systemui.user.data-api",
         "com.android.systemui.util.kotlin",
         "com.android.systemui.util.policy-api",
+        "com.android.systemui.util.settings_api",
         "kotlinx_coroutines",
         "SystemUISharedLib",
     ],

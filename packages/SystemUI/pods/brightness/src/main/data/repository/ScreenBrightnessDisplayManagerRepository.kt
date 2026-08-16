@@ -19,6 +19,11 @@ package com.android.systemui.brightness.data.repository
 import android.annotation.SuppressLint
 import android.hardware.display.BrightnessInfo
 import android.hardware.display.DisplayManager
+import android.os.UserHandle
+import android.provider.Settings
+import com.android.systemui.util.settings.SecureSettings
+import com.android.systemui.util.settings.SystemSettings
+import com.android.systemui.util.settings.SettingsProxyExt.observerFlow
 import com.android.systemui.brightness.data.model.LinearBrightness
 import com.android.systemui.brightness.data.model.formatBrightness
 import com.android.systemui.brightness.data.model.logDiffForTable
@@ -59,6 +64,8 @@ constructor(
     @BrightnessLog private val tableBuffer: TableLogBuffer,
     @Application private val applicationScope: CoroutineScope,
     @Background private val backgroundContext: CoroutineContext,
+    private val systemSettings: SystemSettings,
+    private val secureSettings: SecureSettings,
 ) : ScreenBrightnessRepository {
 
     private val apiQueue = Channel<SetBrightnessMethod>(capacity = Channel.UNLIMITED)
@@ -179,6 +186,46 @@ constructor(
             { str1 = value.formatBrightness() },
             { "Change requested: $str1" },
         )
+    }
+
+    override val isAutoBrightnessEnabledFlow: StateFlow<Boolean> =
+        systemSettings.observerFlow(UserHandle.USER_ALL, Settings.System.SCREEN_BRIGHTNESS_MODE)
+            .onStart { emit(Unit) }
+            .map { isAutoBrightnessEnabled() }
+            .flowOn(backgroundContext)
+            .stateIn(applicationScope, SharingStarted.WhileSubscribed(), isAutoBrightnessEnabled())
+
+    private fun isAutoBrightnessEnabled(): Boolean {
+        return systemSettings.getIntForUser(
+            Settings.System.SCREEN_BRIGHTNESS_MODE,
+            Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL,
+            UserHandle.USER_CURRENT
+        ) == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC
+    }
+
+    override fun toggleBrightnessMode() {
+        val enabled = isAutoBrightnessEnabled()
+        systemSettings.putIntForUser(
+            Settings.System.SCREEN_BRIGHTNESS_MODE,
+            if (enabled) Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+            else Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC,
+            UserHandle.USER_CURRENT
+        )
+    }
+
+    override val showAutoBrightnessFlow: StateFlow<Boolean> =
+        secureSettings.observerFlow(UserHandle.USER_ALL, Settings.Secure.QS_SHOW_AUTO_BRIGHTNESS)
+            .onStart { emit(Unit) }
+            .map { showAutoBrightness() }
+            .flowOn(backgroundContext)
+            .stateIn(applicationScope, SharingStarted.WhileSubscribed(), showAutoBrightness())
+
+    private fun showAutoBrightness(): Boolean {
+        return secureSettings.getIntForUser(
+            Settings.Secure.QS_SHOW_AUTO_BRIGHTNESS,
+            1,
+            UserHandle.USER_CURRENT
+        ) != 0
     }
 
     private companion object {
