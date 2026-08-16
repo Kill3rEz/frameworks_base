@@ -206,6 +206,12 @@ class MediaViewController @Inject constructor(
             ScrimUtils.get().removeListener(this)
             listening = false
         }
+
+        if (featureEnabled) {
+            coroutineScope.launch {
+                updateMediaState()
+            }
+        }
     }
 
     private fun isDozing(): Boolean = ScrimUtils.get().isDozing()

@@ -135,6 +135,8 @@ class PulseViewController @Inject constructor(
             ScrimUtils.get().addListener(this)
             MediaSessionManager.get().addListener(this)
             listenersRegistered = true
+            keyguardShowing = ScrimUtils.get().isKeyguardShowing()
+            isDozing = ScrimUtils.get().isDozing()
         } else if (!enabled && listenersRegistered) {
             ScrimUtils.get().removeListener(this)
             MediaSessionManager.get().removeListener(this)
