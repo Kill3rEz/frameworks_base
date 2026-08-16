@@ -195,8 +195,10 @@ fun CredentialScreen(
                                 stealthMode = stealthMode,
                                 isVisible = currentView == BiometricPromptView.CREDENTIAL,
                                 error = errorMessage,
+                                userId = header.user.userIdForPasswordEntry,
                             )
                         }
+
 
                         else -> {}
                     }
