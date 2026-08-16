@@ -1098,4 +1098,9 @@ interface IActivityManager {
     String getSpoofTrickyStorePatch();
 
     String getSpoofPifTargets();
+    
+    /**
+     *  Force full screen for devices with cutout
+     */
+    boolean shouldForceCutoutFullscreen(in String packageName);
 }
