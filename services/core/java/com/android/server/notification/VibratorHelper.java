@@ -17,7 +17,6 @@
 package com.android.server.notification;
 
 import android.annotation.Nullable;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
@@ -47,9 +46,28 @@ public final class VibratorHelper {
     private static final long[] DEFAULT_VIBRATE_PATTERN = {0, 250, 250, 250};
     private static final int VIBRATE_PATTERN_MAXLEN = 8 * 2 + 1; // up to eight bumps
 
+    private static final long[] SIMPLE_VIBRATION_PATTERN = {
+        0, 1000, 1000, 1000, 1000,
+    };
+
+    private static final long[] DZZZ_DA_VIBRATION_PATTERN = {
+        0, 500, 200, 70, 720,
+    };
+
+    private static final long[] MM_MM_MM_VIBRATION_PATTERN = {
+        0, 300, 400, 300, 400, 300, 1400,
+    };
+
+    private static final long[] DA_DA_DZZZ_VIBRATION_PATTERN = {
+        0, 70, 80, 70, 180, 600, 1050,
+    };
+
+    private static final long[] DA_DZZZ_DA_VIBRATION_PATTERN = {
+        0, 80, 200, 600, 150, 60, 1050,
+    };
+
     private final Vibrator mVibrator;
     private final long[] mDefaultPattern;
-    private final long[] mCustomPattern;
     private final long[] mFallbackPattern;
     private final int mDefaultVibrationAmplitude;
     private final Context mContext;
@@ -60,7 +78,6 @@ public final class VibratorHelper {
                 com.android.internal.R.array.config_defaultNotificationVibePattern,
                 VIBRATE_PATTERN_MAXLEN,
                 DEFAULT_VIBRATE_PATTERN);
-        mCustomPattern = loadCustomVibrationPattern(context);
         mFallbackPattern = getLongArray(context.getResources(),
                 R.array.config_notificationFallbackVibePattern,
                 VIBRATE_PATTERN_MAXLEN,
@@ -71,23 +88,43 @@ public final class VibratorHelper {
     }
 
     @Nullable
-    private static long[] loadCustomVibrationPattern(Context context) {
-        ContentResolver cr = context.getContentResolver();
-        String pattern = Settings.System.getString(cr,
-                Settings.System.NOTIFICATION_VIBRATION_PATTERN);
+    private long[] getNotificationVibrationPattern() {
+        int vibPattern = Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.NOTIFICATION_VIBRATION_PATTERN, 0);
+        switch (vibPattern) {
+            case 1:
+                return DZZZ_DA_VIBRATION_PATTERN;
+            case 2:
+                return MM_MM_MM_VIBRATION_PATTERN;
+            case 3:
+                return DA_DA_DZZZ_VIBRATION_PATTERN;
+            case 4:
+                return DA_DZZZ_DA_VIBRATION_PATTERN;
+            case 5:
+                return loadCustomNotificationVibrationPattern();
+            default:
+                return null;
+        }
+    }
+
+    @Nullable
+    private long[] loadCustomNotificationVibrationPattern() {
+        String pattern = Settings.System.getString(mContext.getContentResolver(),
+                Settings.System.CUSTOM_NOTIFICATION_VIBRATION_PATTERN);
         if (TextUtils.isEmpty(pattern)) {
             return null;
         }
         String[] parts = pattern.split(",");
-        long[] result = new long[parts.length];
-        for (int i = 0; i < parts.length; i++) {
-            try {
-                result[i] = Long.parseLong(parts[i].trim());
-            } catch (NumberFormatException e) {
-                return null;
-            }
-        }
-        return result;
+        if (parts.length < 3) return null;
+        return new long[] {
+            0,
+            Long.parseLong(parts[0].trim()),
+            120,
+            Long.parseLong(parts[1].trim()),
+            120,
+            Long.parseLong(parts[2].trim()),
+            120,
+        };
     }
 
     /**
@@ -162,8 +199,9 @@ public final class VibratorHelper {
             }
         }
 
-        if (mCustomPattern != null) {
-            return createWaveformVibration(mCustomPattern, insistent);
+        long[] pattern = getNotificationVibrationPattern();
+        if (pattern != null) {
+            return createWaveformVibration(pattern, insistent);
         }
         return createWaveformVibration(mDefaultPattern, insistent);
     }
