@@ -98,6 +98,9 @@ constructor(
     /** Whether the pattern should be visible for the currently-selected user. */
     val isPatternVisible: StateFlow<Boolean> = authenticationInteractor.isPatternVisible
 
+    /** Whether the pattern dots should be visible for the currently-selected user. */
+    val isVisibleDotsEnabled: StateFlow<Boolean> = authenticationInteractor.isVisibleDotsEnabled
+
     /** Whether the "enhanced PIN privacy" setting is enabled for the current user. */
     val isPinEnhancedPrivacyEnabled: StateFlow<Boolean> =
         authenticationInteractor.isPinEnhancedPrivacyEnabled

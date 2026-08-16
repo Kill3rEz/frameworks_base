@@ -133,6 +133,9 @@ constructor(
     /** Whether the pattern should be visible for the currently-selected user. */
     val isPatternVisible: StateFlow<Boolean> = repository.isPatternVisible
 
+    /** Whether the pattern dots should be visible for the currently-selected user. */
+    val isVisibleDotsEnabled: StateFlow<Boolean> = repository.isVisibleDotsEnabled
+
     private val onAuthenticationResultListeners =
         ConcurrentHashMap.newKeySet<OnAuthenticationResultListener>()
 
