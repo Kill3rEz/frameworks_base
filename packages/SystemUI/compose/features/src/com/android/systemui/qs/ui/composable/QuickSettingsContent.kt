@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,17 +31,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.android.compose.animation.scene.ContentScope
 import com.android.compose.gesture.gesturesDisabled
 import com.android.compose.modifiers.thenIf
-import com.android.systemui.brightness.ui.compose.BrightnessSliderContainer
-import com.android.systemui.brightness.ui.compose.ContainerColors
 import com.android.systemui.compose.modifiers.sysuiResTag
 import com.android.systemui.media.remedia.ui.compose.Media
 import com.android.systemui.media.remedia.ui.compose.MediaPresentationStyle
+import com.android.systemui.qs.composefragment.BrightnessLayout
+import com.android.systemui.qs.composefragment.VolumeLayout
 import com.android.systemui.qs.composefragment.ui.GridAnchor
 import com.android.systemui.qs.panels.ui.compose.TileGrid
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements
@@ -55,57 +56,15 @@ fun ContentScope.QuickSettingsContent(
     modifier: Modifier = Modifier,
     mediaSquishiness: () -> Float = { 1f },
 ) {
+    val showMedia = viewModel.showMedia
+    val top2Specs = remember(viewModel.tileGridViewModel.tileViewModels) {
+        viewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
+    }
+
     QuickSettingsPanelLayout(
-        brightness =
+        headerLeft =
             @Composable {
-                if (viewModel.isBrightnessSliderVisible) {
-                    var isBrightnessSliderInteractable by remember { mutableStateOf(false) }
-                    LaunchedEffect(Unit) {
-                        snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
-                            .filterNotNull()
-                            .collect { isBrightnessSliderInteractable = it >= .5f }
-                    }
-                    Element(modifier = Modifier, key = Elements.BrightnessSlider) {
-                        BrightnessSliderContainer(
-                            viewModel.brightnessSliderViewModel,
-                            containerColors =
-                                ContainerColors(
-                                    Color.Transparent,
-                                    ContainerColors.defaultContainerColor,
-                                ),
-                            modifier =
-                                Modifier.padding(
-                                        vertical =
-                                            dimensionResource(id = R.dimen.qs_brightness_margin_top)
-                                    )
-                                    .thenIf(!isBrightnessSliderInteractable) {
-                                        Modifier.gesturesDisabled()
-                                    },
-                        )
-                    }
-                }
-            },
-        tiles =
-            @Composable {
-                var listening by remember { mutableStateOf(false) }
-                LifecycleStartEffect(Unit) {
-                    listening = true
-
-                    onStopOrDispose { listening = false }
-                }
-
-                Box {
-                    GridAnchor()
-                    TileGrid(
-                        viewModel.tileGridViewModel,
-                        listening = { listening },
-                        modifier = Modifier.element(Elements.QuickSettingsTiles),
-                    )
-                }
-            },
-        media =
-            @Composable {
-                if (isAlwaysComposedContentVisible()) {
+                if (showMedia && isAlwaysComposedContentVisible()) {
                     Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
                         Media(
                             viewModelFactory = viewModel.mediaViewModelFactory,
@@ -117,10 +76,64 @@ fun ContentScope.QuickSettingsContent(
                         )
                     }
                 } else {
-                    Box(modifier = Modifier)
+                    var listening by remember { mutableStateOf(false) }
+                    LifecycleStartEffect(Unit) {
+                        listening = true
+                        onStopOrDispose { listening = false }
+                    }
+                    TileGrid(
+                        viewModel = viewModel.tileGridViewModel,
+                        includeSpecs = top2Specs,
+                        columnsOverride = 1,
+                        forceLargeTiles = true,
+                        listening = { listening },
+                    )
                 }
             },
-        mediaInRow = mediaInRow,
+        headerRight =
+            @Composable {
+                var isBrightnessSliderInteractable by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
+                        .filterNotNull()
+                        .collect { isBrightnessSliderInteractable = it >= .5f }
+                }
+                Element(modifier = Modifier, key = Elements.BrightnessSlider) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .thenIf(!isBrightnessSliderInteractable) { Modifier.gesturesDisabled() },
+                        horizontalArrangement = spacedBy(
+                            dimensionResource(id = R.dimen.qs_tile_margin_horizontal),
+                            Alignment.CenterHorizontally
+                        ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BrightnessLayout(enable = isBrightnessSliderInteractable, sliderHeight = 160.dp)
+                        VolumeLayout(enable = isBrightnessSliderInteractable, sliderHeight = 160.dp)
+                    }
+                }
+            },
+        tiles =
+            @Composable {
+                var listening by remember { mutableStateOf(false) }
+                LifecycleStartEffect(Unit) {
+                    listening = true
+                    onStopOrDispose { listening = false }
+                }
+
+                val excludeSpecs = top2Specs
+
+                Box {
+                    GridAnchor()
+                    TileGrid(
+                        viewModel = viewModel.tileGridViewModel,
+                        excludeSpecs = excludeSpecs,
+                        listening = { listening },
+                        modifier = Modifier.element(Elements.QuickSettingsTiles),
+                    )
+                }
+            },
         modifier =
             modifier
                 .element(Elements.QuickSettingsContent)
@@ -131,36 +144,24 @@ fun ContentScope.QuickSettingsContent(
 
 @Composable
 private fun QuickSettingsPanelLayout(
-    brightness: @Composable () -> Unit,
+    headerLeft: @Composable () -> Unit,
+    headerRight: @Composable () -> Unit,
     tiles: @Composable () -> Unit,
-    media: @Composable () -> Unit,
-    mediaInRow: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    if (mediaInRow) {
-        Column(
-            verticalArrangement = spacedBy(QuickSettingsShade.Dimensions.VerticalPadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = modifier,
+    Column(
+        verticalArrangement = spacedBy(dimensionResource(id = R.dimen.qs_tile_margin_vertical)),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = spacedBy(dimensionResource(id = R.dimen.qs_tile_margin_horizontal)),
+            verticalAlignment = Alignment.Top,
         ) {
-            brightness()
-            Row(
-                horizontalArrangement = spacedBy(QuickSettingsShade.Dimensions.HorizontalPadding),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(modifier = Modifier.weight(1f)) { tiles() }
-                Box(modifier = Modifier.weight(1f)) { media() }
-            }
+            Box(modifier = Modifier.weight(1f)) { headerLeft() }
+            Box(modifier = Modifier.weight(1f)) { headerRight() }
         }
-    } else {
-        Column(
-            verticalArrangement = spacedBy(QuickSettingsShade.Dimensions.VerticalPadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = modifier,
-        ) {
-            brightness()
-            tiles()
-            media()
-        }
+        tiles()
     }
 }

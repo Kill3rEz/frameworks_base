@@ -770,10 +770,16 @@ constructor(
                 val enabled =
                     layoutState.transitionState is TransitionState.Idle && viewModel.isNotTransitioning
 
-                val Tiles: @Composable (columnsOverride: Int?) -> Unit = { columnsOverride ->
-                    QuickQuickSettings(
-                        viewModel = viewModel.quickQuickSettingsViewModel,
-                        columnsOverride = columnsOverride,
+                val top2Specs = remember(viewModel.containerViewModel.tileGridViewModel.tileViewModels) {
+                    viewModel.containerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
+                }
+
+                val Tiles: @Composable (columnsOverride: Int?) -> Unit = { _ ->
+                    TileGrid(
+                        viewModel = viewModel.containerViewModel.tileGridViewModel,
+                        includeSpecs = top2Specs,
+                        columnsOverride = 1,
+                        forceLargeTiles = true,
                         listening = {
                             viewModel.isQsVisibleAndAnyShadeExpanded &&
                                 viewModel.expansionState.progress < 1f &&
@@ -879,11 +885,16 @@ constructor(
                             layoutState.transitionState is TransitionState.Idle &&
                                 viewModel.isNotTransitioning
 
-                        val QqsTiles: @Composable (columnsOverride: Int?) -> Unit = { columnsOverride ->
-                            QuickQuickSettings(
-                                viewModel = viewModel.quickQuickSettingsViewModel,
-                                columnsOverride = columnsOverride,
-                                showAnchor = false,
+                        val top2Specs = remember(containerViewModel.tileGridViewModel.tileViewModels) {
+                            containerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
+                        }
+
+                        val QqsTiles: @Composable (columnsOverride: Int?) -> Unit = { _ ->
+                            TileGrid(
+                                viewModel = containerViewModel.tileGridViewModel,
+                                includeSpecs = top2Specs,
+                                columnsOverride = 1,
+                                forceLargeTiles = true,
                                 listening = {
                                     viewModel.isQsVisibleAndAnyShadeExpanded &&
                                         viewModel.expansionState.progress > 0f &&
@@ -895,19 +906,7 @@ constructor(
                         val TileGrid: @Composable () -> Unit = {
                             Box {
                                 GridAnchor()
-                                val excludeSpecs =
-                                    if (!viewModel.qqsMediaVisible) {
-                                        splitInRowsSequence(
-                                                viewModel.quickQuickSettingsViewModel.allSizedTiles,
-                                                2,
-                                            )
-                                            .take(2)
-                                            .toList()
-                                            .flatten()
-                                            .map { it.tile.spec }
-                                    } else {
-                                        emptyList()
-                                    }
+                                val excludeSpecs = top2Specs
                                 TileGrid(
                                     viewModel = containerViewModel.tileGridViewModel,
                                     modifier = Modifier.fillMaxWidth(),
@@ -1559,7 +1558,7 @@ fun ContentScope.AnimatedSliders(vm: QSFragmentComposeViewModel, enable: Boolean
 @VisibleForTesting
 fun VolumeLayout(
     enable: Boolean,
-    vm: QSFragmentComposeViewModel,
+    vm: QSFragmentComposeViewModel? = null,
     sliderHeight: Dp,
 ) {
     val context = LocalContext.current
@@ -1641,7 +1640,7 @@ fun VolumeLayout(
 @VisibleForTesting
 fun BrightnessLayout(
     enable: Boolean,
-    vm: QSFragmentComposeViewModel,
+    vm: QSFragmentComposeViewModel? = null,
     sliderHeight: Dp,
 ) {
     val context = LocalContext.current
@@ -1932,7 +1931,7 @@ private fun interactionsConfig() =
  * This should be removed when [notificationShadeBlur] is removed
  */
 @Composable
-private fun AlwaysDarkMode(content: @Composable () -> Unit) {
+fun AlwaysDarkMode(content: @Composable () -> Unit) {
     if (notificationShadeBlur()) {
         content()
     } else {

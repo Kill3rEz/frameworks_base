@@ -38,6 +38,8 @@ interface GridLayout {
     fun ContentScope.TileGrid(
         tiles: List<TileViewModel>,
         modifier: Modifier,
+        columnsOverride: Int? = null,
+        forceLargeTiles: Boolean = false,
         listening: () -> Boolean,
         enableRevealEffect: Boolean,
     )

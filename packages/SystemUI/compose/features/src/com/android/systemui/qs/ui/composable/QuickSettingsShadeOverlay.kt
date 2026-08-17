@@ -16,6 +16,10 @@
 
 package com.android.systemui.qs.ui.composable
 
+import androidx.compose.foundation.layout.Arrangement
+import com.android.systemui.qs.composefragment.BrightnessLayout
+import com.android.systemui.qs.composefragment.VolumeLayout
+import com.android.systemui.qs.shared.ui.QuickSettings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -69,6 +73,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.PlatformSliderDefaults
 import com.android.compose.animation.scene.ContentScope
@@ -387,90 +392,56 @@ private fun ContentScope.QuickSettingsLayout(
         VerticalSeparator(QuickSettingsShade.Dimensions.ToolbarBottomPadding)
 
         Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-            Media(
-                viewModelFactory = qsContainerViewModel.mediaViewModelFactory,
-                presentationStyle = MediaPresentationStyle.Compact,
-                behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
-                onDismissed = qsContainerViewModel::onMediaSwipeToDismiss,
-                modifier = Modifier,
-                location = Media.Location.QS,
-            )
-
-            if (qsContainerViewModel.showMedia) {
-                VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
+            val isIdle = layoutState.transitionState is TransitionState.Idle
+            val horizontalSpacing = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
+            val showMedia = qsContainerViewModel.showMedia
+            val top2Specs = remember(qsContainerViewModel.tileGridViewModel.tileViewModels) {
+                qsContainerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
             }
 
-            if (qsContainerViewModel.isBrightnessSliderVisible) {
-                Box(
-                    Modifier.systemGestureExclusionInShade(
-                        enabled = { layoutState.transitionState is TransitionState.Idle }
-                    )
-                ) {
-                    BrightnessSliderContainer(
-                        viewModel = qsContainerViewModel.brightnessSliderViewModel,
-                        containerColors =
-                            ContainerColors(
-                                idleColor = Color.Transparent,
-                                mirrorColor =
-                                    OverlayShade.Colors.panelBackground(isTransparencyEnabled),
-                            ),
-                        modifier = Modifier.fillMaxWidth(),
-                        dimensions = QuickSettingsShade.Dimensions.brightnessSliderDimensions,
-                    )
-                }
-            }
-
-            if (volumeSliderViewModel != null) {
-                val volumeSliderState by volumeSliderViewModel.slider.collectAsStateWithLifecycle()
-
-                VerticalSeparator(QuickSettingsShade.Dimensions.VolumeSliderExtraPadding)
-                Box(
-                    Modifier.systemGestureExclusionInShade(
-                        enabled = { layoutState.transitionState is TransitionState.Idle }
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        VolumeSlider(
-                            modifier = Modifier.weight(1f),
-                            showLabel = false,
-                            state = volumeSliderState,
-                            onValueChange = { newValue: Float ->
-                                volumeSliderViewModel.onValueChanged(volumeSliderState, newValue)
-                            },
-                            onValueChangeFinished = {
-                                volumeSliderViewModel.onValueChangeFinished()
-                            },
-                            onIconTapped = { volumeSliderViewModel.toggleMuted(volumeSliderState) },
-                            sliderColors = PlatformSliderDefaults.defaultPlatformSliderColors(),
-                            hapticsViewModelFactory =
-                                volumeSliderViewModel.getSliderHapticsViewModelFactory(),
-                            dimensions = QuickSettingsShade.Dimensions.VolumeSliderDimensions,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    if (showMedia) {
+                        Media(
+                            viewModelFactory = qsContainerViewModel.mediaViewModelFactory,
+                            presentationStyle = MediaPresentationStyle.Default,
+                            behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                            onDismissed = qsContainerViewModel::onMediaSwipeToDismiss,
+                            modifier = Modifier.fillMaxWidth(),
+                            location = Media.Location.QS,
                         )
-                        Spacer(Modifier.width(8.dp))
-                        IconButton(
-                            modifier =
-                                Modifier.size(
-                                    QuickSettingsShade.Dimensions.VolumeSliderDimensions.trackHeight
-                                ),
-                            colors =
-                                IconButtonDefaults.iconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                            onClick = {
-                                qsContainerViewModel.detailsViewModel.onVolumeSettingsButtonClicked(
-                                    audioDetailsViewModelFactory.create()
-                                )
-                            },
+                    } else {
+                        var listening by remember { mutableStateOf(false) }
+                        LifecycleStartEffect(Unit) {
+                            listening = true
+                            onStopOrDispose { listening = false }
+                        }
+                        TileGrid(
+                            viewModel = qsContainerViewModel.tileGridViewModel,
+                            includeSpecs = top2Specs,
+                            columnsOverride = 1,
+                            forceLargeTiles = true,
+                            listening = { listening },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(
+                                horizontalSpacing,
+                                Alignment.CenterHorizontally
+                            ),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                painterResource(R.drawable.ic_more_vert),
-                                // TODO(b/378513663): Update the placeholder content description
-                                contentDescription = "Volume settings",
-                            )
+                            BrightnessLayout(enable = isIdle, sliderHeight = 160.dp)
+                            VolumeLayout(enable = isIdle, sliderHeight = 160.dp)
                         }
                     }
                 }
@@ -478,9 +449,12 @@ private fun ContentScope.QuickSettingsLayout(
 
             VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
 
+            val excludeSpecs = top2Specs
+
             GridAnchor()
             TileGrid(
                 viewModel = qsContainerViewModel.tileGridViewModel,
+                excludeSpecs = excludeSpecs,
                 modifier = Modifier.fillMaxWidth(),
                 enableRevealEffect = TileRevealFlag.isEnabled,
             )

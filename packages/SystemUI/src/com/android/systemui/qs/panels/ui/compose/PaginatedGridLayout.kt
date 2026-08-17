@@ -70,6 +70,8 @@ constructor(
     override fun ContentScope.TileGrid(
         tiles: List<TileViewModel>,
         modifier: Modifier,
+        columnsOverride: Int?,
+        forceLargeTiles: Boolean,
         listening: () -> Boolean,
         enableRevealEffect: Boolean,
     ) {
@@ -148,19 +150,23 @@ constructor(
                         TileGrid(
                             tiles = page,
                             modifier = Modifier,
+                            columnsOverride = columnsOverride,
+                            forceLargeTiles = forceLargeTiles,
                             listening = listening,
                             enableRevealEffect = false,
                         )
                     }
                 }
             }
-            FooterBar(
-                buildNumberViewModelFactory = viewModel.buildNumberViewModelFactory,
-                pagerState = pagerState,
-                showArrowsInPager = viewModel.showArrowsInPagerDots,
-                editButtonViewModelFactory = viewModel.editModeButtonViewModelFactory,
-                isVisible = { listening() && layoutState.isIdle() },
-            )
+            if (columnsOverride == null && !forceLargeTiles) {
+                FooterBar(
+                    buildNumberViewModelFactory = viewModel.buildNumberViewModelFactory,
+                    pagerState = pagerState,
+                    showArrowsInPager = viewModel.showArrowsInPagerDots,
+                    editButtonViewModelFactory = viewModel.editModeButtonViewModelFactory,
+                    isVisible = { listening() && layoutState.isIdle() },
+                )
+            }
         }
     }
 }
