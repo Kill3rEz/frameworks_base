@@ -23,6 +23,7 @@ import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.qs.tiles.AmbientDisplayTile
 import com.android.systemui.qs.tiles.AODTile
 import com.android.systemui.qs.tiles.AutoBrightnessTile
+import com.android.systemui.qs.tiles.CPUInfoTile
 import com.android.systemui.qs.tiles.CaffeineTile
 import com.android.systemui.qs.tiles.DataSwitchTile
 import com.android.systemui.qs.tiles.HeadsUpTile
@@ -63,6 +64,12 @@ interface CustomModule {
     @IntoMap
     @StringKey(AutoBrightnessTile.TILE_SPEC)
     fun bindAutoBrightnessTile(autobrightnessTile: AutoBrightnessTile): QSTileImpl<*>
+    
+    /** Inject CPUInfoTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(CPUInfoTile.TILE_SPEC)
+    fun bindCPUInfoTile(cpuInfoTile: CPUInfoTile): QSTileImpl<*>
 
     /** Inject CaffeineTile into tileMap in QSModule */
     @Binds
@@ -135,6 +142,7 @@ interface CustomModule {
         const val AOD_TILE_SPEC = "aod"
         const val AUTO_BRIGHTNESS_TILE_SPEC = "auto_brightness"
         const val CAFFEINE_TILE_SPEC = "caffeine"
+        const val CPU_INFO_TILE_SPEC = "cpuinfo"
         const val DATA_SWITCH_TILE_SPEC = "data_switch"
         const val HEADS_UP_TILE_SPEC = "heads_up"
         const val LOCALE_TILE_SPEC = "locale"
@@ -354,6 +362,20 @@ interface CustomModule {
                     ),
                 instanceId = uiEventLogger.getNewInstanceId(),
                 category = TileCategory.UTILITIES,
-            )                
+            )
+
+        @IntoMap
+        @StringKey(CPU_INFO_TILE_SPEC)
+        fun provideCPUInfoConfig(uiEventLogger: QsEventLogger): QSTileConfig =
+            QSTileConfig(
+                tileSpec = TileSpec.create(CPU_INFO_TILE_SPEC),
+                uiConfig =
+                    QSTileUIConfig.Resource(
+                        iconRes = R.drawable.ic_qs_cpu_info,
+                        labelRes = R.string.quick_settings_cpuinfo_label
+                    ),
+                instanceId = uiEventLogger.getNewInstanceId(),
+                category = TileCategory.UTILITIES,
+            )                      
     }
 }
