@@ -13243,6 +13243,12 @@ public final class Settings {
                 "night_display_last_activated_time";
 
         /**
+         * Control display engine mode.
+         * @hide
+         */
+        public static final String DISPLAY_ENGINE_MODE = "display_engine_mode";
+
+        /**
          * Display color balance for the red channel, from 0 to 255.
          * @hide
          */
