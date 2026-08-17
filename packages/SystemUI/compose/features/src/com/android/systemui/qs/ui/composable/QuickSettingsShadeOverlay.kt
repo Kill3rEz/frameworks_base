@@ -432,6 +432,9 @@ private fun ContentScope.QuickSettingsLayout(
                 }
                 Box(modifier = Modifier.weight(1f)) {
                     Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
+                        val tileHeight = dimensionResource(id = R.dimen.custom_qs_tile_height)
+                        val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+                        val headerHeight = tileHeight * 2 + tileSpacing
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(
@@ -440,14 +443,14 @@ private fun ContentScope.QuickSettingsLayout(
                             ),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            BrightnessLayout(enable = isIdle, sliderHeight = 160.dp)
-                            VolumeLayout(enable = isIdle, sliderHeight = 160.dp)
+                            BrightnessLayout(enable = isIdle, sliderHeight = headerHeight)
+                            VolumeLayout(enable = isIdle, sliderHeight = headerHeight)
                         }
                     }
                 }
             }
 
-            VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
+            VerticalSeparator(dimensionResource(R.dimen.qs_tile_margin_vertical))
 
             val excludeSpecs = top2Specs
 

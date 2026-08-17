@@ -937,7 +937,7 @@ constructor(
                                     enabled = enabled,
                                     leftContent = { QqsTiles(2) },
                                 )
-                                spacerLayout(height = 16.dp)
+                                spacerLayout(height = dimensionResource(R.dimen.qs_tile_margin_vertical))
                                 TileGrid()
                             }
                         }
