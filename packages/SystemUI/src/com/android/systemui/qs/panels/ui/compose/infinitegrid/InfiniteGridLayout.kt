@@ -38,6 +38,7 @@ import com.android.systemui.haptics.msdl.qs.TileHapticsViewModel
 import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.qs.panels.shared.model.SizedTileImpl
 import com.android.systemui.qs.panels.ui.compose.EditTileListState
+import com.android.systemui.qs.panels.ui.compose.LocalIsPaginatedGrid
 import com.android.systemui.qs.panels.ui.compose.PaginatableGridLayout
 import com.android.systemui.qs.panels.ui.compose.TileListener
 import com.android.systemui.qs.panels.ui.compose.bounceableInfo
@@ -109,6 +110,7 @@ constructor(
         val bounceables =
             remember(sizedTiles) { List(sizedTiles.size) { BounceableTileViewModel() } }
         val spans by remember(sizedTiles) { derivedStateOf { sizedTiles.fastMap { it.width } } }
+        val isPaginated = LocalIsPaginatedGrid.current
         Column(modifier) {
         VerticalSpannedGrid(
             columns = columns,
@@ -144,11 +146,13 @@ constructor(
             }
         }
 
-            Row(
-                modifier = Modifier.requiredHeight(48.dp).fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                BuildNumber(viewModelFactory = buildNumberViewModelFactory)
+            if (!isPaginated) {
+                Row(
+                    modifier = Modifier.requiredHeight(48.dp).fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BuildNumber(viewModelFactory = buildNumberViewModelFactory)
+                }
             }
         }
 
