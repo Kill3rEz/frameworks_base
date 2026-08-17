@@ -26,6 +26,7 @@ import com.android.systemui.qs.tiles.AutoBrightnessTile
 import com.android.systemui.qs.tiles.CaffeineTile
 import com.android.systemui.qs.tiles.DataSwitchTile
 import com.android.systemui.qs.tiles.HeadsUpTile
+import com.android.systemui.qs.tiles.LocaleTile
 import com.android.systemui.qs.tiles.PreferredNetworkTile
 import com.android.systemui.qs.tiles.SleepModeTile
 import com.android.systemui.qs.tiles.SoundTile
@@ -80,6 +81,12 @@ interface CustomModule {
     @StringKey(HeadsUpTile.TILE_SPEC)
     fun bindHeadsUpTile(headsUpTile: HeadsUpTile): QSTileImpl<*>
 
+    /** Inject LocaleTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(LocaleTile.TILE_SPEC)
+    fun bindLocaleTile(localeTile: LocaleTile): QSTileImpl<*>
+
     /** Inject PreferredNetworkTile into tileMap in QSModule */
     @Binds
     @IntoMap
@@ -123,6 +130,7 @@ interface CustomModule {
         const val CAFFEINE_TILE_SPEC = "caffeine"
         const val DATA_SWITCH_TILE_SPEC = "data_switch"
         const val HEADS_UP_TILE_SPEC = "heads_up"
+        const val LOCALE_TILE_SPEC = "locale"
         const val PREFERRED_NETWORK_TILE_SPEC = "preferred_network"
         const val SLEEP_MODE_TILE_SPEC = "sleep_mode"
         const val SOUND_TILE_SPEC = "sound"
@@ -308,6 +316,21 @@ interface CustomModule {
                     ),
                 instanceId = uiEventLogger.getNewInstanceId(),
                 category = TileCategory.UTILITIES,
-            )        
+            )
+
+        @Provides
+        @IntoMap  
+        @StringKey(LOCALE_TILE_SPEC)
+        fun provideLocaleTile(uiEventLogger: QsEventLogger): QSTileConfig =
+            QSTileConfig(
+                tileSpec = TileSpec.create(LOCALE_TILE_SPEC),
+                uiConfig =
+                    QSTileUIConfig.Resource(
+                        iconRes = R.drawable.ic_qs_locale,
+                        labelRes = R.string.quick_settings_locale_label
+                    ),
+                instanceId = uiEventLogger.getNewInstanceId(),
+                category = TileCategory.ACCESSIBILITY,
+            )            
     }
 }
