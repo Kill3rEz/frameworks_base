@@ -13,7 +13,6 @@ import com.android.compose.animation.scene.transformation.offsetSharedElementWit
 import com.android.systemui.media.remedia.ui.compose.Media.Elements.MediaCarousel
 import com.android.systemui.notifications.ui.composable.Notifications
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements
-import com.android.systemui.qs.shared.ui.QuickSettings.SHARED_TILE_PICKER_THRESHOLD
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.ui.composable.ShadeHeader
 import kotlin.time.Duration.Companion.milliseconds
@@ -34,9 +33,7 @@ fun TransitionBuilder.shadeToQuickSettingsTransition(
     translate(Notifications.Elements.NotificationScrim, Edge.Bottom)
     timestampRange(endMillis = 83) { fade(Elements.FooterActions) }
 
-    fractionRange(start = 0.43f, end = 1f - SHARED_TILE_PICKER_THRESHOLD) {
-        fade(Elements.QuickSettingsContent)
-    }
+    fractionRange(end = 0.15f) { fade(Elements.QuickSettingsContent) }
 
     anchoredTranslate(Elements.QuickSettingsContent, Elements.GridAnchor)
 
@@ -46,7 +43,7 @@ fun TransitionBuilder.shadeToQuickSettingsTransition(
     // from non first page QS. The QS content ends fading out at 0.43f, so there's a brief
     // overlap, but because they are really faint, it looks better than complete black without
     // overlap.
-    fractionRange(end = 0.5f) { fade(QqsTileElementMatcher) }
+    fractionRange(end = 0.15f) { fade(QqsTileElementMatcher) }
     anchoredTranslate(QqsTileElementMatcher, Elements.GridAnchor)
     fade(MediaCarousel)
 

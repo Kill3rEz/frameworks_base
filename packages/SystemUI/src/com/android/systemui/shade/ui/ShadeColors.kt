@@ -81,7 +81,6 @@ object ShadeColors {
             // SplitShade (avoid adding the shade panel with scrim)
             return surfaceEffect0Color
         }
-        // SingleShade
         val shadePanelWithScrim = shadePanel(context, blurSupported, withScrim = true)
         return ColorUtils.compositeColors(surfaceEffect0Color, shadePanelWithScrim)
     }
