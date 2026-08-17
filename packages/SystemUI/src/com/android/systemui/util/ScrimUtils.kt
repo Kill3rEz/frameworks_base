@@ -170,8 +170,12 @@ class ScrimUtils private constructor(context: Context?) {
                 // Additional refresh when exiting doze to ensure depth wallpaper appears
                 if (mStateIsKeyguard) {
                     mainHandler.postDelayed({
-                        mWallpaperDepthUtils?.updateDepthWallpaper()
+                        mWallpaperDepthUtils?.updateDepthWallpaper(true)
+                        mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
                     }, 200)
+                    mainHandler.postDelayed({
+                        mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
+                    }, 500)
                 }
             }
         }
@@ -193,11 +197,11 @@ class ScrimUtils private constructor(context: Context?) {
         if (mQsVisible.getAndSet(visible) != visible) {
             listeners.notifyOnMain { it.onQsVisibilityChanged(visible) }
             if (visible) {
-                mWallpaperDepthUtils?.getDepthWallpaperView()?.translationZ = -100f
+                mWallpaperDepthUtils?.hideDepthWallpaperImmediate()
             } else if (mStateIsKeyguard) {
-                mWallpaperDepthUtils?.getDepthWallpaperView()?.translationZ = 0f
+                mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
                 mainHandler.postDelayed({
-                    mWallpaperDepthUtils?.updateDepthWallpaper()
+                    mWallpaperDepthUtils?.updateDepthWallpaper(true)
                     mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
                 }, 100)
             }
@@ -209,7 +213,7 @@ class ScrimUtils private constructor(context: Context?) {
             listeners.notify { it.setPulsing(pulsing) }
             if (!pulsing && mStateIsKeyguard) {
                 mainHandler.postDelayed({
-                    mWallpaperDepthUtils?.updateDepthWallpaper()
+                    mWallpaperDepthUtils?.updateDepthWallpaper(true)
                     mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
                 }, 120)
             }
@@ -221,9 +225,12 @@ class ScrimUtils private constructor(context: Context?) {
         listeners.notify { it.onStartedWakingUp() }
         if (mStateIsKeyguard) {
             mainHandler.postDelayed({
-                mWallpaperDepthUtils?.updateDepthWallpaper()
+                mWallpaperDepthUtils?.updateDepthWallpaper(true)
                 mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
             }, 150)
+            mainHandler.postDelayed({
+                mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
+            }, 500)
         }
     }
 
