@@ -42,6 +42,8 @@ import com.android.systemui.statusbar.phone.ScrimController;
 import com.android.systemui.statusbar.phone.ScrimState;
 import com.android.systemui.tuner.TunerService;
 
+import dagger.Lazy;
+
 public class WallpaperDepthUtils {
 
     private static final String WALLPAPER_DEPTH_KEY = "system:depth_wallpaper_subject_image_uri";
@@ -54,7 +56,7 @@ public class WallpaperDepthUtils {
     private FrameLayout mLockScreenSubject;
 
     private final Context mContext;
-    private final ScrimController mScrimController;
+    private final Lazy<ScrimController> mScrimControllerLazy;
     private final TunerService mTunerService;
 
     private boolean mDWallpaperEnabled;
@@ -70,9 +72,9 @@ public class WallpaperDepthUtils {
     private int mOffsetY;
     private boolean mUnlocking;
 
-    private WallpaperDepthUtils(Context context, ScrimController scrimController) {
+    private WallpaperDepthUtils(Context context, Lazy<ScrimController> scrimControllerLazy) {
         mContext = context.getApplicationContext();
-        mScrimController = scrimController;
+        mScrimControllerLazy = scrimControllerLazy;
         mTunerService = Dependency.get(TunerService.class);
         mTunerService.addTunable(mTunable, WALLPAPER_DEPTH_KEY, 
             WALLPAPER_DEPTH_ENABLED_KEY, WALLPAPER_DEPTH_OPACITY_KEY, 
@@ -90,11 +92,12 @@ public class WallpaperDepthUtils {
         mLockScreenSubject.setClickable(false);
         mLockScreenSubject.setFocusable(false);
         mLockScreenSubject.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        mLockScreenSubject.setElevation(2.0f);
     }
 
-    public static WallpaperDepthUtils getInstance(Context context, ScrimController scrimController) {
+    public static WallpaperDepthUtils getInstance(Context context, Lazy<ScrimController> scrimControllerLazy) {
         if (instance == null) {
-            instance = new WallpaperDepthUtils(context, scrimController);
+            instance = new WallpaperDepthUtils(context, scrimControllerLazy);
         }
         return instance;
     }
@@ -202,8 +205,24 @@ public class WallpaperDepthUtils {
                 && !mWallpaperSubjectPath.isEmpty();
     }
 
+    private boolean isAlbumArtVisible() {
+        try {
+            MediaViewController controller = MediaViewController.get(mContext);
+            return controller != null && controller.albumArtVisible();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     private boolean canShowDepthWallpaper() {
-        ScrimState currentState = mScrimController.getState();
+        ScrimState currentState = null;
+        try {
+            if (mScrimControllerLazy != null && mScrimControllerLazy.get() != null) {
+                currentState = mScrimControllerLazy.get().getState();
+            }
+        } catch (Throwable t) {
+            // Ignore legacy assertion error if SceneContainer is active
+        }
         // Only show on KEYGUARD state when bouncer is NOT showing
         return mLockScreenSubject != null
                 && isDWallpaperEnabled()
@@ -211,9 +230,9 @@ public class WallpaperDepthUtils {
                 && !mBouncerShowing
                 && !mGlanceableHubShowing
                 && !mUnlocking
-                && currentState == ScrimState.KEYGUARD
+                && (currentState == null || currentState == ScrimState.KEYGUARD)
                 && mContext.getResources().getConfiguration().orientation != Configuration.ORIENTATION_LANDSCAPE
-                && !MediaViewController.get(mContext).albumArtVisible();
+                && !isAlbumArtVisible();
     }
 
     public void updateDepthWallpaperVisibility() {
@@ -318,15 +337,13 @@ public class WallpaperDepthUtils {
             if (drawable == null || mWallpaperBitmap == null) {
                 Log.d("LoadWallpaperTask", "decodeFile returned nothing, skipping application of subject as background");
                 mWallpaperLoaded = false;
+                updateDepthWallpaperVisibility();
                 return;
             }
-            if (drawable != null) {
-                mLockScreenSubject.setBackground(drawable);
-                mLockScreenSubject.getBackground().setAlpha(mDWallOpacity);
-                Log.d("LoadWallpaperTask", "Subject Loaded!");
-            } else {
-                updateDepthWallpaperVisibility();
-            }
+            mLockScreenSubject.setBackground(drawable);
+            mLockScreenSubject.getBackground().setAlpha(mDWallOpacity);
+            Log.d("LoadWallpaperTask", "Subject Loaded!");
+            updateDepthWallpaperVisibility();
         }
 
         @Override
