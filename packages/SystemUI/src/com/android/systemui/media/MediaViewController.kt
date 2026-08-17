@@ -291,10 +291,19 @@ class MediaViewController @Inject constructor(
         val dozing = isDozing()
         val pulsing = isPulsing()
 
-        if ((dozing || pulsing) && !aodEnabled) return false
-        
+        if (dozing || pulsing) {
+            if (!aodEnabled) return false
+            if (artworkDrawable == null) return false
+            if (!isMediaPlaying) return false
+            if (bouncerShowingOrKeyguardDismissing) return false
+            val isPortrait = context.resources.configuration.orientation !=
+                    Configuration.ORIENTATION_LANDSCAPE
+            return isPortrait
+        }
+
         if (artworkDrawable == null) return false
-        val isPortrait = context.resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
+        val isPortrait = context.resources.configuration.orientation !=
+                Configuration.ORIENTATION_LANDSCAPE
         val isKeyguard = ScrimUtils.get().isKeyguardShowing()
         val isCollapsed = ScrimUtils.get().isPanelFullyCollapsed()
         if (!isPortrait || !isKeyguard || !isCollapsed) return false

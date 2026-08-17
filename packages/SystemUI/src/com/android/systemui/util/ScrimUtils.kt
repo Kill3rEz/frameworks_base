@@ -116,6 +116,12 @@ class ScrimUtils private constructor() {
         if (mIsDozing == null || mIsDozing != dozing) {
             mIsDozing = dozing
             listeners.notify { it.onDozingChanged(dozing) }
+            if (dozing) {
+                setKeyguardShowing(true)
+            } else {
+                val shouldShowKeyguard = mStateIsKeyguard || mPulsing.get()
+                setKeyguardShowing(shouldShowKeyguard)
+            }
         }
     }
 
@@ -177,6 +183,9 @@ class ScrimUtils private constructor() {
     }
 
     fun isPanelFullyCollapsed(): Boolean {
+        if (mIsDozing == true || mPulsing.get()) {
+            return true
+        }
         val sceneOverride = mShadeExpandedForScene
         return if (mStateIsKeyguard) {
             !mQsVisible.get()
