@@ -26,6 +26,7 @@ import com.android.systemui.qs.tiles.AutoBrightnessTile
 import com.android.systemui.qs.tiles.CPUInfoTile
 import com.android.systemui.qs.tiles.CaffeineTile
 import com.android.systemui.qs.tiles.DataSwitchTile
+import com.android.systemui.qs.tiles.FPSInfoTile
 import com.android.systemui.qs.tiles.HeadsUpTile
 import com.android.systemui.qs.tiles.LocaleTile
 import com.android.systemui.qs.tiles.PreferredNetworkTile
@@ -82,6 +83,12 @@ interface CustomModule {
     @IntoMap
     @StringKey(DataSwitchTile.TILE_SPEC)
     fun bindDataSwitchTile(dataSwitchTileTile: DataSwitchTile): QSTileImpl<*>
+
+    /** Inject FPSInfoTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(FPSInfoTile.TILE_SPEC)
+    fun bindFPSInfoTile(fpsInfoTile: FPSInfoTile): QSTileImpl<*>
 
     /** Inject HeadsUpTile into tileMap in QSModule */
     @Binds
@@ -144,6 +151,7 @@ interface CustomModule {
         const val CAFFEINE_TILE_SPEC = "caffeine"
         const val CPU_INFO_TILE_SPEC = "cpuinfo"
         const val DATA_SWITCH_TILE_SPEC = "data_switch"
+        const val FPS_INFO_TILE_SPEC = "fpsinfo"
         const val HEADS_UP_TILE_SPEC = "heads_up"
         const val LOCALE_TILE_SPEC = "locale"
         const val PREFERRED_NETWORK_TILE_SPEC = "preferred_network"
@@ -376,6 +384,21 @@ interface CustomModule {
                     ),
                 instanceId = uiEventLogger.getNewInstanceId(),
                 category = TileCategory.UTILITIES,
-            )                      
+            )
+
+        @Provides
+        @IntoMap
+        @StringKey(FPS_INFO_TILE_SPEC)
+        fun provideFPSInfoConfig(uiEventLogger: QsEventLogger): QSTileConfig =
+            QSTileConfig(
+                tileSpec = TileSpec.create(FPS_INFO_TILE_SPEC),
+                uiConfig =
+                    QSTileUIConfig.Resource(
+                        iconRes = R.drawable.ic_qs_fps_info,
+                        labelRes = R.string.quick_settings_fpsinfo_label
+                    ),
+                instanceId = uiEventLogger.getNewInstanceId(),
+                category = TileCategory.DISPLAY,
+            )                          
     }
 }
