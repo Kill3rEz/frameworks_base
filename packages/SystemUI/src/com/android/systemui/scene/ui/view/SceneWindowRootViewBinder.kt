@@ -57,6 +57,7 @@ import com.android.systemui.lifecycle.setSnapshotBinding
 import com.android.systemui.lifecycle.viewModel
 import com.android.systemui.res.R
 import com.android.systemui.scene.shared.model.Overlays
+import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.scene.shared.model.SceneContainerConfig
 import com.android.systemui.scene.shared.model.SceneDataSourceDelegator
 import com.android.systemui.scene.ui.composable.DualShadeEducationalTooltips
@@ -71,6 +72,7 @@ import com.android.systemui.shade.ui.composable.LocalStatusIconContext
 import com.android.systemui.shade.ui.composable.rememberStatusIconContext
 import com.android.systemui.statusbar.notification.stack.ui.view.SharedNotificationContainer
 import com.android.systemui.statusbar.phone.ui.TintedIconManager
+import com.android.systemui.util.WallpaperDepthUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.awaitCancellation
 
@@ -152,15 +154,34 @@ object SceneWindowRootViewBinder {
                                 onTransitionStart = { transition, animationScope ->
                                     bouncerSceneTransitionCoordinator
                                         ?.onMainContainerTransitionStart(transition, animationScope)
+                                    val isLockscreen = transition.toContent == Scenes.Lockscreen
+                                    val isBouncerShowing = transition.currentOverlays.contains(Overlays.Bouncer)
+                                    WallpaperDepthUtils.get()?.onBouncerShowingChanged(!isLockscreen || isBouncerShowing)
                                 },
                                 onSnap = { idle ->
-                                    bouncerSceneTransitionCoordinator?.onMainContainerSnap(
-                                        idle.currentOverlays.contains(Overlays.Bouncer)
-                                    )
+                                    val isBouncerShowing = idle.currentOverlays.contains(Overlays.Bouncer)
+                                    bouncerSceneTransitionCoordinator?.onMainContainerSnap(isBouncerShowing)
+                                    val isLockscreen = idle.currentScene == Scenes.Lockscreen
+                                    WallpaperDepthUtils.get()?.onBouncerShowingChanged(!isLockscreen || isBouncerShowing)
                                 },
                             )
                             .also { it.id = R.id.scene_container_root_composable }
                     )
+
+                    // Add depth wallpaper subject AFTER the scene container composable so it
+                    // renders ABOVE the lockscreen clock. This must be inside the binder's
+                    // coroutine scope so it is re-added if removeAllViews() is called.
+                    WallpaperDepthUtils.get()?.let { dwUtils ->
+                        val depthView = dwUtils.getDepthWallpaperView()
+                        (depthView.parent as? ViewGroup)?.removeView(depthView)
+                        view.addView(
+                            depthView,
+                            FrameLayout.LayoutParams(
+                                FrameLayout.LayoutParams.MATCH_PARENT,
+                                FrameLayout.LayoutParams.MATCH_PARENT,
+                            )
+                        )
+                    }
 
                     val legacyView = view.requireViewById<View>(R.id.legacy_window_root)
                     legacyView.isVisible = false
