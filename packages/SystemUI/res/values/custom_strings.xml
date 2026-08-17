@@ -201,5 +201,13 @@
     
     <!-- Preferred Network tile -->
     <string name="quick_settings_preferred_network_settings">Settings</string>
+
+    <!-- iOS style power menu. Labels are lower case on purpose, to match the design. -->
+    <string name="power_menu_ios_power_off">slide to power off</string>
+    <string name="power_menu_ios_restart">restart</string>
+    <string name="power_menu_ios_emergency">emergency call</string>
+    <string name="power_menu_ios_emergency_hint">Slide to Call Emergency Services</string>
+    <string name="power_menu_ios_emergency_thumb_label">SOS</string>
+    <string name="power_menu_ios_close">Close</string>
 </resources>
 

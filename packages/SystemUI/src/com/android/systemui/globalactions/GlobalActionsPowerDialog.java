@@ -35,8 +35,12 @@ public class GlobalActionsPowerDialog {
 
     /**
      * Create a dialog for displaying Shut Down and Restart actions.
+     *
+     * @param blurSupported whether blur is up right now. The caller owns that state, because it
+     *                      also decides the colour of the buttons this dialog shows.
      */
-    public static Dialog create(@NonNull Context context, ListAdapter adapter) {
+    public static Dialog create(@NonNull Context context, ListAdapter adapter,
+            boolean blurSupported) {
         ViewGroup listView = (ViewGroup) LayoutInflater.from(context).inflate(
                 com.android.systemui.res.R.layout.global_actions_power_dialog_flow, null);
 
@@ -58,20 +62,22 @@ public class GlobalActionsPowerDialog {
         Window window = dialog.getWindow();
         window.setType(WindowManager.LayoutParams.TYPE_VOLUME_OVERLAY);
         window.setTitle(""); // prevent Talkback from speaking first item name twice
-        window.setBackgroundDrawable(res.getDrawable(
-                com.android.systemui.res.R.drawable.global_actions_lite_background,
-                context.getTheme()));
         window.addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
 
         boolean translucentPowerMenu = res.getBoolean(
                 com.android.systemui.res.R.bool.config_translucentStandalonePowerMenu);
         if (com.android.systemui.shared.system.BlurUtils.isVolumeAndPowerBlurEnabled()
-                && translucentPowerMenu) {
+                && translucentPowerMenu && blurSupported) {
             window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
             WindowManager.LayoutParams attrs = window.getAttributes();
             attrs.setBlurBehindRadius(res.getDimensionPixelSize(
                     com.android.systemui.res.R.dimen.global_actions_blur_radius));
             window.setAttributes(attrs);
+            window.setBackgroundDrawableResource(android.R.color.transparent);
+        } else {
+            window.setBackgroundDrawable(res.getDrawable(
+                    com.android.systemui.res.R.drawable.global_actions_lite_background,
+                    context.getTheme()));
         }
 
         return dialog;

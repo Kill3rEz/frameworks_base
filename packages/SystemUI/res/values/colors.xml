@@ -48,15 +48,35 @@
 
     <!-- The color of the background in the grid of the Global Actions menu -->
     <color name="global_actions_grid_background">#F1F3F4</color>
-    <color name="global_actions_grid_background_blur">@color/customColorSurfaceEffect0</color>
-    <color name="global_actions_grid_background_blur_fallback">@android:color/system_accent1_200</color>
+    <color name="global_actions_grid_background_blur">@android:color/transparent</color>
+    <color name="global_actions_grid_background_blur_fallback">@color/materialColorSurfaceContainerLow</color>
 
     <!-- Colors for Power Menu Lite -->
+    <!-- Tint applied to the (opaque) button oval. Translucent, so whatever is behind the power
+         menu - blurred wallpaper, or the fallback card - shows through the buttons. Light theme
+         backdrop, so the tint darkens and the foreground is dark. -->
+    <color name="global_actions_lite_button_tint">#33000000</color>
+    <color name="global_actions_lite_button_icon">#1B1B1B</color>
+    <color name="global_actions_lite_button_tint_blur">#40F8F8F8</color>
+    <color name="global_actions_lite_button_icon_blur">#FFFFFF</color>
+    <color name="global_actions_lite_emergency_background_blur">#F55E57</color>
     <color name="global_actions_lite_button_background_focused">#808080</color>
     <color name="global_actions_lite_emergency_background">#D8372D</color>
     <color name="global_actions_lite_emergency_icon">#FFFFFF</color>
 
     <color name="global_actions_shutdown_ui_text">@color/control_primary_text</color>
+
+    <color name="power_menu_ios_track">#1FF8F8F8</color>
+    <color name="power_menu_ios_thumb">#14F8F8F8</color>
+    <color name="power_menu_ios_foreground">#FFFFFFFF</color>
+    <color name="power_menu_ios_emergency_track">#33FF3B30</color>
+    <color name="power_menu_ios_emergency_thumb">#4DFF3B30</color>
+    <color name="power_menu_ios_emergency_foreground">#FFFF453A</color>
+    <color name="power_menu_ios_hint">#99EBEBF5</color>
+    <color name="power_menu_ios_close_background">#29F8F8F8</color>
+    <!-- Backdrop used when window blur is unavailable, see power_menu_ios_backdrop.xml. -->
+    <color name="power_menu_ios_backdrop_center">#FF1C1B1F</color>
+    <color name="power_menu_ios_backdrop_edge">#FF000000</color>
 
     <!-- Shadows under the clock, date and other keyguard text fields -->
     <color name="keyguard_shadow_color">#B2000000</color>

@@ -11,4 +11,17 @@
     <!-- Custom Quick Settings -->
     <dimen name="custom_qs_tile_height">76dp</dimen>
 
+    <dimen name="power_menu_button_gap_vertical">48dp</dimen>
+    <dimen name="power_menu_button_gap_horizontal">54dp</dimen>
+
+    <!-- iOS style power menu -->
+    <dimen name="power_menu_ios_thumb_size">80dp</dimen>
+    <dimen name="power_menu_ios_track_padding">3dp</dimen>
+    <dimen name="power_menu_ios_row_radius">43dp</dimen>
+    <dimen name="power_menu_ios_row_margin_horizontal">33dp</dimen>
+    <dimen name="power_menu_ios_row_gap">22dp</dimen>
+    <dimen name="power_menu_ios_group_gap">52dp</dimen>
+    <dimen name="power_menu_ios_hint_margin_top">14dp</dimen>
+    <dimen name="power_menu_ios_close_size">72dp</dimen>
+    <dimen name="power_menu_ios_close_margin_bottom">48dp</dimen>
 </resources>
