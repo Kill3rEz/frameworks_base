@@ -31,7 +31,6 @@ import android.content.Intent;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.text.Html;
-import android.net.wifi.ScanResult;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.Preconditions;
@@ -60,10 +59,6 @@ public class WifiSignalController extends SignalController<WifiState, IconGroup>
     private final Handler mBgHandler;
 
     private final IconGroup mDefaultWifiIconGroup;
-    private final IconGroup mWifi4IconGroup;
-    private final IconGroup mWifi5IconGroup;
-    private final IconGroup mWifi6IconGroup;
-    private final IconGroup mWifi7IconGroup;
 
     public WifiSignalController(
             Context context,
@@ -93,54 +88,6 @@ public class WifiSignalController extends SignalController<WifiState, IconGroup>
                 "Wi-Fi Icons",
                 WifiIcons.WIFI_SIGNAL_STRENGTH,
                 WifiIcons.QS_WIFI_SIGNAL_STRENGTH,
-                AccessibilityContentDescriptions.WIFI_CONNECTION_STRENGTH,
-                WifiIcons.WIFI_NO_NETWORK,
-                WifiIcons.QS_WIFI_NO_NETWORK,
-                WifiIcons.WIFI_NO_NETWORK,
-                WifiIcons.QS_WIFI_NO_NETWORK,
-                AccessibilityContentDescriptions.WIFI_NO_CONNECTION
-                );
-
-        mWifi4IconGroup = new IconGroup(
-                "Wi-Fi 4 Icons",
-                WifiIcons.WIFI_4_SIGNAL_STRENGTH,
-                WifiIcons.QS_WIFI_4_SIGNAL_STRENGTH,
-                AccessibilityContentDescriptions.WIFI_CONNECTION_STRENGTH,
-                WifiIcons.WIFI_NO_NETWORK,
-                WifiIcons.QS_WIFI_NO_NETWORK,
-                WifiIcons.WIFI_NO_NETWORK,
-                WifiIcons.QS_WIFI_NO_NETWORK,
-                AccessibilityContentDescriptions.WIFI_NO_CONNECTION
-                );
-
-        mWifi5IconGroup = new IconGroup(
-                "Wi-Fi 5 Icons",
-                WifiIcons.WIFI_5_SIGNAL_STRENGTH,
-                WifiIcons.QS_WIFI_5_SIGNAL_STRENGTH,
-                AccessibilityContentDescriptions.WIFI_CONNECTION_STRENGTH,
-                WifiIcons.WIFI_NO_NETWORK,
-                WifiIcons.QS_WIFI_NO_NETWORK,
-                WifiIcons.WIFI_NO_NETWORK,
-                WifiIcons.QS_WIFI_NO_NETWORK,
-                AccessibilityContentDescriptions.WIFI_NO_CONNECTION
-                );
-
-        mWifi6IconGroup = new IconGroup(
-                "Wi-Fi 6 Icons",
-                WifiIcons.WIFI_6_SIGNAL_STRENGTH,
-                WifiIcons.QS_WIFI_6_SIGNAL_STRENGTH,
-                AccessibilityContentDescriptions.WIFI_CONNECTION_STRENGTH,
-                WifiIcons.WIFI_NO_NETWORK,
-                WifiIcons.QS_WIFI_NO_NETWORK,
-                WifiIcons.WIFI_NO_NETWORK,
-                WifiIcons.QS_WIFI_NO_NETWORK,
-                AccessibilityContentDescriptions.WIFI_NO_CONNECTION
-                );
-
-        mWifi7IconGroup = new IconGroup(
-                "Wi-Fi 7 Icons",
-                WifiIcons.WIFI_7_SIGNAL_STRENGTH,
-                WifiIcons.QS_WIFI_7_SIGNAL_STRENGTH,
                 AccessibilityContentDescriptions.WIFI_CONNECTION_STRENGTH,
                 WifiIcons.WIFI_NO_NETWORK,
                 WifiIcons.QS_WIFI_NO_NETWORK,
@@ -265,18 +212,7 @@ public class WifiSignalController extends SignalController<WifiState, IconGroup>
 
 
     private void updateIconGroup() {
-	if (mCurrentState.wifiStandard == ScanResult.WIFI_STANDARD_11N) {
-            mCurrentState.iconGroup = mWifi4IconGroup;
-        } else if (mCurrentState.wifiStandard == ScanResult.WIFI_STANDARD_11AC) {
-            mCurrentState.iconGroup = mWifi5IconGroup;
-        } else if (mCurrentState.wifiStandard == ScanResult.WIFI_STANDARD_11AX) {
-            mCurrentState.iconGroup = mWifi6IconGroup;
-        } else if (mCurrentState.wifiStandard == ScanResult.WIFI_STANDARD_11BE) {
-            mCurrentState.iconGroup = mWifi7IconGroup;
-        } else {
-            mCurrentState.iconGroup = mDefaultWifiIconGroup;
-        }
-
+        mCurrentState.iconGroup = mDefaultWifiIconGroup;
     }
     /**
      * Fetches wifi initial state replacing the initial sticky broadcast.
