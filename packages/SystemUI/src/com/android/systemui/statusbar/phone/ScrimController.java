@@ -89,6 +89,7 @@ import com.android.systemui.shade.ui.ShadeColors;
 import com.android.systemui.statusbar.notification.stack.ViewState;
 import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
+import com.android.systemui.util.ScrimUtils;
 import com.android.systemui.util.wakelock.DelayedWakeLock;
 import com.android.systemui.util.wakelock.WakeLock;
 import com.android.systemui.window.domain.interactor.WindowRootViewBlurInteractor;
@@ -815,6 +816,10 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
         return mNotificationsScrim.getScaleY();
     }
 
+    public float getScrimBehindAlpha() {
+        return mScrimBehindAlphaKeyguard;
+    }
+
     public void onTrackingStarted() {
         mDarkenWhileDragging = !mKeyguardStateController.canDismissLockScreen();
         if (!mKeyguardUnlockAnimationController.isPlayingCannedUnlockAnimation()) {
@@ -1279,6 +1284,7 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
         if (mScrimBehind != null) {
             dispatchBackScrimState(mScrimBehind.getViewAlpha());
         }
+        ScrimUtils.get(mScrimBehind.getContext()).onScrimDispatched();
     }
 
     /**

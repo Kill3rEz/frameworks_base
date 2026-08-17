@@ -16,15 +16,20 @@
 
 package com.android.systemui.util
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.service.notification.StatusBarNotification
+import android.view.View
+import android.view.ViewTreeObserver
+import com.android.systemui.Dependency
 import com.android.systemui.statusbar.StatusBarState.KEYGUARD
 import com.android.systemui.statusbar.StatusBarState.SHADE_LOCKED
+import com.android.systemui.statusbar.phone.ScrimController
 import java.util.concurrent.atomic.AtomicBoolean
 
 /* Scrim - aka testing utils */
-class ScrimUtils private constructor() {
+class ScrimUtils private constructor(context: Context?) {
 
     interface ScrimEventListener {
         fun onKeyguardShowingChanged(showing: Boolean) {}
@@ -49,6 +54,24 @@ class ScrimUtils private constructor() {
     private val mPulsing = AtomicBoolean()
     private val mFadingAwayDuration = 500L
 
+    private val mContext: Context by lazy {
+        context ?: throw IllegalStateException("ScrimUtils requires a valid Context")
+    }
+
+    private val mScrimController: ScrimController? by lazy {
+        try {
+            Dependency.get(ScrimController::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private var mWallpaperDepthUtils: WallpaperDepthUtils? = null
+
+    fun setWallpaperDepthUtils(utils: WallpaperDepthUtils) {
+        mWallpaperDepthUtils = utils
+    }
+
     @Volatile private var mIsDozing: Boolean? = null
     @Volatile private var mKeyguardShowing: Boolean? = null
     @Volatile private var mExpandedFraction: Float? = null
@@ -67,7 +90,13 @@ class ScrimUtils private constructor() {
         @JvmStatic
         fun get(): ScrimUtils =
             instance ?: synchronized(this) {
-                instance ?: ScrimUtils().also { instance = it }
+                instance ?: ScrimUtils(null).also { instance = it }
+            }
+
+        @JvmStatic
+        fun get(context: Context): ScrimUtils =
+            instance ?: synchronized(this) {
+                instance ?: ScrimUtils(context).also { instance = it }
             }
     }
 
@@ -78,22 +107,38 @@ class ScrimUtils private constructor() {
         if (mKeyguardShowing == null || mKeyguardShowing != showing) {
             mKeyguardShowing = showing
             listeners.notifyOnMain { it.onKeyguardShowingChanged(showing) }
+            if (showing) {
+                mainHandler.postDelayed({
+                    mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
+                    mWallpaperDepthUtils?.updateDepthWallpaper()
+                }, 120)
+            } else {
+                mWallpaperDepthUtils?.hideDepthWallpaperImmediate()
+            }
         }
     }
 
     fun onKeyguardFadingAwayChanged(fadingAway: Boolean) {
         listeners.notifyOnMain { it.onKeyguardFadingAwayChanged(fadingAway) }
         postKeyguardRetry()
+        if (fadingAway) {
+            mWallpaperDepthUtils?.hideDepthWallpaper()
+            mWallpaperDepthUtils?.hideDepthWallpaperImmediate()
+        }
     }
 
     fun onKeyguardGoingAwayChanged(goingAway: Boolean) {
         listeners.notifyOnMain { it.onKeyguardGoingAwayChanged(goingAway) }
         postKeyguardRetry()
+        if (goingAway) {
+            mWallpaperDepthUtils?.hideDepthWallpaper()
+        }
     }
 
     fun onPrimaryBouncerShowingChanged(showing: Boolean) {
         listeners.notifyOnMain { it.onPrimaryBouncerShowingChanged(showing) }
         postKeyguardRetry()
+        mWallpaperDepthUtils?.onBouncerShowingChanged(showing)
     }
 
     private fun postKeyguardRetry() {
@@ -116,11 +161,18 @@ class ScrimUtils private constructor() {
         if (mIsDozing == null || mIsDozing != dozing) {
             mIsDozing = dozing
             listeners.notify { it.onDozingChanged(dozing) }
+            mWallpaperDepthUtils?.onDozingChanged(dozing)
             if (dozing) {
                 setKeyguardShowing(true)
             } else {
                 val shouldShowKeyguard = mStateIsKeyguard || mPulsing.get()
                 setKeyguardShowing(shouldShowKeyguard)
+                // Additional refresh when exiting doze to ensure depth wallpaper appears
+                if (mStateIsKeyguard) {
+                    mainHandler.postDelayed({
+                        mWallpaperDepthUtils?.updateDepthWallpaper()
+                    }, 200)
+                }
             }
         }
     }
@@ -140,18 +192,39 @@ class ScrimUtils private constructor() {
     fun setQsVisible(visible: Boolean) {
         if (mQsVisible.getAndSet(visible) != visible) {
             listeners.notifyOnMain { it.onQsVisibilityChanged(visible) }
+            if (visible) {
+                mWallpaperDepthUtils?.getDepthWallpaperView()?.translationZ = -100f
+            } else if (mStateIsKeyguard) {
+                mWallpaperDepthUtils?.getDepthWallpaperView()?.translationZ = 0f
+                mainHandler.postDelayed({
+                    mWallpaperDepthUtils?.updateDepthWallpaper()
+                    mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
+                }, 100)
+            }
         }
     }
 
     fun setPulsing(pulsing: Boolean) {
         if (mPulsing.getAndSet(pulsing) != pulsing) {
             listeners.notify { it.setPulsing(pulsing) }
+            if (!pulsing && mStateIsKeyguard) {
+                mainHandler.postDelayed({
+                    mWallpaperDepthUtils?.updateDepthWallpaper()
+                    mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
+                }, 120)
+            }
         }
     }
 
     fun onStartedWakingUp() {
         mAwake = true
         listeners.notify { it.onStartedWakingUp() }
+        if (mStateIsKeyguard) {
+            mainHandler.postDelayed({
+                mWallpaperDepthUtils?.updateDepthWallpaper()
+                mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
+            }, 150)
+        }
     }
 
     fun onScreenTurnedOff() {
@@ -194,5 +267,55 @@ class ScrimUtils private constructor() {
         } else {
             (mExpandedFraction ?: 0.0f) <= 0.0f
         }
+    }
+
+    // Depth Wallpaper control methods
+    fun setViewAlpha(subjectAlpha: Float) {
+        mWallpaperDepthUtils?.setSubjectAlpha(subjectAlpha)
+    }
+
+    fun setQsExpansion(expansion: Float) {
+        val fullyCollapsed = expansion <= 0f
+        if (fullyCollapsed) {
+            mWallpaperDepthUtils?.getDepthWallpaperView()?.translationZ = 0f
+            if (mStateIsKeyguard) {
+                mWallpaperDepthUtils?.updateDepthWallpaper()
+                mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
+            }
+        } else {
+            mWallpaperDepthUtils?.getDepthWallpaperView()?.translationZ = -100f
+        }
+    }
+
+    fun onScreenStateChange() {
+        updateDepthWallpaperElements()
+        mainHandler.postDelayed({
+            updateDepthWallpaperElements()
+        }, 250)
+    }
+
+    private fun updateDepthWallpaperElements() {
+        mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
+    }
+
+    fun onScrimDispatched() {
+        mWallpaperDepthUtils?.updateDepthWallpaper()
+        mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
+    }
+
+    fun updateDepthWallpaper() {
+        mWallpaperDepthUtils?.updateDepthWallpaper()
+    }
+
+    fun updateDepthWallpaperVisibility() {
+        mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
+    }
+
+    fun hideDepthWallpaper() {
+        mWallpaperDepthUtils?.hideDepthWallpaper()
+    }
+
+    fun getScrimBehindAlphaKeyguard(): Float {
+        return mScrimController?.getScrimBehindAlpha() ?: 0f
     }
 }
