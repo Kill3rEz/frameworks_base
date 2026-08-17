@@ -14901,6 +14901,12 @@ public final class Settings {
          public static final String QS_SHOW_AUTO_BRIGHTNESS = "qs_show_auto_brightness";
 
         /**
+         * Whether the volume panel is on the left side of the screen (0=right/default, 1=left)
+         * @hide
+         */
+        public static final String VOLUME_PANEL_ON_LEFT = "volume_panel_on_left";
+
+        /**
          * Whether contextual screen timeout is enabled.
          *
          * @hide
