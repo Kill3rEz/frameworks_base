@@ -45,4 +45,7 @@
     <!-- FPSInfoService FPS node file path -->
     <string name="config_fpsInfoSysNode" translatable="false">/sys/class/drm/sde-crtc-0/measured_fps</string>
 
+    <!-- Whether to disable Smart Pixels on UDFPS -->
+    <bool name="config_disableSmartPixelsOnUDFPS">false</bool>
+
 </resources>
