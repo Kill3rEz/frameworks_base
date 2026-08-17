@@ -420,14 +420,19 @@ private fun ContentScope.SingleShade(
                                         val top2Specs = remember(viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels) {
                                             viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
                                         }
-                                        TileGrid(
-                                            viewModel = viewModel.qsContainerViewModel.tileGridViewModel,
-                                            includeSpecs = top2Specs,
-                                            columnsOverride = if (qqsShowsMedia) null else 1,
-                                            forceLargeTiles = true,
-                                            listening = { listening },
-                                            modifier = Modifier.sysuiResTag("quick_qs_panel"),
-                                        )
+                                        Element(
+                                            key = QuickSettings.Elements.HeaderTiles,
+                                            modifier = Modifier,
+                                        ) {
+                                            TileGrid(
+                                                viewModel = viewModel.qsContainerViewModel.tileGridViewModel,
+                                                includeSpecs = top2Specs,
+                                                columnsOverride = if (qqsShowsMedia) null else 1,
+                                                forceLargeTiles = true,
+                                                listening = { listening },
+                                                modifier = Modifier.sysuiResTag("quick_qs_panel"),
+                                            )
+                                        }
                                     }
                                 }
                             }

@@ -105,13 +105,15 @@ private fun ContentScope.PenguinQuickSettingsContent(
                         listening = true
                         onStopOrDispose { listening = false }
                     }
-                    TileGrid(
-                        viewModel = viewModel.tileGridViewModel,
-                        includeSpecs = top2Specs,
-                        columnsOverride = 1,
-                        forceLargeTiles = true,
-                        listening = { listening },
-                    )
+                    Element(key = Elements.HeaderTiles, modifier = Modifier) {
+                        TileGrid(
+                            viewModel = viewModel.tileGridViewModel,
+                            includeSpecs = top2Specs,
+                            columnsOverride = 1,
+                            forceLargeTiles = true,
+                            listening = { listening },
+                        )
+                    }
                 }
             },
         headerRight =
