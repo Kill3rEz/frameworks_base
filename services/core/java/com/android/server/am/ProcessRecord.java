@@ -1294,6 +1294,11 @@ class ProcessRecord extends ProcessRecordInternal implements WindowProcessListen
     }
 
     @Override
+    public boolean isCachedAppFreezerExempt() {
+        return mService.mConstants.CACHED_APP_FREEZER_EXEMPT_PACKAGES.contains(getPackageName());
+    }
+
+    @Override
     public boolean isInstantApp() {
         return info.isInstantApp();
     }
