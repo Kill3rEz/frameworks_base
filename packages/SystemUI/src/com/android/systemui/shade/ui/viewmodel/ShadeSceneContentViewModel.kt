@@ -35,6 +35,8 @@ import com.android.systemui.qs.footer.ui.viewmodel.FooterActionsViewModel
 import com.android.systemui.qs.panels.domain.interactor.TileSquishinessInteractor
 import com.android.systemui.qs.panels.ui.viewmodel.MediaInRowInLandscapeViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.QuickQuickSettingsViewModel
+import com.android.systemui.qs.shared.style.QsPanelStyle
+import com.android.systemui.qs.shared.style.QsPanelStyleRepository
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.model.Overlays
@@ -80,6 +82,7 @@ constructor(
     windowRootViewBlurInteractor: WindowRootViewBlurInteractor,
     mediaInRowInLandscapeViewModelFactory: MediaInRowInLandscapeViewModel.Factory,
     shadeStatusBarComponentsInteractor: ShadeStatusBarComponentsInteractor,
+    qsPanelStyleRepository: QsPanelStyleRepository,
 ) : HydratedActivatable() {
 
     /**
@@ -95,6 +98,8 @@ constructor(
             .hydratedStateOf()
 
     val shadeMode: ShadeMode by shadeModeInteractor.shadeMode.hydratedStateOf()
+
+    val panelStyle: QsPanelStyle by qsPanelStyleRepository.style.hydratedStateOf()
 
     val isDeviceEntered: Boolean by deviceEntryInteractor.isDeviceEntered.hydratedStateOf()
 

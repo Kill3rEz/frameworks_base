@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,12 +32,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.android.compose.animation.scene.ContentScope
 import com.android.compose.gesture.gesturesDisabled
 import com.android.compose.modifiers.thenIf
+import com.android.systemui.brightness.ui.compose.BrightnessSliderContainer
+import com.android.systemui.brightness.ui.compose.ContainerColors
 import com.android.systemui.compose.modifiers.sysuiResTag
 import com.android.systemui.media.remedia.ui.compose.Media
 import com.android.systemui.media.remedia.ui.compose.MediaPresentationStyle
@@ -44,6 +48,8 @@ import com.android.systemui.qs.composefragment.BrightnessLayout
 import com.android.systemui.qs.composefragment.VolumeLayout
 import com.android.systemui.qs.composefragment.ui.GridAnchor
 import com.android.systemui.qs.panels.ui.compose.TileGrid
+import com.android.systemui.qs.shared.style.LocalQsPanelStyle
+import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.res.R
@@ -56,13 +62,30 @@ fun ContentScope.QuickSettingsContent(
     modifier: Modifier = Modifier,
     mediaSquishiness: () -> Float = { 1f },
 ) {
+    CompositionLocalProvider(LocalQsPanelStyle provides viewModel.panelStyle) {
+        when (viewModel.panelStyle) {
+            QsPanelStyle.Default ->
+                DefaultQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
+            QsPanelStyle.Penguin ->
+                PenguinQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
+        }
+    }
+}
+
+@Composable
+private fun ContentScope.PenguinQuickSettingsContent(
+    viewModel: QuickSettingsContainerViewModel,
+    mediaInRow: Boolean,
+    modifier: Modifier = Modifier,
+    mediaSquishiness: () -> Float = { 1f },
+) {
     val showMedia = viewModel.showMedia
     val headerShowsMedia = showMedia && isAlwaysComposedContentVisible()
     val top2Specs = remember(viewModel.tileGridViewModel.tileViewModels) {
         viewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
     }
 
-    QuickSettingsPanelLayout(
+    PenguinQuickSettingsPanelLayout(
         headerLeft =
             @Composable {
                 if (headerShowsMedia) {
@@ -147,7 +170,7 @@ fun ContentScope.QuickSettingsContent(
 }
 
 @Composable
-private fun QuickSettingsPanelLayout(
+private fun PenguinQuickSettingsPanelLayout(
     headerLeft: @Composable () -> Unit,
     headerRight: @Composable () -> Unit,
     tiles: @Composable () -> Unit,
@@ -167,5 +190,122 @@ private fun QuickSettingsPanelLayout(
             Box(modifier = Modifier.weight(1f)) { headerRight() }
         }
         tiles()
+    }
+}
+
+@Composable
+private fun ContentScope.DefaultQuickSettingsContent(
+    viewModel: QuickSettingsContainerViewModel,
+    mediaInRow: Boolean,
+    modifier: Modifier = Modifier,
+    mediaSquishiness: () -> Float = { 1f },
+) {
+    DefaultQuickSettingsPanelLayout(
+        brightness =
+            @Composable {
+                if (viewModel.isBrightnessSliderVisible) {
+                    var isBrightnessSliderInteractable by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) {
+                        snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
+                            .filterNotNull()
+                            .collect { isBrightnessSliderInteractable = it >= .5f }
+                    }
+                    Element(modifier = Modifier, key = Elements.BrightnessSlider) {
+                        BrightnessSliderContainer(
+                            viewModel.brightnessSliderViewModel,
+                            containerColors =
+                                ContainerColors(
+                                    Color.Transparent,
+                                    ContainerColors.defaultContainerColor,
+                                ),
+                            modifier =
+                                Modifier.padding(
+                                        vertical =
+                                            dimensionResource(id = R.dimen.qs_brightness_margin_top)
+                                    )
+                                    .thenIf(!isBrightnessSliderInteractable) {
+                                        Modifier.gesturesDisabled()
+                                    },
+                        )
+                    }
+                }
+            },
+        tiles =
+            @Composable {
+                var listening by remember { mutableStateOf(false) }
+                LifecycleStartEffect(Unit) {
+                    listening = true
+
+                    onStopOrDispose { listening = false }
+                }
+
+                Box {
+                    GridAnchor()
+                    TileGrid(
+                        viewModel.tileGridViewModel,
+                        listening = { listening },
+                        modifier = Modifier.element(Elements.QuickSettingsTiles),
+                    )
+                }
+            },
+        media =
+            @Composable {
+                if (isAlwaysComposedContentVisible()) {
+                    Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
+                        Media(
+                            viewModelFactory = viewModel.mediaViewModelFactory,
+                            presentationStyle = MediaPresentationStyle.Default,
+                            behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                            onDismissed = viewModel::onMediaSwipeToDismiss,
+                            mediaSquishiness = mediaSquishiness,
+                            location = Media.Location.QS,
+                        )
+                    }
+                } else {
+                    Box(modifier = Modifier)
+                }
+            },
+        mediaInRow = mediaInRow,
+        modifier =
+            modifier
+                .element(Elements.QuickSettingsContent)
+                .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))
+                .sysuiResTag("quick_settings_panel"),
+    )
+}
+
+@Composable
+private fun DefaultQuickSettingsPanelLayout(
+    brightness: @Composable () -> Unit,
+    tiles: @Composable () -> Unit,
+    media: @Composable () -> Unit,
+    mediaInRow: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    if (mediaInRow) {
+        Column(
+            verticalArrangement = spacedBy(QuickSettingsShade.Dimensions.VerticalPadding),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = modifier,
+        ) {
+            brightness()
+            Row(
+                horizontalArrangement = spacedBy(QuickSettingsShade.Dimensions.HorizontalPadding),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.weight(1f)) { tiles() }
+                Box(modifier = Modifier.weight(1f)) { media() }
+            }
+        }
+    } else {
+        Column(
+            verticalArrangement = spacedBy(QuickSettingsShade.Dimensions.VerticalPadding),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = modifier,
+        ) {
+            brightness()
+            tiles()
+            media()
+        }
     }
 }

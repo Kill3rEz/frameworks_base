@@ -108,6 +108,7 @@ import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.TileLabelBlurWidth
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.longPressLabelSettings
 import com.android.systemui.qs.panels.ui.viewmodel.AccessibilityUiState
+import com.android.systemui.qs.shared.style.isStockQsStyle
 import com.android.systemui.qs.ui.compose.borderOnFocus
 import com.android.systemui.res.R
 import kotlin.math.abs
@@ -144,10 +145,13 @@ fun LargeTileContent(
         // Icon
         val longPressLabel = longPressLabelSettings().takeIf { onLongClick != null }
         val focusBorderColor = MaterialTheme.colorScheme.secondary
+        val stockStyle = isStockQsStyle
         Box(
             modifier =
-                Modifier.padding(8.dp).drawBehind {
-                    drawCircle(colors.circleAroundIcon)
+                Modifier.thenIf(!stockStyle) {
+                    Modifier.padding(8.dp).drawBehind {
+                        drawCircle(colors.circleAroundIcon)
+                    }
                 },
             contentAlignment = Alignment.Center,
         ) {
@@ -188,7 +192,9 @@ fun LargeTileContent(
             }
         }
 
-        Spacer(modifier = Modifier.width(0.5.dp).height(CommonTileDefaults.TileDividerHeight))
+        if (!stockStyle) {
+            Spacer(modifier = Modifier.width(0.5.dp).height(CommonTileDefaults.TileDividerHeight))
+        }
 
         // Labels
         LargeTileLabels(

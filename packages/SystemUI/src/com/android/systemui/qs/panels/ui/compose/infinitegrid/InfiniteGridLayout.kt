@@ -105,7 +105,7 @@ constructor(
                 tiles.map {
                     SizedTileImpl(
                         it,
-                        if (forceLargeTiles) columns
+                        if (forceLargeTiles) largeTilesSpan.coerceAtMost(columns)
                         else if (largeTiles.contains(it.spec)) largeTilesSpan
                         else 1
                     )

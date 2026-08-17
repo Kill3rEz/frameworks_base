@@ -44,6 +44,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -103,6 +104,8 @@ import com.android.systemui.qs.composefragment.ui.GridAnchor
 import com.android.systemui.qs.footer.ui.compose.FooterActionsWithAnimatedVisibility
 import com.android.systemui.qs.panels.ui.compose.EditMode
 import com.android.systemui.qs.panels.ui.compose.QuickQuickSettings
+import com.android.systemui.qs.shared.style.LocalQsPanelStyle
+import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.ui.QuickSettings
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements.SplitShadeQuickSettings
 import com.android.systemui.qs.ui.composable.QuickSettingsContent
@@ -370,9 +373,16 @@ private fun ContentScope.SingleShade(
                 )
             },
             mediaAndQqsHeader = {
+                val isDefaultStyle = viewModel.panelStyle == QsPanelStyle.Default
+                val qqsShowsMedia =
+                    !isDefaultStyle &&
+                        viewModel.isQsEnabled &&
+                        viewModel.showMedia &&
+                        isAlwaysComposedContentVisible()
                 val qqsLayoutPaddingBottom = 16.dp
                 val qsHorizontalMargin =
                     shadeHorizontalPadding + dimensionResource(id = R.dimen.qs_horizontal_margin)
+                CompositionLocalProvider(LocalQsPanelStyle provides viewModel.panelStyle) {
                 MediaAndQqsLayout(
                     modifier =
                         Modifier.element(QuickSettings.Elements.QuickQuickSettingsAndMedia)
@@ -396,17 +406,29 @@ private fun ContentScope.SingleShade(
                             }
                             Box {
                                 if (viewModel.isQsEnabled) {
-                                    val top2Specs = remember(viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels) {
-                                        viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
+                                    if (isDefaultStyle) {
+                                        val qqsViewModel =
+                                            rememberViewModel(traceName = "shade_scene_qqs") {
+                                                viewModel.quickQuickSettingsViewModel.create()
+                                            }
+                                        QuickQuickSettings(
+                                            qqsViewModel,
+                                            listening = { listening },
+                                            modifier = Modifier.sysuiResTag("quick_qs_panel"),
+                                        )
+                                    } else {
+                                        val top2Specs = remember(viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels) {
+                                            viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
+                                        }
+                                        TileGrid(
+                                            viewModel = viewModel.qsContainerViewModel.tileGridViewModel,
+                                            includeSpecs = top2Specs,
+                                            columnsOverride = if (qqsShowsMedia) null else 1,
+                                            forceLargeTiles = true,
+                                            listening = { listening },
+                                            modifier = Modifier.sysuiResTag("quick_qs_panel"),
+                                        )
                                     }
-                                    TileGrid(
-                                        viewModel = viewModel.qsContainerViewModel.tileGridViewModel,
-                                        includeSpecs = top2Specs,
-                                        columnsOverride = 1,
-                                        forceLargeTiles = true,
-                                        listening = { listening },
-                                        modifier = Modifier.sysuiResTag("quick_qs_panel"),
-                                    )
                                 }
                             }
                         },
@@ -435,7 +457,10 @@ private fun ContentScope.SingleShade(
                         }
                     },
                     mediaInRow = mediaInRow,
+                    isDefaultStyle = isDefaultStyle,
+                    showMedia = qqsShowsMedia,
                 )
+                }
             },
             scrollableScrim = { onContentHeightChanged, isScrimAtRest ->
                 NestedScrollingNotificationPanel(
@@ -484,32 +509,60 @@ private fun ContentScope.MediaAndQqsLayout(
     tiles: @Composable () -> Unit,
     media: @Composable () -> Unit,
     mediaInRow: Boolean,
+    isDefaultStyle: Boolean,
+    showMedia: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val modifierAnimated =
         modifier.animateContentSizeNoClip(MaterialTheme.motionScheme.defaultSpatialSpec())
-    Row(
-        modifier = modifierAnimated.fillMaxWidth(),
-        horizontalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_horizontal)),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Box(modifier = Modifier.weight(1f)) {
-            tiles()
+    if (isDefaultStyle) {
+        if (mediaInRow) {
+            Row(
+                modifier = modifierAnimated,
+                horizontalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_vertical)),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.weight(1f)) { tiles() }
+                Box(modifier = Modifier.weight(1f)) { media() }
+            }
+        } else {
+            Column(modifier = modifierAnimated, verticalArrangement = spacedBy(16.dp)) {
+                tiles()
+                media()
+            }
         }
-        Box(modifier = Modifier.weight(1f)) {
-            Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = spacedBy(
-                        dimensionResource(R.dimen.qs_tile_margin_horizontal),
-                        Alignment.CenterHorizontally
-                    ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    BrightnessLayout(enable = true, sliderHeight = 160.dp)
-                    VolumeLayout(enable = true, sliderHeight = 160.dp)
+        return
+    }
+    Column(
+        modifier = modifierAnimated.fillMaxWidth(),
+        verticalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_vertical)),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_horizontal)),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                if (showMedia) media() else tiles()
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = spacedBy(
+                            dimensionResource(R.dimen.qs_tile_margin_horizontal),
+                            Alignment.CenterHorizontally
+                        ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BrightnessLayout(enable = true, sliderHeight = 160.dp)
+                        VolumeLayout(enable = true, sliderHeight = 160.dp)
+                    }
                 }
             }
+        }
+        if (showMedia) {
+            tiles()
         }
     }
 }

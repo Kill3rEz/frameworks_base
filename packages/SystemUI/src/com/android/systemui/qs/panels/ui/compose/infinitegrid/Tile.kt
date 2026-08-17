@@ -89,6 +89,7 @@ import com.android.systemui.qs.flags.QsDetailedView
 import com.android.systemui.qs.panels.ui.compose.BounceableInfo
 import com.android.systemui.qs.panels.ui.compose.Tooltip
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.ActiveIconCornerRadius
+import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.ActiveTileCornerRadius
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.InactiveIconCornerRadius
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.InactiveTileCornerRadius
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.TileHeight
@@ -102,6 +103,7 @@ import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toIconProvider
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.pipeline.shared.TileSpec
+import com.android.systemui.qs.shared.style.isStockQsStyle
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.qs.ui.composable.QuickSettingsShade
 import com.android.systemui.qs.ui.compose.borderOnFocus
@@ -530,13 +532,23 @@ private object TileDefaults {
     private const val GlassIconSurfaceAlpha = GlassSurfaceAlpha
     private const val ActiveTileAlpha = 1f
 
+    private val surfaceAlpha: Float
+        @Composable @ReadOnlyComposable get() = if (isStockQsStyle) 1f else GlassSurfaceAlpha
+
+    private val iconSurfaceAlpha: Float
+        @Composable @ReadOnlyComposable get() =
+            if (isStockQsStyle) 1f else GlassIconSurfaceAlpha
+
+    private val activeAlpha: Float
+        @Composable @ReadOnlyComposable get() = if (isStockQsStyle) 1f else ActiveTileAlpha
+
     /** An active tile uses the active color as background */
     @Composable
     @ReadOnlyComposable
     fun activeTileColors(): TileColors =
         TileColors(
-            background = MaterialTheme.colorScheme.primary.copy(alpha = ActiveTileAlpha),
-            iconBackground = MaterialTheme.colorScheme.primary.copy(alpha = ActiveTileAlpha),
+            background = MaterialTheme.colorScheme.primary.copy(alpha = activeAlpha),
+            iconBackground = MaterialTheme.colorScheme.primary.copy(alpha = activeAlpha),
             label = MaterialTheme.colorScheme.onPrimary,
             secondaryLabel = MaterialTheme.colorScheme.onPrimary,
             icon = MaterialTheme.colorScheme.onPrimary,
@@ -548,7 +560,7 @@ private object TileDefaults {
     fun activeDualTargetTileColors(): TileColors =
         TileColors(
             background =
-                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = GlassSurfaceAlpha),
+                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = surfaceAlpha),
             iconBackground = MaterialTheme.colorScheme.primary,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
@@ -561,14 +573,14 @@ private object TileDefaults {
     fun inactiveDualTargetTileColors(): TileColors =
         TileColors(
             background =
-                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = GlassSurfaceAlpha),
+                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = surfaceAlpha),
             iconBackground =
-                LocalAndroidColorScheme.current.surfaceEffect2.copy(alpha = GlassIconSurfaceAlpha),
+                LocalAndroidColorScheme.current.surfaceEffect2.copy(alpha = iconSurfaceAlpha),
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
             icon = MaterialTheme.colorScheme.onSurface,
             circleAroundIcon =
-                LocalAndroidColorScheme.current.surfaceEffect2.copy(alpha = GlassIconSurfaceAlpha),
+                LocalAndroidColorScheme.current.surfaceEffect2.copy(alpha = iconSurfaceAlpha),
         )
 
     @Composable
@@ -576,7 +588,7 @@ private object TileDefaults {
     fun inactiveTileColors(): TileColors =
         TileColors(
             background =
-                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = GlassSurfaceAlpha),
+                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = surfaceAlpha),
             iconBackground = Color.Transparent,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
@@ -587,7 +599,7 @@ private object TileDefaults {
     @ReadOnlyComposable
     fun unavailableTileColors(): TileColors {
         val surfaceColor =
-            LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = GlassSurfaceAlpha)
+            LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = surfaceAlpha)
         val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .38f)
         return TileColors(
             background = surfaceColor,
@@ -633,6 +645,13 @@ private object TileDefaults {
 
     @Composable
     fun tileRadius(uiState: TileUiState): Dp {
+        if (isStockQsStyle) {
+            return when (uiState.visualState) {
+                STATE_ACTIVE -> ActiveTileCornerRadius
+                STATE_INACTIVE -> InactiveTileCornerRadius
+                else -> InactiveTileCornerRadius
+            }
+        }
         return InactiveTileCornerRadius
     }
 
