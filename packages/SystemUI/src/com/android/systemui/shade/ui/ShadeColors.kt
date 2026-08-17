@@ -81,7 +81,7 @@ object ShadeColors {
             // SplitShade (avoid adding the shade panel with scrim)
             return surfaceEffect0Color
         }
-        return shadePanel(context, blurSupported, withScrim = true)
+        return Color.TRANSPARENT
     }
 
     @JvmStatic

@@ -40,7 +40,6 @@ object QuickSettings {
                 this.spec,
                 TileIdentity(this),
                 contentPicker = SharedQsTileContentPicker,
-                placeAllCopies = true,
             )
 
         val TileElementMatcher = ElementKey.withIdentity { it is TileIdentity }

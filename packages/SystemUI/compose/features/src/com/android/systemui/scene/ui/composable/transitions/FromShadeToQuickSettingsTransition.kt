@@ -39,11 +39,6 @@ fun TransitionBuilder.shadeToQuickSettingsTransition(
 
     sharedElement(Elements.TileElementMatcher, enabled = animateQsTilesAsShared())
 
-    // This will animate between 0f (QQS) and 0.5, fading in the QQS tiles when coming back
-    // from non first page QS. The QS content ends fading out at 0.43f, so there's a brief
-    // overlap, but because they are really faint, it looks better than complete black without
-    // overlap.
-    fractionRange(end = 0.15f) { fade(QqsTileElementMatcher) }
     anchoredTranslate(QqsTileElementMatcher, Elements.GridAnchor)
     fade(MediaCarousel)
 
