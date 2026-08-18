@@ -16,6 +16,20 @@
 <merge xmlns:android="http://schemas.android.com/apk/res/android"
        xmlns:androidprv="http://schemas.android.com/apk/prv/res/android">
 
+    <ImageButton
+        android:id="@+id/volume_dialog_expand"
+        android:layout_width="@dimen/volume_dialog_button_size"
+        android:layout_height="@dimen/volume_dialog_button_size"
+        android:layout_gravity="center"
+        android:background="@drawable/ripple_drawable_20dp"
+        android:contentDescription="@string/volume_panel_expand"
+        android:padding="4dp"
+        android:scaleType="centerInside"
+        android:soundEffectsEnabled="false"
+        android:src="@drawable/ic_chevron_left"
+        android:tint="@color/materialColorPrimary"
+        android:visibility="gone"/>
+
     <com.android.systemui.volume.CaptionsToggleImageButton
         android:id="@+id/odi_captions_icon"
         android:src="@drawable/ic_volume_odi_captions_disabled"

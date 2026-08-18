@@ -18,6 +18,7 @@ package com.android.systemui.volume.dialog.captions.ui.binder
 
 import android.os.fakeHandler
 import com.android.systemui.kosmos.Kosmos
+import com.android.systemui.volume.dialog.domain.interactor.volumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.captions.ui.viewmodel.volumeDialogCaptionsButtonViewModelKosmos
 import com.android.systemui.volume.dialog.ui.viewmodel.volumeDialogViewModel
 
@@ -26,6 +27,7 @@ val Kosmos.volumeDialogCaptionsButtonViewBinder by
         VolumeDialogCaptionsButtonViewBinder(
             volumeDialogCaptionsButtonViewModelKosmos,
             volumeDialogViewModel,
+            volumeDialogExpansionInteractor,
             fakeHandler,
         )
     }

@@ -29,20 +29,42 @@ data class RingerButtonUiModel(
     val cornerRadius: Int,
 ) {
     companion object {
-        fun getUnselectedButton(context: Context): RingerButtonUiModel {
+        fun getUnselectedButton(
+            context: Context,
+            isMonochrome: Boolean = false,
+        ): RingerButtonUiModel {
             return RingerButtonUiModel(
-                tintColor = context.getColor(internalR.color.materialColorOnSurface),
+                tintColor = context.getColor(
+                    if (isMonochrome) {
+                        R.color.volume_panel_expandable_icon_on_inactive
+                    } else {
+                        internalR.color.materialColorOnSurface
+                    }),
                 backgroundColor = context.getColor(
-                    internalR.color.materialColorSurfaceContainerHighest),
+                    if (isMonochrome) {
+                        R.color.volume_panel_expandable_button_background
+                    } else {
+                        internalR.color.materialColorSurfaceContainerHighest
+                    }),
                 cornerRadius = context.resources.getDimensionPixelSize(
                     R.dimen.volume_dialog_background_square_corner_radius),
             )
         }
 
-        fun getSelectedButton(context: Context): RingerButtonUiModel {
+        fun getSelectedButton(context: Context, isMonochrome: Boolean = false): RingerButtonUiModel {
             return RingerButtonUiModel(
-                tintColor = context.getColor(internalR.color.materialColorOnPrimary),
-                backgroundColor = context.getColor(internalR.color.materialColorPrimary),
+                tintColor = context.getColor(
+                    if (isMonochrome) {
+                        R.color.volume_panel_expandable_icon_on_active
+                    } else {
+                        internalR.color.materialColorOnPrimary
+                    }),
+                backgroundColor = context.getColor(
+                    if (isMonochrome) {
+                        R.color.volume_panel_expandable_track_active
+                    } else {
+                        internalR.color.materialColorPrimary
+                    }),
                 cornerRadius = context.resources.getDimensionPixelSize(
                     R.dimen.volume_dialog_ringer_selected_button_background_radius),
             )

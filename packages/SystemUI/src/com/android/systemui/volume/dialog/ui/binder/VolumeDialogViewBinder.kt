@@ -18,6 +18,7 @@ package com.android.systemui.volume.dialog.ui.binder
 
 import android.app.Dialog
 import android.content.Context
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -41,9 +42,11 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.res.R
 import com.android.systemui.util.kotlin.awaitCancellationThenDispose
 import com.android.systemui.util.view.listenToComputeInternalInsets
+import com.android.systemui.volume.VolumePanelStyle
 import com.android.systemui.volume.dialog.captions.ui.viewmodel.VolumeDialogCaptionsButtonViewModel
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialog
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
+import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.shared.model.VolumeDialogVisibilityModel
 import com.android.systemui.volume.dialog.ui.utils.JankListenerFactory
 import com.android.systemui.volume.dialog.ui.utils.suspendAnimate
@@ -77,8 +80,12 @@ constructor(
     private val captionsButtonViewModel: VolumeDialogCaptionsButtonViewModel,
     private val jankListenerFactory: JankListenerFactory,
     private val tracer: VolumeTracer,
+    private val expansionInteractor: VolumeDialogExpansionInteractor,
     @VolumeDialog private val viewBinders: List<@JvmSuppressWildcards ViewBinder>,
 ) {
+
+    private val isOneUiStyle: Boolean
+        get() = expansionInteractor.style == VolumePanelStyle.ONE_UI
 
     private val halfOpenedOffsetPx: Float =
         context.resources.getDimensionPixelSize(R.dimen.volume_dialog_half_opened_offset).toFloat()
@@ -149,6 +156,20 @@ constructor(
 
             constraintSet.applyTo(root)
         }
+        if (isOneUiStyle) {
+            launchTraced("VDVB#oneUiGravity") {
+                expansionInteractor.isExpanded.collect { isExpanded ->
+                    dialog.window?.setGravity(
+                        if (isExpanded) {
+                            Gravity.CENTER
+                        } else {
+                            (if (isLeft) Gravity.START else Gravity.END) or
+                                Gravity.CENTER_VERTICAL
+                        }
+                    )
+                }
+            }
+        }
         root.accessibilityDelegate = Accessibility(viewModel)
         root.setOnHoverListener { _, event ->
             viewModel.onHover(
@@ -189,6 +210,9 @@ constructor(
                                 WindowInsets.Type.navigationBars() or
                                 WindowInsets.Type.statusBars()
                         )
+                    if (isOneUiStyle) {
+                        return@onApplyWindowInsets WindowInsets.CONSUMED
+                    }
                     view.updatePadding(
                         left = insetsValues.left,
                         top = insetsValues.top,
@@ -270,6 +294,10 @@ constructor(
      * @param fraction in range [0, 1]. 0 corresponds to the dialog being hidden and 1 - visible.
      */
     private fun View.applyAnimationProgress(fraction: Float) {
+        if (isOneUiStyle) {
+            alpha = fraction
+            return
+        }
         alpha = ceil(fraction)
         val isLeft = android.provider.Settings.Secure.getInt(
             context.contentResolver,

@@ -78,6 +78,22 @@
     <color name="power_menu_ios_backdrop_center">#FF1C1B1F</color>
     <color name="power_menu_ios_backdrop_edge">#FF000000</color>
 
+    <color name="volume_panel_expandable_track_active">#FFFFFFFF</color>
+    <color name="volume_panel_expandable_track_inactive">#4DFFFFFF</color>
+    <color name="volume_panel_expandable_icon_on_active">#FF1B1B1F</color>
+    <color name="volume_panel_expandable_icon_on_inactive">#FFFFFFFF</color>
+    <!-- Buttons are darker than the pills so they read as controls, not as sliders. -->
+    <color name="volume_panel_expandable_button_background">#59000000</color>
+
+    <color name="volume_panel_oneui_background_blur">#4DFFFFFF</color>
+    <!-- Card drawn when blur is unavailable: opaque, or the pills would sit on the wallpaper. -->
+    <color name="volume_panel_oneui_background_fallback">#E6C7C7C9</color>
+    <color name="volume_panel_oneui_track_active">#FFF7F7F7</color>
+    <color name="volume_panel_oneui_track_inactive">#59FFFFFF</color>
+    <color name="volume_panel_oneui_icon">#FF1B1B1B</color>
+    <color name="volume_panel_oneui_label">#FF3C3C3C</color>
+    <color name="volume_panel_oneui_button_selected">#33000000</color>
+
     <!-- Shadows under the clock, date and other keyguard text fields -->
     <color name="keyguard_shadow_color">#B2000000</color>
 

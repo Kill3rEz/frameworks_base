@@ -24,4 +24,23 @@
     <dimen name="power_menu_ios_hint_margin_top">14dp</dimen>
     <dimen name="power_menu_ios_close_size">72dp</dimen>
     <dimen name="power_menu_ios_close_margin_bottom">48dp</dimen>
+
+    <!-- Expandable volume panel style -->
+    <dimen name="volume_panel_expandable_track_size">44dp</dimen>
+    <dimen name="volume_panel_expandable_slider_height">148dp</dimen>
+    <!-- Half of the track, so every pill is fully rounded. -->
+    <dimen name="volume_panel_expandable_track_corner_radius">22dp</dimen>
+
+    <!-- One UI volume panel style -->
+    <dimen name="volume_panel_oneui_background_corner_radius">28dp</dimen>
+    <dimen name="volume_panel_oneui_padding">20dp</dimen>
+    <dimen name="volume_panel_oneui_slider_width">52dp</dimen>
+    <dimen name="volume_panel_oneui_track_size">52dp</dimen>
+    <dimen name="volume_panel_oneui_track_corner_radius">26dp</dimen>
+    <!-- Pill plus the label underneath it. -->
+    <dimen name="volume_panel_oneui_slider_container_height">248dp</dimen>
+    <dimen name="volume_panel_oneui_slider_spacing">10dp</dimen>
+    <dimen name="volume_panel_oneui_header_height">40dp</dimen>
+    <!-- Keeps the header readable when the panel is collapsed down to a single pill. -->
+    <dimen name="volume_panel_oneui_min_width">260dp</dimen>
 </resources>

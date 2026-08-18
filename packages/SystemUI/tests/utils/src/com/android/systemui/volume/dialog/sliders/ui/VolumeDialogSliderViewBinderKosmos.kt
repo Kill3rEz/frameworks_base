@@ -19,6 +19,7 @@ package com.android.systemui.volume.dialog.sliders.ui
 import com.android.systemui.haptics.slider.sliderHapticsViewModelFactory
 import com.android.systemui.kosmos.Kosmos
 import com.android.systemui.volume.dialog.domain.interactor.expandedAudioTileDetailsFeatureInteractor
+import com.android.systemui.volume.dialog.domain.interactor.volumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.sliders.ui.viewmodel.volumeDialogOverscrollViewModel
 import com.android.systemui.volume.dialog.sliders.ui.viewmodel.volumeDialogSliderViewModel
 
@@ -29,5 +30,6 @@ val Kosmos.volumeDialogSliderViewBinder by
             volumeDialogOverscrollViewModel,
             sliderHapticsViewModelFactory,
             expandedAudioTileDetailsFeatureInteractor,
+            volumeDialogExpansionInteractor,
         )
     }

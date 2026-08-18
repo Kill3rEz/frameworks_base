@@ -209,5 +209,12 @@
     <string name="power_menu_ios_emergency_hint">Slide to Call Emergency Services</string>
     <string name="power_menu_ios_emergency_thumb_label">SOS</string>
     <string name="power_menu_ios_close">Close</string>
+
+    <!-- Expandable volume panel style -->
+    <string name="volume_panel_expand">Show all volume sliders</string>
+    <string name="volume_panel_collapse">Show only the current volume slider</string>
+
+    <!-- Header of the One UI volume panel style -->
+    <string name="volume_panel_oneui_title">Volume</string>
 </resources>
 
