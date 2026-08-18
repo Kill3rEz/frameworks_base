@@ -17,13 +17,18 @@
 package com.android.systemui.volume.dialog.settings.domain
 
 import android.app.ActivityManager
+import android.content.Intent
+import android.provider.Settings
 import com.android.app.tracing.coroutines.flow.flowName
+import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.policy.DeviceProvisionedController
 import com.android.systemui.volume.Events
+import com.android.systemui.volume.VolumePanelStyle
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialog
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
 import com.android.systemui.volume.dialog.domain.interactor.ExpandedAudioTileDetailsFeatureInteractor
+import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogVisibilityInteractor
 import com.android.systemui.volume.dialog.shared.model.VolumeDialogVisibilityModel
 import com.android.systemui.volume.panel.domain.interactor.VolumePanelGlobalStateInteractor
@@ -45,6 +50,8 @@ constructor(
     private val visibilityInteractor: VolumeDialogVisibilityInteractor,
     private val shadeInteractor: ShadeInteractor,
     private val expandedAudioTileDetailsFeatureInteractor: ExpandedAudioTileDetailsFeatureInteractor,
+    private val expansionInteractor: VolumeDialogExpansionInteractor,
+    private val activityStarter: ActivityStarter,
 ) {
 
     val isVisible: StateFlow<Boolean> =
@@ -62,7 +69,18 @@ constructor(
     }
 
     fun onButtonClicked() {
-        if (isExpandedAudioTileDetailsEnabled()) {
+        if (expansionInteractor.style == VolumePanelStyle.ONE_UI) {
+            activityStarter.startActivityDismissingKeyguard(
+                /* intent = */ Intent(Settings.ACTION_SOUND_SETTINGS),
+                /* onlyProvisioned = */ false,
+                /* dismissShade = */ true,
+                /* disallowEnterPictureInPictureWhileLaunching = */ false,
+                /* callback = */ null,
+                /* flags = */ Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
+                /* animationController = */ null,
+                /* userHandle = */ null,
+            )
+        } else if (isExpandedAudioTileDetailsEnabled()) {
             shadeInteractor.expandQuickSettingsShade(QS_SHADE_EXPAND_REASON)
         } else {
             volumePanelGlobalStateInteractor.setVisible(true)
