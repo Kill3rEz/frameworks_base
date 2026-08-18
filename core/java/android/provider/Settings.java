@@ -7292,6 +7292,8 @@ public final class Settings {
 
         public static final String SCREENSHOT_SHUTTER_SOUND = "screenshot_shutter_sound";
 
+        public static final String SCREENSHOT_CLIPBOARD_ONLY = "screenshot_clipboard_only";
+
         /**
          * What to show at the bottom of the Ambient display
          * 0: Nothing.
