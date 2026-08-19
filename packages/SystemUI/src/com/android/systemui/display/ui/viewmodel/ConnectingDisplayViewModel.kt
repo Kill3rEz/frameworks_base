@@ -26,7 +26,6 @@ import android.view.WindowInsets.Type.navigationBars
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED
 import android.widget.Toast
-import android.widget.Toast.LENGTH_LONG
 import com.android.app.displaylib.ExternalDisplayConnectionType
 import com.android.app.displaylib.ExternalDisplayConnectionType.DESKTOP
 import com.android.app.displaylib.ExternalDisplayConnectionType.MIRROR
@@ -200,10 +199,11 @@ constructor(
         isInKioskMode: Boolean,
         concurrentDisplaysInProgress: Boolean,
     ) {
-        val isInExtendedMode = desktopState.isDesktopModeSupportedOnDisplay(DEFAULT_DISPLAY)
+        val isDesktopModeSupportedOnInternalDisplay =
+            desktopState.isDesktopModeSupportedOnDisplay(DEFAULT_DISPLAY)
 
         when {
-            isInKioskMode && isInExtendedMode -> {
+            isInKioskMode && isDesktopModeSupportedOnInternalDisplay -> {
                 pendingDisplay.enableForMirroring()
             }
             isInKioskMode -> {
@@ -213,10 +213,6 @@ constructor(
                     isInKioskMode = true,
                     isDesktopModeSupported = desktopState.canEnterDesktopMode,
                 )
-            }
-            isInExtendedMode -> {
-                pendingDisplay.enableForDesktop()
-                showExtendedDisplayConnectionToast()
             }
             else -> {
                 when (pendingDisplay.connectionType) {
@@ -287,9 +283,6 @@ constructor(
         dialog?.dismiss()
         dialog = null
     }
-
-    private fun showExtendedDisplayConnectionToast() =
-        Toast.makeText(context, R.string.connected_display_connection_text, LENGTH_LONG).show()
 
     private fun handleA11y(isConnected: Boolean) {
         // Send an a11y event as if a toast was shown
