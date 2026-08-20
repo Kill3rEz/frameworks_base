@@ -574,8 +574,7 @@ private object TileDefaults {
         TileColors(
             background =
                 LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = surfaceAlpha),
-            iconBackground =
-                LocalAndroidColorScheme.current.surfaceEffect2.copy(alpha = iconSurfaceAlpha),
+            iconBackground = Color.Transparent,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
             icon = MaterialTheme.colorScheme.onSurface,

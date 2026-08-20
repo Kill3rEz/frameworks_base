@@ -10,6 +10,7 @@
 
     <!-- Custom Quick Settings -->
     <dimen name="custom_qs_tile_height">76dp</dimen>
+    <dimen name="custom_qs_tile_start_padding">0dp</dimen>
 
     <dimen name="power_menu_button_gap_vertical">48dp</dimen>
     <dimen name="power_menu_button_gap_horizontal">54dp</dimen>
