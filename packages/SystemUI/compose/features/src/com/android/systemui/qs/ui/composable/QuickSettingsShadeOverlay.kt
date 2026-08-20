@@ -432,7 +432,7 @@ private fun ContentScope.QuickSettingsLayout(
                 }
                 Box(modifier = Modifier.weight(1f)) {
                     Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
-                        val tileHeight = dimensionResource(id = R.dimen.custom_qs_tile_height)
+                        val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
                         val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
                         val headerHeight = tileHeight * 2 + tileSpacing
                         Row(

@@ -124,7 +124,7 @@ private fun ContentScope.PenguinQuickSettingsContent(
                         .filterNotNull()
                         .collect { isBrightnessSliderInteractable = it >= .5f }
                 }
-                val tileHeight = dimensionResource(id = R.dimen.custom_qs_tile_height)
+                val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
                 val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
                 val headerHeight = tileHeight * 2 + tileSpacing
                 Element(modifier = Modifier, key = Elements.BrightnessSlider) {

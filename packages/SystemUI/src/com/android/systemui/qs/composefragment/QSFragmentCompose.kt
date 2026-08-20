@@ -1436,7 +1436,7 @@ private fun ContentScope.Header(
     enabled: Boolean,
     leftContent: @Composable () -> Unit = {}
 ) {
-    val tileHeight = dimensionResource(id = R.dimen.custom_qs_tile_height)
+    val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
     val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
     val headerHeight = tileHeight * 2 + tileSpacing
     val horizontalSpacing = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
@@ -1780,6 +1780,17 @@ fun VerticalSlider(
     housingHeight: Dp,
 ) {
     val housingWidth = 75.dp
+    val iconSize = 24.dp
+    val iconBottomPadding = 16.dp
+
+    val iconCoveredFraction =
+        if (housingHeight > 0.dp) (iconBottomPadding + iconSize) / housingHeight else 0f
+    val iconTint =
+        if (value > iconCoveredFraction) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
 
     Box(
         modifier = modifier
@@ -1803,10 +1814,10 @@ fun VerticalSlider(
         Icon(
             painter = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface,
+            tint = iconTint,
             modifier = Modifier
-                .padding(bottom = 16.dp)
-                .size(24.dp)
+                .padding(bottom = iconBottomPadding)
+                .size(iconSize)
         )
     }
 }
