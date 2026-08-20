@@ -3346,8 +3346,10 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
             if (mCurrentDialog == null) {
                 return;
             }
+            boolean animateFromExpandable =
+                    expandable != null && PowerMenuStyle.current(mContext) != PowerMenuStyle.IOS;
             DialogTransitionAnimator.Controller controller =
-                    expandable != null ? expandable.dialogTransitionController(
+                    animateFromExpandable ? expandable.dialogTransitionController(
                             new DialogCuj(InteractionJankMonitor.CUJ_SHADE_DIALOG_OPEN,
                                     INTERACTION_JANK_TAG)) : null;
             if (controller != null) {
