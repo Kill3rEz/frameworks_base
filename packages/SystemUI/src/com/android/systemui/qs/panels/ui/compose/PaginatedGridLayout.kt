@@ -30,6 +30,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -105,14 +107,15 @@ constructor(
 
         val pagerState = rememberPagerState(0) { pages.size }
 
-        LaunchedEffect(listening, pagerState) {
-            snapshotFlow { listening() }
-                .collect {
+        val currentListening by rememberUpdatedState(listening)
+        LaunchedEffect(pagerState) {
+            snapshotFlow { currentListening() }
+                .collect { isListening ->
                     // Whenever we go from not listening to listening, we should be in the first
                     // page. If we did this when going from listening to not listening, opening
                     // edit mode in second page will cause it to go to first page during the
                     // transition.
-                    if (listening()) {
+                    if (isListening) {
                         pagerState.scrollToPage(0)
                     }
                 }
