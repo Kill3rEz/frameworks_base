@@ -359,6 +359,23 @@ public class SystemPerformanceHinter {
     }
 
     /**
+     * Sessions are normally closed by traversals over the displays that are currently attached to
+     * the hierarchy, so once a display is detached its sessions can no longer be reached by their
+     * owners. Leaving them active would keep the boosted display root SurfaceControl referenced,
+     * which keeps the layer alive in SurfaceFlinger, and would keep any global hints requested by
+     * those sessions permanently applied.
+     * @hide
+     */
+    public void onDisplayRemoved(int displayId) {
+        for (int i = mActiveSessions.size() - 1; i >= 0; i--) {
+            final HighPerfSession session = mActiveSessions.get(i);
+            if (session.displayId == displayId) {
+                endSession(session);
+            }
+        }
+    }
+
+    /**
      * Checks if checkFlags was previously not set and is now set.
      */
     private boolean nowEnabled(@HintFlags int oldFlags, @HintFlags int newFlags,
