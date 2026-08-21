@@ -50,6 +50,10 @@ import static java.lang.Float.isNaN;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
+import androidx.dynamicanimation.animation.DynamicAnimation;
+import androidx.dynamicanimation.animation.FloatPropertyCompat;
+import androidx.dynamicanimation.animation.SpringAnimation;
+import androidx.dynamicanimation.animation.SpringForce;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.ContentResolver;
@@ -340,6 +344,29 @@ public final class NotificationPanelViewController implements
     private long mStatusBarLongPressDowntime = -1L;
     private boolean mTouchSlopExceededBeforeDown;
     private float mOverExpansion;
+
+    /** Drives {@link #setOverExpansionInternal(float)} via a physical spring instead of a
+     * fixed-duration interpolator, so fling velocity carries into the overshoot/settle. */
+    private static final FloatPropertyCompat<NotificationPanelViewController>
+            OVER_EXPANSION_SPRING_PROPERTY =
+            new FloatPropertyCompat<NotificationPanelViewController>("overExpansionSpring") {
+                @Override
+                public float getValue(NotificationPanelViewController controller) {
+                    return controller.mOverExpansion;
+                }
+
+                @Override
+                public void setValue(NotificationPanelViewController controller, float value) {
+                    controller.setOverExpansionInternal(value);
+                }
+            };
+    private SpringAnimation mOverExpansionSpring;
+
+    /** Tunables for the QS/shade overshoot spring. Adjust these to change how "bouncy" the
+     * fling settle feels. Lower stiffness / higher damping ratio = softer, slower settle. */
+    private static final float OVER_EXPANSION_SPRING_STIFFNESS = 450f;
+    private static final float OVER_EXPANSION_SPRING_DAMPING_RATIO =
+            SpringForce.DAMPING_RATIO_LOW_BOUNCY;
     private CentralSurfaces mCentralSurfaces;
     private HeadsUpManager mHeadsUpManager;
     private float mExpandedHeight = 0;
@@ -1419,7 +1446,7 @@ public final class NotificationPanelViewController implements
                             * FACTOR_OF_HIGH_VELOCITY_FOR_MAX_OVERSHOOT)));
             overshootAmount += mOverExpansion / mPanelFlingOvershootAmount;
         }
-        ValueAnimator animator = createHeightAnimator(target, overshootAmount);
+        ValueAnimator animator = createHeightAnimator(target, overshootAmount, vel);
         if (expand) {
             maybeVibrateOnOpening(true /* openingWithTouch */);
             if (expandBecauseOfFalsing && vel < 0) {
@@ -3051,27 +3078,22 @@ public final class NotificationPanelViewController implements
             return;
         }
         mIsSpringBackAnimation = true;
-        ValueAnimator animator = ValueAnimator.ofFloat(mOverExpansion, 0);
-        animator.addUpdateListener(
-                animation -> setOverExpansionInternal((float) animation.getAnimatedValue()));
-        animator.setDuration(SHADE_OPEN_SPRING_BACK_DURATION);
-        animator.setInterpolator(Interpolators.FAST_OUT_SLOW_IN);
-        animator.addListener(new AnimatorListenerAdapter() {
-            private boolean mCancelled;
-
-            @Override
-            public void onAnimationCancel(Animator animation) {
-                mCancelled = true;
-            }
-
-            @Override
-            public void onAnimationEnd(Animator animation) {
-                mIsSpringBackAnimation = false;
-                onFlingEnd(mCancelled);
-            }
+        // Real spring physics instead of a fixed-duration ValueAnimator: the settle now
+        // reacts to how far it has to travel instead of always taking
+        // SHADE_OPEN_SPRING_BACK_DURATION regardless of overexpansion amount.
+        if (mOverExpansionSpring != null) {
+            mOverExpansionSpring.cancel();
+        }
+        mOverExpansionSpring = new SpringAnimation(this, OVER_EXPANSION_SPRING_PROPERTY)
+                .setStartValue(mOverExpansion)
+                .setSpring(new SpringForce(0)
+                        .setStiffness(OVER_EXPANSION_SPRING_STIFFNESS)
+                        .setDampingRatio(OVER_EXPANSION_SPRING_DAMPING_RATIO));
+        mOverExpansionSpring.addEndListener((animation, cancelled, value, velocity) -> {
+            mIsSpringBackAnimation = false;
+            onFlingEnd(cancelled);
         });
-        setAnimator(animator);
-        animator.start();
+        mOverExpansionSpring.start();
     }
 
     @VisibleForTesting
@@ -3246,23 +3268,38 @@ public final class NotificationPanelViewController implements
      * @param overshootAmount the amount of overshoot desired
      */
     private ValueAnimator createHeightAnimator(float targetHeight, float overshootAmount) {
+        return createHeightAnimator(targetHeight, overshootAmount, 0f);
+    }
+
+    /**
+     * @param velocity the real fling velocity (px/s) from the touch that triggered this
+     *                 animation. Used to give the overshoot spring a natural starting speed
+     *                 instead of always starting from rest.
+     */
+    private ValueAnimator createHeightAnimator(float targetHeight, float overshootAmount,
+            float velocity) {
         float startExpansion = mOverExpansion;
         ValueAnimator animator = ValueAnimator.ofFloat(mExpandedHeight, targetHeight);
         registerAnimatorForTest(animator);
+        final boolean animateOverExpansion = overshootAmount > 0.0f
+                || (targetHeight == 0.0f && startExpansion != 0);
+        if (animateOverExpansion) {
+            // Real spring instead of a lerp-over-fixed-duration: this is what actually makes
+            // the overshoot/settle feel "alive" instead of robotic, and it carries the real
+            // finger-flick speed into how hard it overshoots.
+            if (mOverExpansionSpring != null) {
+                mOverExpansionSpring.cancel();
+            }
+            mOverExpansionSpring = new SpringAnimation(this, OVER_EXPANSION_SPRING_PROPERTY)
+                    .setStartValue(startExpansion)
+                    .setStartVelocity(velocity)
+                    .setSpring(new SpringForce(mPanelFlingOvershootAmount * overshootAmount)
+                            .setStiffness(OVER_EXPANSION_SPRING_STIFFNESS)
+                            .setDampingRatio(OVER_EXPANSION_SPRING_DAMPING_RATIO));
+            mOverExpansionSpring.start();
+        }
         animator.addUpdateListener(
-                animation -> {
-                    if (overshootAmount > 0.0f
-                            // Also remove the overExpansion when collapsing
-                            || (targetHeight == 0.0f && startExpansion != 0)) {
-                        final float expansion = MathUtils.lerp(
-                                startExpansion,
-                                mPanelFlingOvershootAmount * overshootAmount,
-                                Interpolators.FAST_OUT_SLOW_IN.getInterpolation(
-                                        animator.getAnimatedFraction()));
-                        setOverExpansionInternal(expansion);
-                    }
-                    setExpandedHeightInternal((float) animation.getAnimatedValue());
-                });
+                animation -> setExpandedHeightInternal((float) animation.getAnimatedValue()));
         return animator;
     }
 
