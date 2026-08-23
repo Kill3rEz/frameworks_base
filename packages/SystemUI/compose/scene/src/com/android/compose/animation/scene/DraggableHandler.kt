@@ -16,6 +16,8 @@
 
 package com.android.compose.animation.scene
 
+import android.app.ActivityThread
+import android.util.BoostFramework
 import androidx.compose.foundation.OverscrollEffect
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.ui.geometry.Offset
@@ -404,7 +406,9 @@ private class DragControllerImpl(
         val targeContent =
             if (shouldCommitSwipe) swipeAnimation.toContent else swipeAnimation.fromContent
 
-        return swipeAnimation.animateOffset(velocity, targeContent, awaitFling = awaitFling)
+        return SceneSettleBoost.around {
+            swipeAnimation.animateOffset(velocity, targeContent, awaitFling = awaitFling)
+        }
     }
 
     /**
@@ -616,4 +620,25 @@ private object NoOpDragController : NestedDraggable.Controller {
     override fun onDrag(delta: Float) = 0f
 
     override suspend fun onDragStopped(velocity: Float, awaitFling: suspend () -> Unit): Float = 0f
+}
+
+private object SceneSettleBoost {
+
+    private val perf: BoostFramework? = runCatching { BoostFramework() }.getOrNull()
+
+    private val packageName: String? = runCatching { ActivityThread.currentPackageName() }.getOrNull()
+
+    suspend fun around(block: suspend () -> Float): Float {
+        perf?.perfHint(
+            BoostFramework.VENDOR_HINT_SCROLL_BOOST,
+            packageName,
+            -1,
+            BoostFramework.Scroll.PANEL_VIEW,
+        )
+        try {
+            return block()
+        } finally {
+            perf?.perfLockRelease()
+        }
+    }
 }

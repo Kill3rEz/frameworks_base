@@ -154,6 +154,45 @@ public class TextViewReceiveContentTest {
     }
 
     @Test
+    public void testOnReceive_fallbackToCommitContent_pasteAndDrop() throws Throwable {
+        mEditText.setContentMimeTypes(new String[] {"image/gif", "image/png"});
+        MyInputConnection ic = new MyInputConnection();
+        mEditText.setInputConnectionWrapper(ic);
+
+        onView(withId(mEditText.getId())).perform(clickOnTextAtIndex(0));
+
+        ClipDescription description = new ClipDescription("", new String[] {"image/gif"});
+        ClipData clip = new ClipData(description, new ClipData.Item(SAMPLE_CONTENT_URI));
+        mDefaultReceiver.onReceiveContent(mEditText,
+                new ContentInfo.Builder(clip, SOURCE_CLIPBOARD).build());
+        verify(ic.mMock, times(1))
+                .commitContent(any(InputContentInfo.class), eq(0), eq(null));
+
+        mDefaultReceiver.onReceiveContent(mEditText,
+                new ContentInfo.Builder(clip, SOURCE_DRAG_AND_DROP).build());
+        verify(ic.mMock, times(2))
+                .commitContent(any(InputContentInfo.class), eq(0), eq(null));
+        verifyNoMoreInteractions(ic.mMock);
+    }
+
+    @Test
+    public void testOnReceive_fallbackToCommitContent_pasteOfUndeclaredMimeType() throws Throwable {
+        mEditText.setContentMimeTypes(new String[] {"image/gif", "image/png"});
+        MyInputConnection ic = new MyInputConnection();
+        mEditText.setInputConnectionWrapper(ic);
+
+        onView(withId(mEditText.getId())).perform(clickOnTextAtIndex(0));
+
+        ClipDescription description = new ClipDescription("", new String[] {"video/mp4"});
+        ClipData clip = new ClipData(description, new ClipData.Item(SAMPLE_CONTENT_URI));
+        mDefaultReceiver.onReceiveContent(mEditText,
+                new ContentInfo.Builder(clip, SOURCE_CLIPBOARD).build());
+        verify(ic.mMock, times(1))
+                .commitContent(any(InputContentInfo.class), eq(0), eq(null));
+        verifyNoMoreInteractions(ic.mMock);
+    }
+
+    @Test
     public void testOnReceive_fallbackToCommitContent_sourceOtherThanAutofill() throws Throwable {
         mEditText.setContentMimeTypes(new String[] {"image/gif", "image/png"});
         MyInputConnection ic = new MyInputConnection();
@@ -161,20 +200,9 @@ public class TextViewReceiveContentTest {
 
         onView(withId(mEditText.getId())).perform(clickOnTextAtIndex(0));
 
-        // Invoke the listener with sources other than SOURCE_AUTOFILL and assert that it does NOT
-        // trigger calls to InputConnection.commitContent.
         ClipDescription description = new ClipDescription("", new String[] {"image/gif"});
         ClipData clip = new ClipData(description, new ClipData.Item(SAMPLE_CONTENT_URI));
-        ContentInfo payload =
-                new ContentInfo.Builder(clip, SOURCE_CLIPBOARD).build();
-        mDefaultReceiver.onReceiveContent(mEditText, payload);
-        verifyNoMoreInteractions(ic.mMock);
-
-        payload = new ContentInfo.Builder(clip, SOURCE_INPUT_METHOD).build();
-        mDefaultReceiver.onReceiveContent(mEditText, payload);
-        verifyNoMoreInteractions(ic.mMock);
-
-        payload = new ContentInfo.Builder(clip, SOURCE_DRAG_AND_DROP).build();
+        ContentInfo payload = new ContentInfo.Builder(clip, SOURCE_INPUT_METHOD).build();
         mDefaultReceiver.onReceiveContent(mEditText, payload);
         verifyNoMoreInteractions(ic.mMock);
 

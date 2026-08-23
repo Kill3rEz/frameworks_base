@@ -17,6 +17,9 @@
 package com.android.systemui.volume.dialog.sliders.ui
 
 import android.graphics.drawable.Drawable
+import android.provider.Settings
+import android.transition.ChangeBounds
+import android.transition.TransitionManager
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.view.LayoutInflater
@@ -85,9 +88,21 @@ constructor(
                     }
                 }
             }
+            val pillBlur: LayerDrawable? =
+                if (viewModel.showBlur) mainSliderContainer.pillBlur() else null
+            if (pillBlur != null) {
+                launchTraced("VDSVB#pillBlur") {
+                    windowRootViewBlurInteractor.isBlurCurrentlySupported.collect { supported ->
+                        mainSliderContainer.applyCardBlurSupport(pillBlur, supported)
+                    }
+                }
+            }
             launchTraced("VDSVB#cardVisibility") {
                 expansionInteractor.isExpanded.collect { isExpanded ->
                     view.background = if (isExpanded) card else null
+                    (pillBlur?.getDrawable(0) as? BackgroundBlurDrawable)
+                        ?.setVisible(!isExpanded, false)
+                    mainSliderContainer.background = if (isExpanded) null else pillBlur
                 }
             }
         } else if (isExpandableStyle) {
@@ -102,8 +117,26 @@ constructor(
                 LinearLayout.SHOW_DIVIDER_NONE
         }
 
+        val oneUiHost: ViewGroup? =
+            if (isOneUiStyle) view.parent as? ViewGroup else null
+        val oneUiCollapsedBias = if (isPanelOnLeft(view)) 0f else 1f
+        var lastExpanded: Boolean? = null
+
         viewModel.sliders
             .onEach { uiModel ->
+                if (isOneUiStyle) {
+                    val isExpanded = expansionInteractor.isExpanded.value
+                    if (lastExpanded != null && lastExpanded != isExpanded && oneUiHost != null) {
+                        TransitionManager.beginDelayedTransition(
+                            oneUiHost,
+                            ChangeBounds().setDuration(ONE_UI_EXPAND_DURATION_MS),
+                        )
+                    }
+                    lastExpanded = isExpanded
+                    view.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                        horizontalBias = if (isExpanded) 0.5f else oneUiCollapsedBias
+                    }
+                }
                 bindSlider(
                     uiModel.sliderComponent,
                     mainSliderContainer,
@@ -140,6 +173,31 @@ constructor(
                     }
                 }
             }
+        }
+    }
+
+    private fun isPanelOnLeft(view: View): Boolean =
+        Settings.Secure.getInt(
+            view.context.contentResolver,
+            Settings.Secure.VOLUME_PANEL_ON_LEFT,
+            0,
+        ) == 1
+
+    private fun View.pillBlur(): LayerDrawable {
+        val radius =
+            context.resources.getDimensionPixelSize(R.dimen.volume_panel_oneui_slider_width) / 2f
+        val blur =
+            viewRootImpl.createBackgroundBlurDrawable().apply {
+                setCornerRadius(radius)
+                setBlurRadius(0)
+            }
+        val surface =
+            GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = radius
+            }
+        return LayerDrawable(arrayOf<Drawable>(blur, surface)).also {
+            applyCardBlurSupport(it, windowRootViewBlurInteractor.isBlurCurrentlySupported.value)
         }
     }
 
@@ -241,3 +299,5 @@ private fun ViewGroup.ensureChildCount(@LayoutRes viewLayoutId: Int, count: Int)
         }
     }
 }
+
+private const val ONE_UI_EXPAND_DURATION_MS = 250L

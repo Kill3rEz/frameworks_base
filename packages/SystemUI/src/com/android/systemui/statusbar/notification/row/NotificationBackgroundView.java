@@ -32,6 +32,7 @@ import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.util.AttributeSet;
 import android.view.View;
+import android.view.ViewRootImpl;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -81,6 +82,7 @@ public class NotificationBackgroundView extends View implements Dumpable,
     private final int convexR = 9;
     private final int concaveR = 22;
     private BackgroundBlurDrawable mBackgroundBlurDrawable;
+    private boolean mBlurBackgroundEnabled;
     @VisibleForTesting
     protected View.OnAttachStateChangeListener mOnAttachStateChangeListener;
 
@@ -326,8 +328,8 @@ public class NotificationBackgroundView extends View implements Dumpable,
     /**
      * Update whether this view should allow a blurred background or not.
      *
-     * @param enabled - If true, queues creation of a {BackgroundBlurDrawable}. If false, removes
-     *     any reference to a blurred drawable.
+     * @param enabled - If true, this row frosts the wallpaper behind it while it is attached. If
+     *     false, its blur region is dropped.
      */
     @UiThread
     public void setBlurBackgroundEnabled(boolean enabled) {
@@ -336,50 +338,55 @@ public class NotificationBackgroundView extends View implements Dumpable,
         }
         Assert.isMainThread();
 
-        if (enabled && mBackgroundBlurDrawable == null) {
-            if (mOnAttachStateChangeListener != null) {
-                removeOnAttachStateChangeListener(mOnAttachStateChangeListener);
-            }
-            mOnAttachStateChangeListener =
-                    new OnAttachStateChangeListener() {
-                        @Override
-                        public void onViewAttachedToWindow(View view) {
-                            if (mBackgroundBlurDrawable == null) {
-                                mBackgroundBlurDrawable =
-                                        view.getViewRootImpl().createBackgroundBlurDrawable();
-                                mBackgroundBlurDrawable.setBlurRadius(
-                                        getResources().getDimensionPixelSize(
-                                                R.dimen.notification_background_blur_radius));
-                                mBackgroundBlurDrawable.setXfermode(null);
-                                mBackgroundBlurDrawable.setCallback(
-                                        NotificationBackgroundView.this);
-                                mBackgroundBlurDrawable.setColor(mNormalColor);
-
-                                updateBackgroundRadii();
-                                invalidate();
-                            }
-                            NotificationBackgroundView.this.removeOnAttachStateChangeListener(this);
-                            mOnAttachStateChangeListener = null;
-                        }
-
-                        @Override
-                        public void onViewDetachedFromWindow(View view) {}
-                    };
-            addOnAttachStateChangeListener(mOnAttachStateChangeListener);
-
-            if (isAttachedToWindow()) {
-                mOnAttachStateChangeListener.onViewAttachedToWindow(this);
-            }
-        } else if (!enabled) {
-            if (mOnAttachStateChangeListener != null) {
-                removeOnAttachStateChangeListener(mOnAttachStateChangeListener);
-                mOnAttachStateChangeListener = null;
-            }
-            if (mBackgroundBlurDrawable != null) {
-                mBackgroundBlurDrawable.setCallback(null);
-            }
-            mBackgroundBlurDrawable = null;
+        if (mBlurBackgroundEnabled == enabled) {
+            return;
         }
+        mBlurBackgroundEnabled = enabled;
+        if (enabled) {
+            createBlurDrawableIfAttached();
+        } else {
+            releaseBlurDrawable();
+        }
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        createBlurDrawableIfAttached();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        releaseBlurDrawable();
+    }
+
+    private void createBlurDrawableIfAttached() {
+        if (!mBlurBackgroundEnabled || mBackgroundBlurDrawable != null || !isAttachedToWindow()) {
+            return;
+        }
+        ViewRootImpl viewRoot = getViewRootImpl();
+        if (viewRoot == null) {
+            return;
+        }
+        mBackgroundBlurDrawable = viewRoot.createBackgroundBlurDrawable();
+        mBackgroundBlurDrawable.setBlurRadius(
+                getResources().getDimensionPixelSize(R.dimen.notification_background_blur_radius));
+        mBackgroundBlurDrawable.setXfermode(null);
+        mBackgroundBlurDrawable.setCallback(this);
+        mBackgroundBlurDrawable.setColor(mNormalColor);
+
+        updateBackgroundRadii();
+        invalidate();
+    }
+
+    private void releaseBlurDrawable() {
+        if (mBackgroundBlurDrawable == null) {
+            return;
+        }
+        mBackgroundBlurDrawable.setCallback(null);
+        mBackgroundBlurDrawable.setVisible(false, false);
+        mBackgroundBlurDrawable = null;
     }
 
     public Drawable getBaseBackgroundLayer() {

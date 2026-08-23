@@ -39,6 +39,11 @@ fun TransitionBuilder.shadeToQuickSettingsTransition(
 
     sharedElement(Elements.TileElementMatcher, enabled = animateQsTilesAsShared())
 
+    if (!animateQsTilesAsShared()) {
+        fractionRange(end = 0.5f) { fade(QqsTileElementMatcher) }
+        fractionRange(start = 0.5f) { fade(QsTileElementMatcher) }
+    }
+
     anchoredTranslate(QqsTileElementMatcher, Elements.GridAnchor)
     fade(MediaCarousel)
 
@@ -51,12 +56,12 @@ fun TransitionBuilder.shadeToQuickSettingsTransition(
     )
     translate(ShadeHeader.Elements.ShadeCarrierGroup, y = -translationY)
 
-    fractionRange(end = .14f) {
+    fractionRange(end = .35f) {
         fade(ShadeHeader.Elements.CollapsedContentStart)
         fade(ShadeHeader.Elements.CollapsedContentEnd)
     }
 
-    fractionRange(start = .58f) {
+    fractionRange(start = .25f) {
         fade(ShadeHeader.Elements.ExpandedContent)
         fade(ShadeHeader.Elements.ShadeCarrierGroup)
     }
@@ -91,5 +96,13 @@ private val QqsTileElementMatcher =
     object : ElementMatcher {
         override fun matches(key: ElementKey, content: ContentKey): Boolean {
             return content == Scenes.Shade && Elements.TileElementMatcher.matches(key, content)
+        }
+    }
+
+private val QsTileElementMatcher =
+    object : ElementMatcher {
+        override fun matches(key: ElementKey, content: ContentKey): Boolean {
+            return content == Scenes.QuickSettings &&
+                Elements.TileElementMatcher.matches(key, content)
         }
     }

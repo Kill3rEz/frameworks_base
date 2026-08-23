@@ -848,6 +848,9 @@ public class Activity extends ContextThemeWrapper
 
     private SparseArray<ManagedDialog> mManagedDialogs;
 
+    @Nullable
+    private LocusId mLocusId;
+
     // set by the thread after the constructor and before onCreate(Bundle savedInstanceState) is called.
     @UnsupportedAppUsage
     private Instrumentation mInstrumentation;
@@ -1267,10 +1270,16 @@ public class Activity extends ContextThemeWrapper
         } catch (RemoteException re) {
             re.rethrowFromSystemServer();
         }
+        mLocusId = locusId;
         // If locusId is not null pass it to the Content Capture.
         if (locusId != null) {
             setLocusContextToContentCapture(locusId, bundle);
         }
+    }
+
+    @Nullable
+    public LocusId getLocusContextId() {
+        return mLocusId;
     }
 
     /**

@@ -16,6 +16,8 @@
 
 package com.android.systemui.qs.panels.ui.compose
 
+import android.util.BoostFramework
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,6 +31,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -38,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
@@ -134,11 +138,36 @@ constructor(
                     0.dp
                 }
             val contentPadding = PaddingValues(horizontal = contentPaddingValue)
+            val perf = remember { runCatching { BoostFramework() }.getOrNull() }
+            val boostPackageName = LocalContext.current.packageName
+            DisposableEffect(perf) { onDispose { perf?.perfLockRelease() } }
+
             val nestedScrollConnection =
-                remember(viewModel) {
+                remember(viewModel, perf, boostPackageName) {
                     object : NestedScrollConnection {
                         override suspend fun onPreFling(available: Velocity): Velocity {
                             viewModel.registerSideSwipeGesture()
+                            val handle =
+                                perf?.perfHint(
+                                    BoostFramework.VENDOR_HINT_SCROLL_BOOST,
+                                    boostPackageName,
+                                    -1,
+                                    BoostFramework.Scroll.HORIZONTAL,
+                                )
+                            if (Log.isLoggable(QS_BOOST_TAG, Log.DEBUG)) {
+                                Log.d(QS_BOOST_TAG, "QS page fling: perfHint handle=" + handle)
+                            }
+                            return Velocity.Zero
+                        }
+
+                        override suspend fun onPostFling(
+                            consumed: Velocity,
+                            available: Velocity,
+                        ): Velocity {
+                            perf?.perfLockRelease()
+                            if (Log.isLoggable(QS_BOOST_TAG, Log.DEBUG)) {
+                                Log.d(QS_BOOST_TAG, "QS page fling: perfLockRelease")
+                            }
                             return Velocity.Zero
                         }
                     }
@@ -191,6 +220,8 @@ private object Dimensions {
     val FooterHeight = 48.dp
     val InterPageSpacing = 16.dp
 }
+
+private const val QS_BOOST_TAG = "QSBoost"
 
 @Composable
 private fun FooterBar(

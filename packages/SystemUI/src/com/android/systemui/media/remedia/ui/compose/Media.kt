@@ -193,6 +193,10 @@ import kotlinx.coroutines.launch
  * This composable supports a multitude of presentation styles/layouts controlled by the
  * [presentationStyle] parameter. If the card carousel can be swiped away to dismiss by the user,
  * the [onDismissed] callback will be invoked when/if that happens.
+ *
+ * Pass [fillHeight] when the caller sizes the carousel itself (for example a fixed-height slot in
+ * Quick Settings) and the card should grow to fill that height instead of only being as tall as its
+ * rows need.
  */
 @Composable
 fun Media(
@@ -205,6 +209,7 @@ fun Media(
     mediaSquishiness: () -> Float = { 1f },
     location: Media.Location,
     expansion: () -> Float = { 0F },
+    fillHeight: Boolean = false,
 ) {
     val context = LocalContext.current
     val viewModel: MediaViewModel =
@@ -227,6 +232,7 @@ fun Media(
         modifier = modifier,
         mediaSquishiness = mediaSquishiness,
         expansion = expansion,
+        fillHeight = fillHeight,
     )
 }
 
@@ -247,6 +253,7 @@ private fun CardCarousel(
     modifier: Modifier = Modifier,
     mediaSquishiness: () -> Float,
     expansion: () -> Float,
+    fillHeight: Boolean,
 ) {
     AnimatedVisibility(
         visible = viewModel.isCarouselVisible,
@@ -261,6 +268,7 @@ private fun CardCarousel(
             onDismissed = onDismissed,
             mediaSquishiness = mediaSquishiness,
             expansion = expansion,
+            fillHeight = fillHeight,
         )
     }
 }
@@ -274,6 +282,7 @@ private fun CardCarouselContent(
     modifier: Modifier = Modifier,
     mediaSquishiness: () -> Float,
     expansion: () -> Float,
+    fillHeight: Boolean,
 ) {
     val carouselState = rememberCarouselState {
         if (behavior.isCarouselScrollingEnabled) {
@@ -364,6 +373,7 @@ private fun CardCarouselContent(
                             carouselStyle = presentationStyle,
                             mediaSquishiness = mediaSquishiness,
                             expansion = expansion,
+                            fillHeight = fillHeight,
                             modifier =
                                 Modifier.maskClip(roundedCornerShape)
                                     .fillMaxWidth()
@@ -419,6 +429,7 @@ private fun Card(
     modifier: Modifier = Modifier,
     mediaSquishiness: () -> Float,
     expansion: () -> Float,
+    fillHeight: Boolean = false,
 ) {
     val viewModel = mediaViewModel.cards[cardIndex]
     val stlState =
@@ -461,7 +472,7 @@ private fun Card(
                             cardIndex = cardIndex,
                             colorScheme = colorScheme,
                             threeRows = true,
-                            fillHeight = false,
+                            fillHeight = fillHeight,
                         )
                     }
 

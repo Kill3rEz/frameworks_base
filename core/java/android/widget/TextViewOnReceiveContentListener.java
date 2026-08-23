@@ -19,16 +19,30 @@ package android.widget;
 import static android.content.ContentResolver.SCHEME_CONTENT;
 import static android.view.ContentInfo.FLAG_CONVERT_TO_PLAIN_TEXT;
 import static android.view.ContentInfo.SOURCE_AUTOFILL;
+import static android.view.ContentInfo.SOURCE_CLIPBOARD;
+import static android.view.ContentInfo.SOURCE_DRAG_AND_DROP;
 import static android.view.ContentInfo.SOURCE_INPUT_METHOD;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.app.Activity;
+import android.app.usage.UsageEvents;
+import android.app.usage.UsageStatsManager;
 import android.compat.Compatibility;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledAfter;
+import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipDescription;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.ContextWrapper;
+import android.content.Intent;
+import android.content.LocusId;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -51,6 +65,10 @@ import com.android.internal.annotations.VisibleForTesting;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Default implementation for {@link View#onReceiveContent} for editable {@link TextView}
@@ -62,6 +80,10 @@ import java.util.Arrays;
 @VisibleForTesting(visibility = VisibleForTesting.Visibility.PACKAGE)
 public final class TextViewOnReceiveContentListener implements OnReceiveContentListener {
     private static final String LOG_TAG = "ReceiveContent";
+
+    private static final long SHORTCUT_USAGE_LOOKBACK_MS = 6 * 60 * 60 * 1000L;
+
+    private static final long SHORTCUT_LAUNCH_WINDOW_MS = 5 * 1000L;
 
     @Nullable private InputConnectionInfo mInputConnectionInfo;
 
@@ -87,7 +109,28 @@ public final class TextViewOnReceiveContentListener implements OnReceiveContentL
         // In particular, multiple items within the given ClipData will trigger separate calls to
         // replace/insert. This is to preserve the original behavior with respect to TextWatcher
         // notifications fired from SpannableStringBuilder when replace/insert is called.
-        final ClipData clip = payload.getClip();
+        ClipData clip = payload.getClip();
+        if (source == SOURCE_CLIPBOARD && !isKeyboardMediaClip(clip.getDescription())) {
+            final ClipData notShared = handleNonTextViaAppShare(view, clip);
+            if (notShared == null) {
+                if (Log.isLoggable(LOG_TAG, Log.VERBOSE)) {
+                    Log.v(LOG_TAG, "onReceive: Handed over to the app's share target");
+                }
+                return null;
+            }
+            clip = notShared;
+        }
+        if (source == SOURCE_CLIPBOARD || source == SOURCE_DRAG_AND_DROP) {
+            final ClipData notInserted =
+                    handleNonTextViaImeCommitContent(clip, /* requireMimeTypeMatch= */ false);
+            if (notInserted == null) {
+                if (Log.isLoggable(LOG_TAG, Log.VERBOSE)) {
+                    Log.v(LOG_TAG, "onReceive: Handled via IME");
+                }
+                return null;
+            }
+            clip = notInserted;
+        }
         final @Flags int flags = payload.getFlags();
         final Editable editable = (Editable) ((TextView) view).getText();
         final Context context = view.getContext();
@@ -126,7 +169,7 @@ public final class TextViewOnReceiveContentListener implements OnReceiveContentL
     private void onReceiveForAutofill(@NonNull TextView view, @NonNull ContentInfo payload) {
         ClipData clip = payload.getClip();
         if (isUsageOfImeCommitContentEnabled(view)) {
-            clip = handleNonTextViaImeCommitContent(clip);
+            clip = handleNonTextViaImeCommitContent(clip, /* requireMimeTypeMatch= */ true);
             if (clip == null) {
                 if (Log.isLoggable(LOG_TAG, Log.VERBOSE)) {
                     Log.v(LOG_TAG, "onReceive: Handled via IME");
@@ -216,7 +259,7 @@ public final class TextViewOnReceiveContentListener implements OnReceiveContentL
      */
     void setInputConnectionInfo(@NonNull TextView view, @NonNull InputConnection ic,
             @NonNull EditorInfo editorInfo) {
-        if (!isUsageOfImeCommitContentEnabled(view)) {
+        if (view.getReceiveContentMimeTypes() != null) {
             mInputConnectionInfo = null;
             return;
         }
@@ -264,7 +307,8 @@ public final class TextViewOnReceiveContentListener implements OnReceiveContentL
      * inserted.
      */
     @Nullable
-    private ClipData handleNonTextViaImeCommitContent(@NonNull ClipData clip) {
+    private ClipData handleNonTextViaImeCommitContent(@NonNull ClipData clip,
+            boolean requireMimeTypeMatch) {
         ClipDescription description = clip.getDescription();
         if (!containsUri(clip) || containsOnlyText(clip)) {
             if (Log.isLoggable(LOG_TAG, Log.VERBOSE)) {
@@ -283,7 +327,8 @@ public final class TextViewOnReceiveContentListener implements OnReceiveContentL
             return clip;
         }
         String[] editorInfoContentMimeTypes = icInfo.mEditorInfoContentMimeTypes;
-        if (!isClipMimeTypeSupported(editorInfoContentMimeTypes, clip.getDescription())) {
+        if (requireMimeTypeMatch
+                && !isClipMimeTypeSupported(editorInfoContentMimeTypes, clip.getDescription())) {
             if (Log.isLoggable(LOG_TAG, Log.DEBUG)) {
                 Log.d(LOG_TAG,
                         "onReceive: MIME type is not supported by the app's commitContent impl");
@@ -320,6 +365,252 @@ public final class TextViewOnReceiveContentListener implements OnReceiveContentL
             return null;
         }
         return new ClipData(description, remainingItems);
+    }
+
+    private static boolean isKeyboardMediaClip(@NonNull ClipDescription description) {
+        final int mimeTypeCount = description.getMimeTypeCount();
+        if (mimeTypeCount == 0) {
+            return false;
+        }
+        for (int i = 0; i < mimeTypeCount; i++) {
+            if (!description.getMimeType(i).startsWith("image/")) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Nullable
+    private static ClipData handleNonTextViaAppShare(@NonNull View view, @NonNull ClipData clip) {
+        final ClipDescription description = clip.getDescription();
+        final ArrayList<Uri> uris = new ArrayList<>(clip.getItemCount());
+        final ArrayList<ClipData.Item> sharedItems = new ArrayList<>(clip.getItemCount());
+        final ArrayList<ClipData.Item> remainingItems = new ArrayList<>(clip.getItemCount());
+        for (int i = 0; i < clip.getItemCount(); i++) {
+            final ClipData.Item item = clip.getItemAt(i);
+            final Uri uri = item.getUri();
+            if (uri != null && SCHEME_CONTENT.equals(uri.getScheme())) {
+                uris.add(uri);
+                sharedItems.add(item);
+            } else {
+                remainingItems.add(item);
+            }
+        }
+        if (uris.isEmpty()) {
+            return clip;
+        }
+
+        final Context context = view.getContext();
+        final Intent share = new Intent(uris.size() == 1
+                ? Intent.ACTION_SEND : Intent.ACTION_SEND_MULTIPLE);
+        share.setPackage(context.getPackageName());
+        share.setType(description.getMimeTypeCount() == 1 ? description.getMimeType(0) : "*/*");
+        if (uris.size() == 1) {
+            share.putExtra(Intent.EXTRA_STREAM, uris.get(0));
+        } else {
+            share.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+        }
+        share.setClipData(new ClipData(description, sharedItems));
+        share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        final ResolveInfo target = context.getPackageManager()
+                .resolveActivity(share, PackageManager.MATCH_DEFAULT_ONLY);
+        if (target == null || target.activityInfo == null) {
+            if (Log.isLoggable(LOG_TAG, Log.DEBUG)) {
+                Log.d(LOG_TAG, "onReceive: The app has nothing to share files to");
+            }
+            return clip;
+        }
+        if (context.getPackageName().equals(target.activityInfo.packageName)) {
+            share.setComponent(new ComponentName(
+                    target.activityInfo.packageName, target.activityInfo.name));
+        }
+
+        final Activity activity = activityOf(context);
+
+        final String conversationShortcutId = findOpenConversationShortcutId(context, activity);
+        if (conversationShortcutId != null) {
+            share.putExtra(Intent.EXTRA_SHORTCUT_ID, conversationShortcutId);
+            if (Log.isLoggable(LOG_TAG, Log.VERBOSE)) {
+                Log.v(LOG_TAG, "onReceive: Sharing to the open conversation");
+            }
+        }
+        try {
+            if (activity != null) {
+                activity.startActivity(share);
+            } else {
+                share.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(share);
+            }
+        } catch (ActivityNotFoundException | SecurityException e) {
+            Log.w(LOG_TAG, "onReceive: Could not hand the pasted files to the app", e);
+            return clip;
+        }
+        return remainingItems.isEmpty() ? null : new ClipData(description, remainingItems);
+    }
+
+    @Nullable
+    private static String findOpenConversationShortcutId(@NonNull Context context,
+            @Nullable Activity activity) {
+        if (activity == null) {
+            return null;
+        }
+        final ShortcutManager shortcutManager = context.getSystemService(ShortcutManager.class);
+        if (shortcutManager == null) {
+            return null;
+        }
+        final List<ShortcutInfo> shortcuts;
+        try {
+            shortcuts = shortcutManager.getShortcuts(ShortcutManager.FLAG_MATCH_DYNAMIC
+                    | ShortcutManager.FLAG_MATCH_PINNED | ShortcutManager.FLAG_MATCH_CACHED);
+        } catch (RuntimeException e) {
+            Log.w(LOG_TAG, "onReceive: Could not read the app's shortcuts", e);
+            return null;
+        }
+        if (shortcuts.isEmpty()) {
+            return null;
+        }
+
+        final LocusId locusId = activity.getLocusContextId();
+        if (locusId != null) {
+            final String byLocus = onlyShortcutMatching(shortcuts,
+                    shortcut -> locusId.equals(shortcut.getLocusId()));
+            if (byLocus != null) {
+                return byLocus;
+            }
+        }
+
+        final Intent activityIntent = activity.getIntent();
+        if (activityIntent != null) {
+            final String byIntent = onlyShortcutMatching(shortcuts,
+                    shortcut -> opensSameScreen(activityIntent, shortcut));
+            if (byIntent != null) {
+                return byIntent;
+            }
+        }
+
+        return shortcutThatOpenedActivity(context, activity, shortcuts);
+    }
+
+    @Nullable
+    private static String onlyShortcutMatching(@NonNull List<ShortcutInfo> shortcuts,
+            @NonNull Predicate<ShortcutInfo> matcher) {
+        String match = null;
+        for (int i = 0; i < shortcuts.size(); i++) {
+            final ShortcutInfo shortcut = shortcuts.get(i);
+            if (!isShareTarget(shortcut) || !matcher.test(shortcut)) {
+                continue;
+            }
+            if (match != null) {
+                return null;
+            }
+            match = shortcut.getId();
+        }
+        return match;
+    }
+
+    private static boolean isShareTarget(@NonNull ShortcutInfo shortcut) {
+        final Set<String> categories = shortcut.getCategories();
+        return shortcut.isEnabled() && categories != null && !categories.isEmpty();
+    }
+
+    private static boolean opensSameScreen(@NonNull Intent activityIntent,
+            @NonNull ShortcutInfo shortcut) {
+        final Intent shortcutIntent = shortcut.getIntent();
+        if (shortcutIntent == null) {
+            return false;
+        }
+        final ComponentName shortcutComponent = shortcutIntent.getComponent();
+        if (shortcutComponent != null
+                && !shortcutComponent.equals(activityIntent.getComponent())) {
+            return false;
+        }
+        final Uri shortcutData = shortcutIntent.getData();
+        if (shortcutData != null && !shortcutData.equals(activityIntent.getData())) {
+            return false;
+        }
+        final Bundle shortcutExtras = shortcutIntent.getExtras();
+        if (shortcutExtras == null || shortcutExtras.isEmpty()) {
+            return shortcutData != null;
+        }
+        final Bundle activityExtras = activityIntent.getExtras();
+        if (activityExtras == null) {
+            return false;
+        }
+        for (String key : shortcutExtras.keySet()) {
+            if (!Objects.equals(shortcutExtras.get(key), activityExtras.get(key))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Nullable
+    private static String shortcutThatOpenedActivity(@NonNull Context context,
+            @NonNull Activity activity, @NonNull List<ShortcutInfo> shortcuts) {
+        final UsageStatsManager usageStats = context.getSystemService(UsageStatsManager.class);
+        if (usageStats == null) {
+            return null;
+        }
+        final long now = System.currentTimeMillis();
+        final UsageEvents events;
+        try {
+            events = usageStats.queryEventsForSelf(now - SHORTCUT_USAGE_LOOKBACK_MS, now);
+        } catch (RuntimeException e) {
+            Log.w(LOG_TAG, "onReceive: Could not read the app's own usage events", e);
+            return null;
+        }
+        if (events == null) {
+            return null;
+        }
+
+        final String activityClass = activity.getComponentName().getClassName();
+        final UsageEvents.Event event = new UsageEvents.Event();
+        String shortcutId = null;
+        long invokedAt = 0;
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event);
+            if (event.getEventType() == UsageEvents.Event.SHORTCUT_INVOCATION) {
+                shortcutId = event.getShortcutId();
+                invokedAt = event.getTimeStamp();
+            } else if (event.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED
+                    && shortcutId != null
+                    && !activityClass.equals(event.getClassName())
+                    && event.getTimeStamp() - invokedAt > SHORTCUT_LAUNCH_WINDOW_MS) {
+                shortcutId = null;
+            }
+        }
+        if (shortcutId == null) {
+            return null;
+        }
+
+        for (int i = 0; i < shortcuts.size(); i++) {
+            final ShortcutInfo shortcut = shortcuts.get(i);
+            if (!shortcutId.equals(shortcut.getId()) || !isShareTarget(shortcut)) {
+                continue;
+            }
+            final Intent shortcutIntent = shortcut.getIntent();
+            final ComponentName shortcutComponent =
+                    shortcutIntent != null ? shortcutIntent.getComponent() : null;
+            if (shortcutComponent != null
+                    && !activityClass.equals(shortcutComponent.getClassName())) {
+                return null;
+            }
+            return shortcutId;
+        }
+        return null;
+    }
+
+    @Nullable
+    private static Activity activityOf(@NonNull Context context) {
+        Context current = context;
+        while (current instanceof ContextWrapper) {
+            if (current instanceof Activity) {
+                return (Activity) current;
+            }
+            current = ((ContextWrapper) current).getBaseContext();
+        }
+        return null;
     }
 
     private static boolean isClipMimeTypeSupported(@NonNull String[] supportedMimeTypes,

@@ -18,9 +18,13 @@ package com.android.systemui.qs.ui.composable
 
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -34,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.android.compose.animation.scene.ContentScope
@@ -89,7 +94,7 @@ private fun ContentScope.PenguinQuickSettingsContent(
         headerLeft =
             @Composable {
                 if (headerShowsMedia) {
-                    Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
+                    Element(key = Media.Elements.MediaCarousel, modifier = Modifier.fillMaxSize()) {
                         Media(
                             viewModelFactory = viewModel.mediaViewModelFactory,
                             presentationStyle = MediaPresentationStyle.Default,
@@ -97,6 +102,8 @@ private fun ContentScope.PenguinQuickSettingsContent(
                             onDismissed = viewModel::onMediaSwipeToDismiss,
                             mediaSquishiness = mediaSquishiness,
                             location = Media.Location.QS,
+                            modifier = Modifier.fillMaxSize(),
+                            fillHeight = true,
                         )
                     }
                 } else {
@@ -116,21 +123,19 @@ private fun ContentScope.PenguinQuickSettingsContent(
                     }
                 }
             },
+        headerShowsMedia = headerShowsMedia,
         headerRight =
-            @Composable {
+            @Composable { headerHeight: Dp ->
                 var isBrightnessSliderInteractable by remember { mutableStateOf(false) }
                 LaunchedEffect(Unit) {
                     snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
                         .filterNotNull()
                         .collect { isBrightnessSliderInteractable = it >= .5f }
                 }
-                val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
-                val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
-                val headerHeight = tileHeight * 2 + tileSpacing
                 Element(modifier = Modifier, key = Elements.BrightnessSlider) {
                     Row(
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .fillMaxSize()
                             .thenIf(!isBrightnessSliderInteractable) { Modifier.gesturesDisabled() },
                         horizontalArrangement = spacedBy(
                             dimensionResource(id = R.dimen.qs_tile_margin_horizontal),
@@ -154,7 +159,6 @@ private fun ContentScope.PenguinQuickSettingsContent(
                 val excludeSpecs = if (headerShowsMedia) emptyList() else top2Specs
 
                 Box {
-                    GridAnchor()
                     TileGrid(
                         viewModel = viewModel.tileGridViewModel,
                         excludeSpecs = excludeSpecs,
@@ -172,9 +176,10 @@ private fun ContentScope.PenguinQuickSettingsContent(
 }
 
 @Composable
-private fun PenguinQuickSettingsPanelLayout(
+private fun ContentScope.PenguinQuickSettingsPanelLayout(
+    headerShowsMedia: Boolean,
     headerLeft: @Composable () -> Unit,
-    headerRight: @Composable () -> Unit,
+    headerRight: @Composable (headerHeight: Dp) -> Unit,
     tiles: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -183,13 +188,22 @@ private fun PenguinQuickSettingsPanelLayout(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = spacedBy(dimensionResource(id = R.dimen.qs_tile_margin_horizontal)),
-            verticalAlignment = Alignment.Top,
-        ) {
-            Box(modifier = Modifier.weight(1f)) { headerLeft() }
-            Box(modifier = Modifier.weight(1f)) { headerRight() }
+        val horizontalSpacing = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            GridAnchor()
+            val squareHeight = (maxWidth - horizontalSpacing) / 2
+            val tileColumnHeight =
+                dimensionResource(id = R.dimen.common_tile_default_tile_height) * 2 +
+                    dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+            val headerHeight = if (headerShowsMedia) squareHeight else tileColumnHeight
+            Row(
+                modifier = Modifier.fillMaxWidth().height(headerHeight),
+                horizontalArrangement = spacedBy(horizontalSpacing),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) { headerLeft() }
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) { headerRight(headerHeight) }
+            }
         }
         tiles()
     }

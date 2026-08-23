@@ -25,6 +25,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -33,6 +34,7 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -440,11 +442,17 @@ private fun ContentScope.SingleShade(
                     media = {
                         if (isAlwaysComposedContentVisible()) {
                             if (viewModel.isQsEnabled && viewModel.showMedia) {
-                                Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
+                                val fillsHeaderSlot = qqsShowsMedia
+                                val slotModifier =
+                                    if (fillsHeaderSlot) Modifier.fillMaxSize() else Modifier
+                                Element(
+                                    key = Media.Elements.MediaCarousel,
+                                    modifier = slotModifier,
+                                ) {
                                     Media(
                                         viewModelFactory = viewModel.mediaViewModelFactory,
                                         presentationStyle =
-                                            if (mediaInRow) {
+                                            if (mediaInRow && !fillsHeaderSlot) {
                                                 MediaPresentationStyle.Compressed
                                             } else {
                                                 MediaPresentationStyle.Default
@@ -452,6 +460,8 @@ private fun ContentScope.SingleShade(
                                         behavior = ShadeSceneContentViewModel.qqsMediaUiBehavior,
                                         onDismissed = viewModel::onMediaSwipeToDismiss,
                                         location = Media.Location.SHADE,
+                                        modifier = slotModifier,
+                                        fillHeight = fillsHeaderSlot,
                                     )
                                 }
                             }
@@ -542,26 +552,35 @@ private fun ContentScope.MediaAndQqsLayout(
         modifier = modifierAnimated.fillMaxWidth(),
         verticalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_vertical)),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_horizontal)),
-            verticalAlignment = Alignment.Top,
-        ) {
-            Box(modifier = Modifier.weight(1f)) {
-                if (showMedia) media() else tiles()
-            }
-            Box(modifier = Modifier.weight(1f)) {
-                Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = spacedBy(
-                            dimensionResource(R.dimen.qs_tile_margin_horizontal),
-                            Alignment.CenterHorizontally
-                        ),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        BrightnessLayout(enable = true, sliderHeight = 160.dp)
-                        VolumeLayout(enable = true, sliderHeight = 160.dp)
+        val horizontalSpacing = dimensionResource(R.dimen.qs_tile_margin_horizontal)
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            GridAnchor()
+            val squareHeight = (maxWidth - horizontalSpacing) / 2
+            val tileColumnHeight =
+                dimensionResource(R.dimen.common_tile_default_tile_height) * 2 +
+                    dimensionResource(R.dimen.qs_tile_margin_vertical)
+            val headerHeight = if (showMedia) squareHeight else tileColumnHeight
+            Row(
+                modifier = Modifier.fillMaxWidth().height(headerHeight),
+                horizontalArrangement = spacedBy(horizontalSpacing),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    if (showMedia) media() else tiles()
+                }
+                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = spacedBy(
+                                horizontalSpacing,
+                                Alignment.CenterHorizontally
+                            ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            BrightnessLayout(enable = true, sliderHeight = headerHeight)
+                            VolumeLayout(enable = true, sliderHeight = headerHeight)
+                        }
                     }
                 }
             }

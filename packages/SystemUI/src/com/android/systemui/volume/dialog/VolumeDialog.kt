@@ -76,10 +76,8 @@ constructor(
                 0
             ) == 1
             if (isOneUiStyle) {
-                setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                setGravity(
-                    (if (isLeft) Gravity.START else Gravity.END) or Gravity.CENTER_VERTICAL
-                )
+                setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                setGravity(Gravity.CENTER)
             } else if (isVolumeDialogVertical) {
                 setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 setGravity(if (isLeft) Gravity.START else Gravity.END)

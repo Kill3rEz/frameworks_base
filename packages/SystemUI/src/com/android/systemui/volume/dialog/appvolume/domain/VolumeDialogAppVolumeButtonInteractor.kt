@@ -3,6 +3,7 @@ package com.android.systemui.volume.dialog.appvolume.domain
 import android.content.Context
 import android.database.ContentObserver
 import android.media.AudioManager
+import android.media.AudioPlaybackConfiguration
 import android.os.Handler
 import android.os.Looper
 import android.os.UserHandle
@@ -18,6 +19,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 
 /** Exposes [VolumeDialogAppVolumeButtonViewModel]. */
@@ -30,6 +32,9 @@ constructor(
     private val volumeNavigator: VolumeNavigator,
     private val volumePanelNavigationInteractor: VolumePanelNavigationInteractor,
 ) {
+    private val audioManager: AudioManager
+        get() = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
     private fun shouldShowAppVolume(): Boolean {
         val showAppVolume = Settings.System.getIntForUser(
             context.contentResolver,
@@ -38,7 +43,6 @@ constructor(
             UserHandle.USER_CURRENT
         )
         if (showAppVolume == 1) {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             for (appVolume in audioManager.listAppVolumes()) {
                 if (appVolume.isActive) {
                     return true
@@ -62,11 +66,21 @@ constructor(
                 observer,
                 UserHandle.USER_CURRENT
             )
+
+            val playbackCallback = object : AudioManager.AudioPlaybackCallback() {
+                override fun onPlaybackConfigChanged(configs: List<AudioPlaybackConfiguration>) {
+                    trySend(shouldShowAppVolume())
+                }
+            }
+            audioManager.registerAudioPlaybackCallback(playbackCallback, handler)
+
             trySend(shouldShowAppVolume())
             awaitClose {
                 context.contentResolver.unregisterContentObserver(observer)
+                audioManager.unregisterAudioPlaybackCallback(playbackCallback)
             }
         }
+            .distinctUntilChanged()
             .stateIn(coroutineScope, SharingStarted.Eagerly, shouldShowAppVolume())
 
     fun onButtonClicked() {

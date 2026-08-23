@@ -18,7 +18,6 @@ package com.android.systemui.volume.dialog.ui.binder
 
 import android.app.Dialog
 import android.content.Context
-import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -155,20 +154,6 @@ constructor(
             }
 
             constraintSet.applyTo(root)
-        }
-        if (isOneUiStyle) {
-            launchTraced("VDVB#oneUiGravity") {
-                expansionInteractor.isExpanded.collect { isExpanded ->
-                    dialog.window?.setGravity(
-                        if (isExpanded) {
-                            Gravity.CENTER
-                        } else {
-                            (if (isLeft) Gravity.START else Gravity.END) or
-                                Gravity.CENTER_VERTICAL
-                        }
-                    )
-                }
-            }
         }
         root.accessibilityDelegate = Accessibility(viewModel)
         root.setOnHoverListener { _, event ->

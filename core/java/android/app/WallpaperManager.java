@@ -58,6 +58,7 @@ import android.content.pm.ResolveInfo;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.content.res.Resources.NotFoundException;
+import android.database.ContentObserver;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapRegionDecoder;
@@ -3296,6 +3297,10 @@ public class WallpaperManager {
         }
     }
 
+    private volatile boolean mDepthWallpaperEnabledCached;
+    private volatile boolean mDepthWallpaperObserverRegistered;
+    private final Object mDepthWallpaperObserverLock = new Object();
+
     /**
      * Set the current zoom out level of the wallpaper.
      *
@@ -3320,14 +3325,48 @@ public class WallpaperManager {
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }
+    }
 
-      }
-        private boolean isDepthWallpaperEnabled() {
-        boolean depthWallpaperEnabled = android.provider.Settings.System.getInt(mContext.getContentResolver(), 
-                "depth_wallpaper_enabled", 0) == 1;
-        String depthWallpaperUri = android.provider.Settings.System.getString(mContext.getContentResolver(),
-                "depth_wallpaper_subject_image_uri");
-        return depthWallpaperEnabled && depthWallpaperUri != null && !depthWallpaperUri.isEmpty();
+    private boolean isDepthWallpaperEnabled() {
+        ensureDepthWallpaperObserverRegistered();
+        return mDepthWallpaperEnabledCached;
+    }
+
+    private void ensureDepthWallpaperObserverRegistered() {
+        if (mDepthWallpaperObserverRegistered || mContext == null) {
+            return;
+        }
+        synchronized (mDepthWallpaperObserverLock) {
+            if (mDepthWallpaperObserverRegistered) {
+                return;
+            }
+            refreshDepthWallpaperEnabledCache();
+
+            ContentObserver observer = new ContentObserver(new Handler(mContext.getMainLooper())) {
+                @Override
+                public void onChange(boolean selfChange) {
+                    refreshDepthWallpaperEnabledCache();
+                }
+            };
+            android.content.ContentResolver resolver = mContext.getContentResolver();
+            resolver.registerContentObserver(
+                    android.provider.Settings.System.getUriFor("depth_wallpaper_enabled"),
+                    false, observer);
+            resolver.registerContentObserver(
+                    android.provider.Settings.System.getUriFor(
+                            "depth_wallpaper_subject_image_uri"),
+                    false, observer);
+            mDepthWallpaperObserverRegistered = true;
+        }
+    }
+
+    private void refreshDepthWallpaperEnabledCache() {
+        boolean depthWallpaperEnabled = android.provider.Settings.System.getInt(
+                mContext.getContentResolver(), "depth_wallpaper_enabled", 0) == 1;
+        String depthWallpaperUri = android.provider.Settings.System.getString(
+                mContext.getContentResolver(), "depth_wallpaper_subject_image_uri");
+        mDepthWallpaperEnabledCached =
+                depthWallpaperEnabled && depthWallpaperUri != null && !depthWallpaperUri.isEmpty();
     }
 
     /**

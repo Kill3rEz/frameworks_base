@@ -473,16 +473,14 @@ fun ContentScope.OverlayShadeHeader(
     )
 }
 
-/** The header that appears at the top of the Quick Settings shade overlay. */
 @Composable
 fun QuickSettingsOverlayHeader(viewModel: ShadeHeaderViewModel, modifier: Modifier = Modifier) {
     Row(
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier.fillMaxWidth(),
     ) {
         ShadeCarrierGroup(viewModel = viewModel)
-        BatteryInfo(viewModel = viewModel, showIcon = false, useExpandedFormat = true)
     }
 }
 

@@ -774,11 +774,11 @@ constructor(
                     viewModel.containerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
                 }
 
-                val Tiles: @Composable (columnsOverride: Int?) -> Unit = { _ ->
+                val Tiles: @Composable (columnsOverride: Int?) -> Unit = { columns ->
                     TileGrid(
                         viewModel = viewModel.containerViewModel.tileGridViewModel,
                         includeSpecs = top2Specs,
-                        columnsOverride = 1,
+                        columnsOverride = columns,
                         forceLargeTiles = true,
                         listening = {
                             viewModel.isQsVisibleAndAnyShadeExpanded &&
@@ -799,11 +799,12 @@ constructor(
                                 .padding(horizontal = qsHorizontalMargin())
                     ) {
                         Column {
+                            GridAnchor()
                             Header(
                                 viewModel = viewModel,
                                 location = "QQS",
                                 enabled = enabled,
-                                leftContent = { Tiles(2) }
+                                leftContent = { Tiles(1) }
                             )
                             if (viewModel.qqsMediaVisible) {
                                 spacerLayout(height = 16.dp)
@@ -905,8 +906,8 @@ constructor(
 
                         val TileGrid: @Composable () -> Unit = {
                             Box {
-                                GridAnchor()
-                                val excludeSpecs = top2Specs
+                                val excludeSpecs =
+                                    if (viewModel.qqsMediaVisible) emptyList() else top2Specs
                                 TileGrid(
                                     viewModel = containerViewModel.tileGridViewModel,
                                     modifier = Modifier.fillMaxWidth(),
@@ -931,6 +932,7 @@ constructor(
                                     )
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                GridAnchor()
                                 Header(
                                     viewModel = viewModel,
                                     location = "QS",

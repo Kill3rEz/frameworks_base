@@ -28,9 +28,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -399,52 +402,57 @@ private fun ContentScope.QuickSettingsLayout(
                 qsContainerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    if (showMedia) {
-                        Media(
-                            viewModelFactory = qsContainerViewModel.mediaViewModelFactory,
-                            presentationStyle = MediaPresentationStyle.Default,
-                            behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
-                            onDismissed = qsContainerViewModel::onMediaSwipeToDismiss,
-                            modifier = Modifier.fillMaxWidth(),
-                            location = Media.Location.QS,
-                        )
-                    } else {
-                        var listening by remember { mutableStateOf(false) }
-                        LifecycleStartEffect(Unit) {
-                            listening = true
-                            onStopOrDispose { listening = false }
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val squareHeight = (maxWidth - horizontalSpacing) / 2
+                val tileColumnHeight =
+                    dimensionResource(id = R.dimen.common_tile_default_tile_height) * 2 +
+                        dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+                val headerHeight = if (showMedia) squareHeight else tileColumnHeight
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(headerHeight),
+                    horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        if (showMedia) {
+                            Media(
+                                viewModelFactory = qsContainerViewModel.mediaViewModelFactory,
+                                presentationStyle = MediaPresentationStyle.Default,
+                                behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                                onDismissed = qsContainerViewModel::onMediaSwipeToDismiss,
+                                modifier = Modifier.fillMaxSize(),
+                                location = Media.Location.QS,
+                                fillHeight = true,
+                            )
+                        } else {
+                            var listening by remember { mutableStateOf(false) }
+                            LifecycleStartEffect(Unit) {
+                                listening = true
+                                onStopOrDispose { listening = false }
+                            }
+                            TileGrid(
+                                viewModel = qsContainerViewModel.tileGridViewModel,
+                                includeSpecs = top2Specs,
+                                columnsOverride = 1,
+                                forceLargeTiles = true,
+                                listening = { listening },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
-                        TileGrid(
-                            viewModel = qsContainerViewModel.tileGridViewModel,
-                            includeSpecs = top2Specs,
-                            columnsOverride = 1,
-                            forceLargeTiles = true,
-                            listening = { listening },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
                     }
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
-                        val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
-                        val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
-                        val headerHeight = tileHeight * 2 + tileSpacing
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(
-                                horizontalSpacing,
-                                Alignment.CenterHorizontally
-                            ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            BrightnessLayout(enable = isIdle, sliderHeight = headerHeight)
-                            VolumeLayout(enable = isIdle, sliderHeight = headerHeight)
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
+                            Row(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    horizontalSpacing,
+                                    Alignment.CenterHorizontally
+                                ),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                BrightnessLayout(enable = isIdle, sliderHeight = headerHeight)
+                                VolumeLayout(enable = isIdle, sliderHeight = headerHeight)
+                            }
                         }
                     }
                 }
@@ -452,7 +460,7 @@ private fun ContentScope.QuickSettingsLayout(
 
             VerticalSeparator(dimensionResource(R.dimen.qs_tile_margin_vertical))
 
-            val excludeSpecs = top2Specs
+            val excludeSpecs = if (showMedia) emptyList() else top2Specs
 
             GridAnchor()
             TileGrid(
