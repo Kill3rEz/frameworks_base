@@ -2384,6 +2384,7 @@ public class AudioService extends IAudioService.Stub
         }
 
         AudioSystem.setRttEnabled(mRttEnabled.get());
+        updateBtWiredCoPlay(mContentResolver);
         synchronized (mAssistantUidLock) {
             resetAssistantServicesUidsLocked();
         }
@@ -3191,6 +3192,14 @@ public class AudioService extends IAudioService.Stub
         AudioSystem.setMasterMono(masterMono);
     }
 
+    private void updateBtWiredCoPlay(ContentResolver cr) {
+        final boolean enabled = mSettings.getSystemIntForUser(
+                cr, System.BT_WIRED_COPLAY_ENABLED, 0 /* default */,
+                UserHandle.USER_CURRENT) == 1;
+        final int status = AudioSystem.setBtWiredCoPlayEnabled(enabled);
+        Log.i(TAG, "Bluetooth and wired co-play " + enabled + " status " + status);
+    }
+
     private void updateMasterBalance(ContentResolver cr) {
         final float masterBalance = System.getFloatForUser(
                 cr, System.MASTER_BALANCE, 0.f /* default */, UserHandle.USER_CURRENT);
@@ -3608,6 +3617,7 @@ public class AudioService extends IAudioService.Stub
         }
 
         AudioSystem.setRttEnabled(mRttEnabled.get());
+        updateBtWiredCoPlay(cr);
 
         mMuteAffectedStreams = mSettings.getSystemIntForUser(cr,
                 System.MUTE_STREAMS_AFFECTED, AudioSystem.DEFAULT_MUTE_STREAMS_AFFECTED,
@@ -12297,6 +12307,8 @@ public class AudioService extends IAudioService.Stub
                     Settings.System.MASTER_BALANCE), false, this, UserHandle.USER_ALL);
             mContentResolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.SHOW_APP_VOLUME), false, this);
+            mContentResolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.BT_WIRED_COPLAY_ENABLED), false, this, UserHandle.USER_ALL);
 
             mEncodedSurroundMode = mSettings.getGlobalInt(
                     mContentResolver, Settings.Global.ENCODED_SURROUND_OUTPUT,
@@ -12331,6 +12343,7 @@ public class AudioService extends IAudioService.Stub
                 updateMasterMono(mContentResolver);
                 updateMasterBalance(mContentResolver);
                 updateShowAppVolume(mContentResolver);
+                updateBtWiredCoPlay(mContentResolver);
             }
 
             synchronized (mSurroundLock) {

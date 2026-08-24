@@ -2852,6 +2852,18 @@ android_media_AudioSystem_setRttEnabled(JNIEnv *env, jobject thiz, jboolean enab
 }
 
 static jint
+android_media_AudioSystem_setBtWiredCoPlayEnabled(JNIEnv *env, jobject thiz, jboolean enabled)
+{
+    return check_AudioSystem_Command(AudioSystem::setBtWiredCoPlayEnabled(enabled));
+}
+
+static jboolean
+android_media_AudioSystem_isBtWiredCoPlayEnabled(JNIEnv *env, jobject thiz)
+{
+    return AudioSystem::isBtWiredCoPlayEnabled();
+}
+
+static jint
 android_media_AudioSystem_setAudioHalPids(JNIEnv *env, jobject clazz, jintArray jPids)
 {
     if (jPids == NULL) {
@@ -3636,6 +3648,8 @@ static const JNINativeMethod gMethods[] = {
         MAKE_AUDIO_SYSTEM_METHOD(setSupportedSystemUsages),
         MAKE_AUDIO_SYSTEM_METHOD(setAllowedCapturePolicy),
         MAKE_AUDIO_SYSTEM_METHOD(setRttEnabled),
+        MAKE_AUDIO_SYSTEM_METHOD(setBtWiredCoPlayEnabled),
+        MAKE_AUDIO_SYSTEM_METHOD(isBtWiredCoPlayEnabled),
         MAKE_AUDIO_SYSTEM_METHOD(setAudioHalPids),
         MAKE_AUDIO_SYSTEM_METHOD(isCallScreeningModeSupported),
         MAKE_JNI_NATIVE_METHOD("setProductStrategiesZoneIdForUserId", "(II)I",
