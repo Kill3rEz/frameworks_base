@@ -6953,6 +6953,9 @@ public final class Settings {
         @Readable
         public static final String MULTI_AUDIO_FOCUS_ENABLED = "multi_audio_focus_enabled";
 
+        @Readable
+        public static final String BT_WIRED_COPLAY_ENABLED = "bt_wired_coplay_enabled";
+
         /**
          * Whether user can swap the order of the Alert Slider.
          * * Whether user can invert the order of the Alert Slider.

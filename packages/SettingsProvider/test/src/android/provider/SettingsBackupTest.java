@@ -961,6 +961,7 @@ public class SettingsBackupTest {
                         Settings.System.WEAR_TTS_PREWARM_ENABLED,
                         Settings.System.SCREEN_AUTO_BRIGHTNESS_ADJ,
                         Settings.System.MULTI_AUDIO_FOCUS_ENABLED, // form-factor/OEM specific
+                        Settings.System.BT_WIRED_COPLAY_ENABLED,
                         // Potentially disruptive to on-boarding flow on new devices
                         Settings.System.TOUCHPAD_SYSTEM_GESTURES,
                         // Potentially disruptive to on-boarding flow on new devices
