@@ -144,6 +144,21 @@ constructor(
                     onTop = true,
                     taskInfo = info?.changes?.firstOrNull { it.mode == TRANSIT_OPEN }?.taskInfo,
                 )
+
+                // The origin animation runs on the keyguard window's ViewRootImpl, which can be
+                // surface-less while waking (e.g. FSI from AOD) - it then never finishes, wedging
+                // the transition with the occluding activity stuck at alpha 0 (black screen).
+                if (
+                    info == null ||
+                        info.isNoAnimationOcclude() ||
+                        !powerInteractor.detailedWakefulness.value.isAwakeForAnimations()
+                ) {
+                    Log.d(TAG, "occludeTransition#startAnimation: skipping animation, finishing now")
+                    t?.apply()
+                    occludeTransitionFinishedCallback?.onTransitionFinished(null, null)
+                    return
+                }
+
                 delegate =
                     activityTransitionAnimator.createOriginTransition(
                         occludeAnimationController,
@@ -151,7 +166,12 @@ constructor(
                         isDialogLaunch = false,
                         transitionHelper = KeyguardTransitionHelper(),
                     )
-                delegate?.startAnimation(token, info, t, finishCallback)
+                try {
+                    delegate?.startAnimation(token, info, t, finishCallback)
+                } catch (e: Exception) {
+                    Log.e(TAG, "occludeTransition#startAnimation failed; finishing now", e)
+                    occludeTransitionFinishedCallback?.onTransitionFinished(null, null)
+                }
             }
 
             override fun mergeAnimation(
@@ -198,15 +218,25 @@ constructor(
                     onTop = true,
                     taskInfo = apps.firstOrNull()?.taskInfo,
                 )
-                activityTransitionAnimator
-                    .createEphemeralRunner(occludeAnimationController)
-                    .onAnimationStart(
-                        transit,
-                        apps,
-                        wallpapers,
-                        nonApps,
-                        occludeAnimationFinishedCallback,
-                    )
+                if (!powerInteractor.detailedWakefulness.value.isAwakeForAnimations()) {
+                    Log.d(TAG, "occludeAnimationRunner: device waking, finishing without animation")
+                    occludeAnimationFinishedCallback?.onAnimationFinished()
+                    return
+                }
+                try {
+                    activityTransitionAnimator
+                        .createEphemeralRunner(occludeAnimationController)
+                        .onAnimationStart(
+                            transit,
+                            apps,
+                            wallpapers,
+                            nonApps,
+                            occludeAnimationFinishedCallback,
+                        )
+                } catch (e: Exception) {
+                    Log.e(TAG, "occludeAnimationRunner#onAnimationStart failed; finishing now", e)
+                    occludeAnimationFinishedCallback?.onAnimationFinished()
+                }
             }
 
             override fun onAnimationCancelled() {
@@ -494,6 +524,10 @@ constructor(
                 }
             }
         }
+
+    /** Whether WM asked for the occlude to happen without an animation (e.g. screen was off). */
+    private fun TransitionInfo.isNoAnimationOcclude(): Boolean =
+        changes.any { it.mode == TRANSIT_OPEN && it.hasFlags(TransitionInfo.FLAG_NO_ANIMATION) }
 
     private fun createInteractionJankMonitorConf(
         cuj: Int,
