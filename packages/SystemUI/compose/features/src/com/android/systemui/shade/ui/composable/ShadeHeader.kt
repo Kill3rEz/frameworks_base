@@ -81,7 +81,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.max
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.android.compose.animation.scene.ContentScope
 import com.android.compose.animation.scene.ElementKey
@@ -158,6 +157,8 @@ object ShadeHeader {
         val ExpandedHeight = 120.dp
         val ChipPaddingHorizontal = 6.dp
         val ChipPaddingVertical = 4.dp
+        /** Matches the inter-icon spacing of [SystemStatusIcons]. */
+        val StatusIconsEndSpacing = 6.dp
     }
 
     object Colors {
@@ -256,7 +257,7 @@ fun ContentScope.CollapsedShadeHeader(
                         isClickable = isSplitShade,
                         onClick = viewModel::onSystemIconChipClicked,
                     ) {
-                        val paddingEnd = with(LocalDensity.current) { 3.sp.toDp() }
+                        val paddingEnd = ShadeHeader.Dimensions.StatusIconsEndSpacing
                         StatusIcons(
                             viewModel = viewModel,
                             useExpandedFormat = useExpandedTextFormat,
@@ -345,7 +346,7 @@ fun ContentScope.ExpandedShadeHeader(
                     modifier = Modifier.sysuiResTag("expanded_shade_header_day_date"),
                 )
                 ShadeHighlightChip {
-                    val paddingEnd = with(LocalDensity.current) { 3.sp.toDp() }
+                    val paddingEnd = ShadeHeader.Dimensions.StatusIconsEndSpacing
                     StatusIcons(
                         viewModel = viewModel,
                         useExpandedFormat = useExpandedFormat,
@@ -442,7 +443,7 @@ fun ContentScope.OverlayShadeHeader(
                             },
                         ),
                 ) {
-                    val paddingEnd = with(LocalDensity.current) { 3.sp.toDp() }
+                    val paddingEnd = ShadeHeader.Dimensions.StatusIconsEndSpacing
                     StatusIcons(
                         viewModel = viewModel,
                         useExpandedFormat = false,
@@ -813,6 +814,7 @@ private fun ContentScope.StatusIcons(
             viewModelFactory = viewModel.systemStatusIconsViewModelFactory,
             systemStatusIconBlocklistInteractor = viewModel.systemStatusIconsBlockListInteractor,
             tint = Color(foregroundColor),
+            modifier = modifier,
         )
     } else {
         val isTransitioning = layoutState.isTransitioningBetween(Scenes.Shade, Scenes.QuickSettings)
