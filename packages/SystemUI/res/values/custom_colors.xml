@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     SPDX-FileCopyrightText: 2024-2026 ASCP OS Project
+     SPDX-License-Identifier: Apache-2.0
+-->
+<resources>
+    <!-- Mobile data enable confirmation dialog: "Don't ask me again" checkbox row -->
+    <color name="mobile_data_dialog_checkbox_bg">@color/materialColorSurfaceContainerHigh</color>
+    <color name="mobile_data_dialog_checkbox_text">@color/materialColorOnSurface</color>
+</resources>
