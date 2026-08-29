@@ -307,7 +307,7 @@ fun ContentScope.ExpandedShadeHeader(
             }
         }
         Column(
-            verticalArrangement = Arrangement.spacedBy(space = 16.dp, alignment = Alignment.Bottom),
+            verticalArrangement = Arrangement.spacedBy(space = 6.dp, alignment = Alignment.Bottom),
             modifier =
                 Modifier.fillMaxWidth()
                     .defaultMinSize(minHeight = ShadeHeader.Dimensions.ExpandedHeight),
@@ -325,11 +325,15 @@ fun ContentScope.ExpandedShadeHeader(
                 if (!viewModel.isPrivacyChipVisible) {
                     Box(
                         modifier =
-                            Modifier.element(ShadeHeader.Elements.ShadeCarrierGroup).fillMaxWidth()
+                            Modifier.element(ShadeHeader.Elements.ShadeCarrierGroup)
+                                .matchParentSize()
                     ) {
                         ShadeCarrierGroup(
                             viewModel = viewModel,
-                            modifier = Modifier.align(Alignment.CenterEnd).widthIn(max = 180.dp),
+                            modifier =
+                                Modifier.align(Alignment.BottomEnd)
+                                    .padding(bottom = 3.dp)
+                                    .widthIn(max = 180.dp),
                         )
                     }
                 }
