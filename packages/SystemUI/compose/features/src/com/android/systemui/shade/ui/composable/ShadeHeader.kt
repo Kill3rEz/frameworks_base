@@ -619,6 +619,8 @@ private fun ContentScope.Clock(
                             isSingleLine = true
                             textDirection = View.TEXT_DIRECTION_LOCALE
                             gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                            // Drop the status-bar clock padding to match up with the date.
+                            setShouldApplyPadding(false)
                             if (onClick != null) {
                                 isClickable = true
                                 isFocusable = true
