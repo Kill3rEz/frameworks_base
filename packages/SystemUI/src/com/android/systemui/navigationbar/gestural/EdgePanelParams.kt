@@ -151,7 +151,8 @@ data class EdgePanelParams(private var resources: Resources) {
             getDimen(R.dimen.navigation_edge_action_reactivation_drag_threshold)
         deactivationTriggerThreshold =
             getDimen(R.dimen.navigation_edge_action_deactivation_drag_threshold)
-        dynamicTriggerThresholdRange = reactivationTriggerThreshold..deactivationTriggerThreshold
+        // deactivationTriggerThreshold's getter negates, so the range must be built low..high
+        dynamicTriggerThresholdRange = deactivationTriggerThreshold..reactivationTriggerThreshold
         swipeProgressThreshold = getDimen(R.dimen.navigation_edge_action_progress_threshold)
 
         entryWidthInterpolator = PathInterpolator(.19f, 1.27f, .71f, .86f)
