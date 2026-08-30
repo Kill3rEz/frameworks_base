@@ -206,6 +206,12 @@ interface HomeStatusBarViewModel : Activatable {
     /** True if the operator name view is not hidden due to HUN or other visibility state */
     val shouldShowOperatorNameView: Flow<Boolean>
     val isClockVisible: Flow<VisibilityModel>
+
+    /**
+     * [isClockVisible] as compose state, for the clock that [ClockModernization] renders in the
+     * status bar's compose hierarchy instead of the legacy clock view.
+     */
+    val isComposeClockVisible: Boolean
     val isNotificationIconContainerVisible: Flow<VisibilityModel>
 
     /**
@@ -573,6 +579,12 @@ constructor(
                 initialValue = VisibilityModel(false.toVisibleOrInvisible(), false),
             )
             .flowOn(bgDispatcher)
+
+    override val isComposeClockVisible: Boolean by
+        isClockVisible
+            .map { it.visibility == View.VISIBLE }
+            .distinctUntilChanged()
+            .hydratedStateOf(initialValue = false)
 
     override val isNotificationIconContainerVisible: Flow<VisibilityModel> =
         combine(

@@ -23,6 +23,7 @@ import android.graphics.RectF
 import android.view.View
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.android.systemui.lifecycle.HydratedActivatable
 import com.android.systemui.plugins.DarkIconDispatcher
 import com.android.systemui.statusbar.chips.mediaprojection.domain.model.MediaProjectionStopDialogModel
@@ -112,6 +113,8 @@ class FakeHomeStatusBarViewModel(
 
     override val isClockVisible =
         MutableStateFlow(VisibilityModel(visibility = View.GONE, shouldAnimateChange = false))
+
+    override var isComposeClockVisible: Boolean by mutableStateOf(false)
 
     override val isNotificationIconContainerVisible =
         MutableStateFlow(VisibilityModel(visibility = View.GONE, shouldAnimateChange = false))
