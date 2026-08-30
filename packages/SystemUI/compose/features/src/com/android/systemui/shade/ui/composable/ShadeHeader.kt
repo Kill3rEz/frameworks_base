@@ -18,11 +18,7 @@
 package com.android.systemui.shade.ui.composable
 
 import android.content.res.Configuration.ORIENTATION_PORTRAIT
-import android.view.ContextThemeWrapper
-import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
-import android.view.accessibility.AccessibilityNodeInfo
 import androidx.annotation.ColorInt
 import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.core.Animatable
@@ -47,6 +43,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,6 +67,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.DeviceFontFamilyName
 import androidx.compose.ui.text.font.Font
@@ -91,12 +89,17 @@ import com.android.compose.animation.scene.animateElementFloatAsState
 import com.android.compose.animation.scene.content.state.TransitionState
 import com.android.compose.modifiers.thenIf
 import com.android.systemui.Flags.groupedPrivacyChip
+import com.android.systemui.clock.ClockModernization
+import com.android.systemui.clock.ui.composable.Clock as ComposeClock
+import com.android.systemui.clock.ui.composable.ClockLegacy
+import com.android.systemui.clock.ui.viewmodel.AmPmStyle
 import com.android.systemui.common.ui.compose.byLayoutId
 import com.android.systemui.common.ui.compose.windowinsets.CutoutLocation
 import com.android.systemui.common.ui.compose.windowinsets.LocalDisplayCutout
 import com.android.systemui.common.ui.compose.windowinsets.LocalScreenCornerRadius
 import com.android.systemui.compose.modifiers.sysuiResTag
 import com.android.systemui.kairos.util.nameTag
+import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.privacy.AbstractOngoingPrivacyChip
 import com.android.systemui.privacy.OngoingPrivacyChip
 import com.android.systemui.privacy.PrivacyItem
@@ -117,7 +120,6 @@ import com.android.systemui.statusbar.pipeline.mobile.ui.viewmodel.MobileIconsVi
 import com.android.systemui.statusbar.pipeline.mobile.ui.viewmodel.ShadeCarrierGroupMobileIconViewModel
 import com.android.systemui.statusbar.pipeline.mobile.ui.viewmodel.ShadeCarrierGroupMobileIconViewModelKairos
 import com.android.systemui.statusbar.pipeline.mobile.ui.viewmodel.composeWrapper
-import com.android.systemui.statusbar.policy.Clock
 import com.android.systemui.statusbar.systemstatusicons.SystemStatusIconsInCompose
 import com.android.systemui.statusbar.systemstatusicons.ui.compose.SystemStatusIcons
 import com.android.systemui.statusbar.systemstatusicons.ui.compose.SystemStatusIconsLegacy
@@ -213,6 +215,7 @@ fun ContentScope.CollapsedShadeHeader(
                         .layoutId(ShadeHeader.LayoutId.StartContent),
             ) {
                 Clock(
+                    viewModel = viewModel,
                     onClick = viewModel::onClockClicked,
                     textColor = textColor,
                     modifier =
@@ -315,6 +318,7 @@ fun ContentScope.ExpandedShadeHeader(
         ) {
             Box(modifier = Modifier.fillMaxWidth()) {
                 Clock(
+                    viewModel = viewModel,
                     onClick = viewModel::onClockClicked,
                     scale = 2.57f,
                     textColor = textColor,
@@ -415,7 +419,10 @@ fun ContentScope.OverlayShadeHeader(
                         ),
                 ) {
                     if (showClock) {
-                        Clock(textColor = notificationsHighlight.foregroundColor)
+                        Clock(
+                            viewModel = viewModel,
+                            textColor = notificationsHighlight.foregroundColor,
+                        )
                     }
                     VariableDayDate(
                         longerDateText = viewModel.longerDateText,
@@ -590,14 +597,18 @@ object ShadeHeaderMotionTestKeys {
     val Alpha = MotionTestValueKey<Float>("alpha")
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ContentScope.Clock(
+    viewModel: ShadeHeaderViewModel,
+    textColor: Color,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     scale: Float = 1f,
-    textColor: Color? = null,
 ) {
     val layoutDirection = LocalLayoutDirection.current
+    // Shared with the date so the two can never drift apart in weight or size.
+    val textStyle = MaterialTheme.typography.bodyMediumEmphasized
 
     ElementWithValues(
         key = ShadeHeader.Elements.Clock,
@@ -611,61 +622,46 @@ private fun ContentScope.Clock(
         val animatedScale by animateElementFloatAsState(scale, ClockScale, canOverflow = false)
 
         content {
-            AndroidView(
-                factory = { context ->
-                    Clock(
-                            ContextThemeWrapper(
-                                context,
-                                R.style.Theme_SystemUI_QuickSettings_Header,
-                            ),
-                            null,
-                        )
-                        .apply {
-                            isSingleLine = true
-                            textDirection = View.TEXT_DIRECTION_LOCALE
-                            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                            // Drop the status-bar clock padding to match up with the date.
-                            setShouldApplyPadding(false)
-                            if (onClick != null) {
-                                isClickable = true
-                                isFocusable = true
-                                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-                                setOnClickListener { onClick.invoke() }
-                                accessibilityDelegate =
-                                    object : View.AccessibilityDelegate() {
-                                        override fun onInitializeAccessibilityNodeInfo(
-                                            host: View,
-                                            info: AccessibilityNodeInfo,
-                                        ) {
-                                            super.onInitializeAccessibilityNodeInfo(host, info)
-                                            info.className = android.widget.Button::class.java.name
-                                            info.isClickable = true
-                                            info.isFocusable = true
-                                        }
-                                    }
-                            }
-                        }
-                },
-                update = { view -> textColor?.let { view.setTextColor(it.toArgb()) } },
-                modifier =
-                    modifier
-                        .wrapContentWidth(unbounded = true)
-                        // use graphicsLayer instead of Modifier.scale to anchor transform to the
-                        // (start, top) corner
-                        .graphicsLayer {
-                            scaleX = animatedScale
-                            scaleY = animatedScale
-                            transformOrigin =
-                                TransformOrigin(
-                                    when (layoutDirection) {
-                                        LayoutDirection.Ltr -> 0f
-                                        LayoutDirection.Rtl -> 1f
-                                    },
-                                    0.5f,
-                                )
-                        }
-                        .thenIf(onClick != null) { Modifier.clickable { onClick?.invoke() } },
-            )
+            val clockModifier =
+                modifier
+                    .wrapContentWidth(unbounded = true)
+                    // use graphicsLayer instead of Modifier.scale to anchor transform to the
+                    // (start, top) corner
+                    .graphicsLayer {
+                        scaleX = animatedScale
+                        scaleY = animatedScale
+                        transformOrigin =
+                            TransformOrigin(
+                                when (layoutDirection) {
+                                    LayoutDirection.Ltr -> 0f
+                                    LayoutDirection.Rtl -> 1f
+                                },
+                                0.5f,
+                            )
+                    }
+                    .thenIf(onClick != null) {
+                        Modifier.clickable(role = Role.Button) { onClick?.invoke() }
+                    }
+
+            if (ClockModernization.isEnabled) {
+                val clockViewModel =
+                    rememberViewModel("ShadeHeader.Clock") {
+                        viewModel.clockViewModelFactory.create(AmPmStyle.Gone)
+                    }
+                ComposeClock(
+                    clockViewModel = clockViewModel,
+                    textColor = textColor,
+                    textStyle = textStyle,
+                    modifier = clockModifier,
+                )
+            } else {
+                ClockLegacy(
+                    textColor = textColor,
+                    onClick = null,
+                    textStyle = textStyle,
+                    modifier = clockModifier,
+                )
+            }
         }
     }
 }

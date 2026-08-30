@@ -18,6 +18,7 @@ package com.android.systemui.shade.ui.viewmodel
 
 import com.android.systemui.battery.batteryMeterViewControllerFactory
 import com.android.systemui.clock.domain.interactor.clockInteractor
+import com.android.systemui.clock.ui.viewmodel.clockViewModelFactory
 import com.android.systemui.desktop.domain.interactor.desktopInteractor
 import com.android.systemui.kairos.kairos
 import com.android.systemui.kosmos.Kosmos
@@ -54,6 +55,7 @@ val Kosmos.shadeHeaderViewModelFactory: ShadeHeaderViewModel.Factory by
                     mobileIconsViewModel = { mobileIconsViewModel },
                     privacyChipInteractor = privacyChipInteractor,
                     clockInteractor = clockInteractor,
+                    clockViewModelFactory = clockViewModelFactory,
                     batteryMeterViewControllerFactory = batteryMeterViewControllerFactory,
                     statusBarIconController = mock<StatusBarIconController>(),
                     batteryViewModelFactory = batteryViewModelAlwaysShowPercentFactory,
