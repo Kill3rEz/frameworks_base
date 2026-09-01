@@ -14665,6 +14665,14 @@ public final class Settings {
         public static final String PI_TENSOR_SPOOF = "pi_tensor_spoof";
 
         /**
+         * Whether to spoof Google Photos as Pixel XL for unlimited storage
+         * Default is 1 (enabled).
+         * @hide
+         */
+        @Readable
+        public static final String GPHOTOS_SPOOF = "gphotos_spoof";
+
+        /**
           * Which navigation bar layout to use
           * 0 = Normal (Default)
           * 1 = Compact

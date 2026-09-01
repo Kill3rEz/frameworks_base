@@ -294,7 +294,7 @@ public class PropImitationHooks {
 
     private static volatile String sProcessName;
     private static volatile boolean sIsGms, sIsFinsky, sIsPhotos, sIsRecentPixel;
-    private static volatile boolean sForceTensor;
+    private static volatile boolean sForceTensor, sGphotosSpoof;
 
     public static void setProps(Context context) {
         final String packageName = context.getPackageName();
@@ -327,6 +327,13 @@ public class PropImitationHooks {
             sForceTensor = false;
         }
 
+        try {
+            sGphotosSpoof = !Process.isIsolated() && Settings.Secure.getInt(context.getContentResolver(),
+                    Settings.Secure.GPHOTOS_SPOOF, 1) == 1;
+        } catch (Exception e) {
+            sGphotosSpoof = true;
+        }
+
         /* Set Certified Properties for GMSCore
          * Set Stock Fingerprint for ARCore
          * Set custom model for Netflix
@@ -344,7 +351,7 @@ public class PropImitationHooks {
             setPropValue("FINGERPRINT", sStockFp);
             mapSystemProp("FINGERPRINT", sStockFp);
             sSpoofPropsForProcess = true;
-        } else if (sIsPhotos) {
+        } else if (sGphotosSpoof && sIsPhotos) {
             dlog("Spoofing Pixel XL for Google Photos");
             sPixelXLProps.forEach((k, v) -> {
                 setPropValue(k, v);
