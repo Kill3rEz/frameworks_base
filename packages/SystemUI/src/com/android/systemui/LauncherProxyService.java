@@ -78,6 +78,7 @@ import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.Surface;
+import android.view.WindowManagerGlobal;
 import android.view.accessibility.AccessibilityManager;
 import android.view.inputmethod.InputMethodManager;
 
@@ -503,6 +504,12 @@ public class LauncherProxyService implements CallbackController<LauncherProxyLis
                 mHandler.post(() -> {
                     mContext.getSystemService(PowerManager.class)
                             .goToSleep(event.getEventTime());
+                    try {
+                        if (WindowManagerGlobal.getWindowManagerService() != null) {
+                            WindowManagerGlobal.getWindowManagerService().lockNow(null);
+                        }
+                    } catch (RemoteException ignored) {
+                    }
                     event.recycle();
                 });
             });
