@@ -114,6 +114,9 @@ public interface StatusBarIconController {
         for (String slot : hideList) {
             if (!TextUtils.isEmpty(slot)) {
                 ret.add(slot);
+                if ("mute".equals(slot)) {
+                    ret.add("status_bar_mute");
+                }
             }
         }
         return ret;

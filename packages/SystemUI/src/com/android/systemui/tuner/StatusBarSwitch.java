@@ -52,27 +52,54 @@ public class StatusBarSwitch extends SwitchPreferenceCompat implements Tunable {
         super.onDetached();
     }
 
+    private boolean isMuteKey() {
+        return "status_bar_mute".equals(getKey()) || "mute".equals(getKey());
+    }
+
     @Override
     public void onTuningChanged(String key, String newValue) {
         if (!StatusBarIconController.ICON_HIDE_LIST.equals(key)) {
             return;
         }
         mHideList = StatusBarIconController.getIconHideList(getContext(), newValue);
-        setChecked(!mHideList.contains(getKey()));
+        boolean isHidden = mHideList.contains(getKey());
+        if (isMuteKey()) {
+            isHidden = mHideList.contains("status_bar_mute") || mHideList.contains("mute");
+        }
+        setChecked(!isHidden);
     }
 
     @Override
     protected boolean persistBoolean(boolean value) {
         if (!value) {
             // If not enabled add to hideList.
+            boolean added = false;
             if (!mHideList.contains(getKey())) {
+                mHideList.add(getKey());
+                added = true;
+            }
+            if (isMuteKey()) {
+                if (!mHideList.contains("mute")) {
+                    mHideList.add("mute");
+                    added = true;
+                }
+                if (!mHideList.contains("status_bar_mute")) {
+                    mHideList.add("status_bar_mute");
+                    added = true;
+                }
+            }
+            if (added) {
                 MetricsLogger.action(getContext(), MetricsEvent.TUNER_STATUS_BAR_DISABLE,
                         getKey());
-                mHideList.add(getKey());
                 setList(mHideList);
             }
         } else {
-            if (mHideList.remove(getKey())) {
+            boolean removed = mHideList.remove(getKey());
+            if (isMuteKey()) {
+                removed |= mHideList.remove("mute");
+                removed |= mHideList.remove("status_bar_mute");
+            }
+            if (removed) {
                 MetricsLogger.action(getContext(), MetricsEvent.TUNER_STATUS_BAR_ENABLE, getKey());
                 setList(mHideList);
             }
