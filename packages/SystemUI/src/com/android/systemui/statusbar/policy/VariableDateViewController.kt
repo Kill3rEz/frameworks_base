@@ -224,6 +224,12 @@ class VariableDateViewController(
         }
     }
 
+    /** Refresh the date format after the system locale changes. */
+    fun onLocaleListChanged() {
+        dateFormat = null
+        post(::updateClock)
+    }
+
     private fun maybeChangeFormat(availableWidth: Int) {
         if (
             mView.freezeSwitching ||
