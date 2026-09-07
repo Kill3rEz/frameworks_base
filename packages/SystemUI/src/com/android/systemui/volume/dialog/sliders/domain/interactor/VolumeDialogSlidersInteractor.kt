@@ -22,6 +22,7 @@ import android.media.AudioSystem
 import com.android.systemui.volume.VolumeDialogControllerImpl
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialog
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
+import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogStateInteractor
 import com.android.systemui.volume.dialog.shared.model.VolumeDialogStateModel
 import com.android.systemui.volume.dialog.shared.model.VolumeDialogStreamModel
@@ -31,6 +32,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
@@ -39,6 +41,14 @@ import kotlinx.coroutines.flow.stateIn
 
 private const val DEFAULT_STREAM = AudioManager.STREAM_MUSIC
 
+private val EXPANDABLE_STREAMS =
+    setOf(
+        AudioManager.STREAM_MUSIC,
+        AudioManager.STREAM_RING,
+        AudioManager.STREAM_ALARM,
+        AudioManager.STREAM_VOICE_CALL,
+    )
+
 /** Provides a state for the Sliders section of the Volume Dialog. */
 @VolumeDialogScope
 class VolumeDialogSlidersInteractor
@@ -46,11 +56,13 @@ class VolumeDialogSlidersInteractor
 constructor(
     volumeDialogStateInteractor: VolumeDialogStateInteractor,
     private val packageManager: PackageManager,
+    private val expansionInteractor: VolumeDialogExpansionInteractor,
     @VolumeDialog private val coroutineScope: CoroutineScope,
 ) {
 
     private val streamsSorter = StreamsSorter()
-    val sliders: Flow<VolumeDialogSlidersModel> =
+
+    private val sliderTypes: Flow<LinkedHashSet<VolumeDialogSliderType>> =
         volumeDialogStateInteractor.volumeDialogState
             .filter { it.streamModels.isNotEmpty() }
             .map { stateModel ->
@@ -64,12 +76,20 @@ constructor(
             .runningReduce { sliderTypes, newSliderTypes ->
                 sliderTypes.apply { addAll(newSliderTypes) }
             }
-            .map { sliderTypes ->
+
+    val sliders: Flow<VolumeDialogSlidersModel> =
+        combine(sliderTypes, expansionInteractor.isExpanded) { sliderTypes, isExpanded ->
                 val primarySlider = sliderTypes.firstOrNull()
-                primarySlider ?: return@map null
+                primarySlider ?: return@combine null
+                val floatingSliders =
+                    when {
+                        !expansionInteractor.isExpandable -> sliderTypes.drop(1)
+                        isExpanded -> sliderTypes.drop(1).reversed()
+                        else -> emptyList()
+                    }
                 VolumeDialogSlidersModel(
                     slider = primarySlider,
-                    floatingSliders = sliderTypes.drop(1),
+                    floatingSliders = floatingSliders,
                 )
             }
             .stateIn(coroutineScope, SharingStarted.Eagerly, null)
@@ -84,6 +104,10 @@ constructor(
         }
 
         if (!packageManager.isTv()) {
+            if (expansionInteractor.isExpandable && streamModel.stream in EXPANDABLE_STREAMS) {
+                return true
+            }
+
             if (streamModel.stream == AudioSystem.STREAM_ACCESSIBILITY) {
                 return stateModel.shouldShowA11ySlider
             }
@@ -122,6 +146,7 @@ constructor(
                 { it.stream == AudioManager.STREAM_ACCESSIBILITY },
                 { it.stream == AudioManager.STREAM_RING },
                 { it.stream == AudioManager.STREAM_NOTIFICATION },
+                { it.stream == AudioManager.STREAM_ALARM },
                 { it.stream == AudioManager.STREAM_VOICE_CALL },
                 { it.stream == AudioManager.STREAM_SYSTEM },
                 { it.isDynamic },

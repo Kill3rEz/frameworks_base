@@ -17,6 +17,7 @@
 package com.android.systemui.volume.dialog.ringer
 
 import com.android.systemui.kosmos.Kosmos
+import com.android.systemui.volume.dialog.domain.interactor.volumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.ringer.ui.binder.VolumeDialogRingerViewBinder
 import com.android.systemui.volume.dialog.ringer.ui.viewmodel.volumeDialogRingerDrawerViewModel
 import com.android.systemui.volume.dialog.ui.viewmodel.volumeDialogViewModel
@@ -27,6 +28,7 @@ val Kosmos.volumeDialogRingerViewBinder by
         VolumeDialogRingerViewBinder(
             volumeDialogRingerDrawerViewModel,
             volumeDialogViewModel,
+            volumeDialogExpansionInteractor,
             windowRootViewBlurInteractor,
         )
     }

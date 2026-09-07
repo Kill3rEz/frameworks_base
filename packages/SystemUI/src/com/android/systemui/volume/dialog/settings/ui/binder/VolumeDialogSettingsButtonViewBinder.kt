@@ -16,12 +16,15 @@
 
 package com.android.systemui.volume.dialog.settings.ui.binder
 
+import android.content.res.ColorStateList
 import android.view.View
 import android.widget.ImageButton
 import com.android.app.tracing.coroutines.launchInTraced
 import com.android.app.tracing.coroutines.launchTraced
 import com.android.systemui.res.R
+import com.android.systemui.volume.VolumePanelStyle
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
+import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.settings.ui.viewmodel.VolumeDialogSettingsButtonViewModel
 import com.android.systemui.volume.dialog.ui.binder.ViewBinder
 import com.android.systemui.volume.dialog.ui.viewmodel.VolumeDialogViewModel
@@ -35,10 +38,18 @@ class VolumeDialogSettingsButtonViewBinder
 constructor(
     private val viewModel: VolumeDialogSettingsButtonViewModel,
     private val dialogViewModel: VolumeDialogViewModel,
+    private val expansionInteractor: VolumeDialogExpansionInteractor,
 ) : ViewBinder {
 
     override fun CoroutineScope.bind(view: View) {
         val button = view.requireViewById<ImageButton>(R.id.volume_dialog_settings)
+        if (expansionInteractor.style == VolumePanelStyle.EXPANDABLE) {
+            button.setBackgroundResource(R.drawable.volume_panel_expandable_button_background)
+            button.imageTintList =
+                ColorStateList.valueOf(
+                    view.context.getColor(R.color.volume_panel_expandable_icon_on_inactive)
+                )
+        }
         launchTraced("VDSBVB#addTouchableBounds") { dialogViewModel.addTouchableBounds(button) }
         viewModel.isVisible
             .onEach { isVisible -> button.visibility = if (isVisible) View.VISIBLE else View.GONE }

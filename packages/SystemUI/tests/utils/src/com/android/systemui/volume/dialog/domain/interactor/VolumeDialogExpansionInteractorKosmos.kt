@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 The Android Open Source Project
+ * Copyright (C) 2026 The PenguinOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,15 @@
  * limitations under the License.
  */
 
-package com.android.systemui.volume.dialog.settings.ui.binder
+package com.android.systemui.volume.dialog.domain.interactor
 
+import android.content.applicationContext
 import com.android.systemui.kosmos.Kosmos
-import com.android.systemui.volume.dialog.domain.interactor.volumeDialogExpansionInteractor
-import com.android.systemui.volume.dialog.settings.ui.viewmodel.volumeDialogSettingsButtonViewModel
-import com.android.systemui.volume.dialog.ui.viewmodel.volumeDialogViewModel
 
-val Kosmos.volumeDialogSettingsButtonViewBinder by
+val Kosmos.volumeDialogExpansionInteractor by
     Kosmos.Fixture {
-        VolumeDialogSettingsButtonViewBinder(
-            volumeDialogSettingsButtonViewModel,
-            volumeDialogViewModel,
-            volumeDialogExpansionInteractor,
+        VolumeDialogExpansionInteractor(
+            applicationContext,
+            expandedAudioTileDetailsFeatureInteractor,
         )
     }

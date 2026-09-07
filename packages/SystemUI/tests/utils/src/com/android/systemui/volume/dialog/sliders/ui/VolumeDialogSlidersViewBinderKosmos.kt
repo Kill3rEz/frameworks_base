@@ -17,6 +17,7 @@
 package com.android.systemui.volume.dialog.sliders.ui
 
 import com.android.systemui.kosmos.Kosmos
+import com.android.systemui.volume.dialog.domain.interactor.volumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.sliders.ui.viewmodel.volumeDialogSlidersViewModel
 import com.android.systemui.volume.dialog.ui.viewmodel.volumeDialogViewModel
 import com.android.systemui.window.domain.interactor.windowRootViewBlurInteractor
@@ -26,6 +27,7 @@ val Kosmos.volumeDialogSlidersViewBinder by
         VolumeDialogSlidersViewBinder(
             volumeDialogSlidersViewModel,
             volumeDialogViewModel,
+            volumeDialogExpansionInteractor,
             windowRootViewBlurInteractor,
         )
     }
