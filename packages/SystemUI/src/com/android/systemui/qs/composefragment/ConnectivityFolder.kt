@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
+import com.android.compose.theme.LocalAndroidColorScheme
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.common.ui.compose.Icon
 import com.android.systemui.plugins.qs.QSTile
@@ -67,6 +68,7 @@ import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toIconProvider
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.pipeline.shared.TileSpec
+import com.android.systemui.qs.shared.style.isStockQsStyle
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.res.R
 
@@ -78,6 +80,32 @@ object ConnectivityFolderSpecs {
 
 const val SETTING_QS_FOLDER_LARGE = "qs_connectivity_folder_large"
 const val SETTING_QS_FOLDER_SMALL = "qs_connectivity_folder_small"
+
+const val SETTING_QS_FOLDER_SPAN = "qs_connectivity_folder_span"
+const val SETTING_QS_FOLDER_POSITION = "qs_connectivity_folder_position"
+const val SETTING_QS_MEDIA_POSITION = "qs_media_position"
+
+const val POSITION_HEADER = -1
+const val POSITION_ABOVE_GRID = 0
+const val POSITION_BELOW_GRID = 1
+const val SETTING_QS_MEDIA_SPAN = "qs_media_span"
+
+@Composable
+fun secureIntSetting(key: String, default: Int): Int {
+    val resolver = LocalContext.current.contentResolver
+    var value by remember(key) { mutableStateOf(Settings.Secure.getInt(resolver, key, default)) }
+    DisposableEffect(resolver, key) {
+        val observer =
+            object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    value = Settings.Secure.getInt(resolver, key, default)
+                }
+            }
+        resolver.registerContentObserver(Settings.Secure.getUriFor(key), false, observer)
+        onDispose { resolver.unregisterContentObserver(observer) }
+    }
+    return value
+}
 
 @Composable
 private fun folderSpecs(): Pair<List<String>, List<String>> {
@@ -115,6 +143,7 @@ private val HeroCircle = 64.dp
 private val SmallCircle = 30.dp
 private val CellSize = 72.dp
 private val BigCardHeight = 148.dp
+private const val GlassSurfaceAlpha = 0.45f
 private val CardPadding = 10.dp
 private val CellSpacing = 6.dp
 
@@ -143,7 +172,13 @@ fun ConnectivityFolder(
     val gap = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
 
     if (expanded) {
-        ExpandedSheet(large = large, small = small, gap = gap, onDone = { onExpandedChange(false) })
+        ExpandedSheet(
+            large = large,
+            small = small,
+            gap = gap,
+            uniformGrid = secureIntSetting(SETTING_QS_FOLDER_SPAN, 1) >= 2,
+            onDone = { onExpandedChange(false) },
+        )
         return
     }
 
@@ -154,19 +189,30 @@ fun ConnectivityFolder(
             modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(28.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                .background(glassSurface())
                 .padding(CardPadding),
         verticalArrangement = spacedBy(CellSpacing),
     ) {
-        Row(horizontalArrangement = spacedBy(CellSpacing), modifier = Modifier.fillMaxWidth()) {
-            Cell(cell) { large.getOrNull(0)?.let { FolderCircle(it, cell * 0.88f) } }
-            Cell(cell) { large.getOrNull(1)?.let { FolderCircle(it, cell * 0.88f) } }
-        }
-        Row(horizontalArrangement = spacedBy(CellSpacing), modifier = Modifier.fillMaxWidth()) {
-            Cell(cell) { large.getOrNull(2)?.let { FolderCircle(it, cell * 0.96f) } }
-            Cell(cell) {
+        if (compactHeight == null) {
+            Row(horizontalArrangement = spacedBy(CellSpacing), modifier = Modifier.fillMaxWidth()) {
+                large.forEach { tile -> Cell(cell) { FolderCircle(tile, cell * 0.88f) } }
                 if (small.isNotEmpty()) {
-                    SmallCluster(small, cell * 0.38f, onClick = { onExpandedChange(true) })
+                    Cell(cell) {
+                        SmallCluster(small, cell * 0.34f, onClick = { onExpandedChange(true) })
+                    }
+                }
+            }
+        } else {
+            Row(horizontalArrangement = spacedBy(CellSpacing), modifier = Modifier.fillMaxWidth()) {
+                Cell(cell) { large.getOrNull(0)?.let { FolderCircle(it, cell * 0.88f) } }
+                Cell(cell) { large.getOrNull(1)?.let { FolderCircle(it, cell * 0.88f) } }
+            }
+            Row(horizontalArrangement = spacedBy(CellSpacing), modifier = Modifier.fillMaxWidth()) {
+                Cell(cell) { large.getOrNull(2)?.let { FolderCircle(it, cell * 0.96f) } }
+                Cell(cell) {
+                    if (small.isNotEmpty()) {
+                        SmallCluster(small, cell * 0.38f, onClick = { onExpandedChange(true) })
+                    }
                 }
             }
         }
@@ -178,10 +224,11 @@ private fun ExpandedSheet(
     large: List<TileViewModel>,
     small: List<TileViewModel>,
     gap: Dp,
+    uniformGrid: Boolean,
     onDone: () -> Unit,
 ) {
     val all = large + small
-    val cards = all.filter { it.spec.spec in ConnectivityFolderSpecs.ExpandedCards }
+    val cards = if (uniformGrid) all else all.filter { it.spec.spec in ConnectivityFolderSpecs.ExpandedCards }
     val rows = all.filterNot { it in cards }
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = spacedBy(gap)) {
@@ -222,7 +269,7 @@ private fun FolderBigCard(tile: TileViewModel) {
             Modifier.fillMaxWidth()
                 .height(BigCardHeight)
                 .clip(RoundedCornerShape(26.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                .background(glassSurface())
                 .combinedClickable(
                     onClick = { tile.primaryAction(uiState) },
                     onLongClick = { tile.settingsClick(null) },
@@ -330,7 +377,7 @@ private fun FolderRow(tile: TileViewModel) {
         modifier =
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(26.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                .background(glassSurface())
                 .combinedClickable(
                     onClick = { tile.primaryAction(uiState) },
                     onLongClick = { tile.settingsClick(null) },
@@ -368,9 +415,14 @@ private fun FolderRow(tile: TileViewModel) {
 }
 
 @Composable
+private fun glassSurface(): Color =
+    LocalAndroidColorScheme.current.surfaceEffect1.copy(
+        alpha = if (isStockQsStyle) 1f else GlassSurfaceAlpha
+    )
+
+@Composable
 private fun folderBackground(active: Boolean): Color =
-    if (active) MaterialTheme.colorScheme.primary
-    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    if (active) MaterialTheme.colorScheme.primary else glassSurface()
 
 @Composable
 private fun folderForeground(active: Boolean): Color =

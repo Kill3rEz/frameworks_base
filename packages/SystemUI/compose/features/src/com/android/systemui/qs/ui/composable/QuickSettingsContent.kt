@@ -47,6 +47,14 @@ import com.android.systemui.media.remedia.ui.compose.MediaPresentationStyle
 import com.android.systemui.qs.composefragment.BrightnessLayout
 import com.android.systemui.qs.composefragment.ConnectivityFolder
 import com.android.systemui.qs.composefragment.connectivityFolderEnabled
+import com.android.systemui.qs.composefragment.POSITION_ABOVE_GRID
+import com.android.systemui.qs.composefragment.POSITION_BELOW_GRID
+import com.android.systemui.qs.composefragment.POSITION_HEADER
+import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_POSITION
+import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_SPAN
+import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_POSITION
+import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_SPAN
+import com.android.systemui.qs.composefragment.secureIntSetting
 import com.android.systemui.qs.composefragment.VolumeLayout
 import com.android.systemui.qs.composefragment.ui.GridAnchor
 import com.android.systemui.qs.panels.ui.compose.TileGrid
@@ -88,11 +96,36 @@ private fun ContentScope.PenguinQuickSettingsContent(
     }
     val folderEnabled = connectivityFolderEnabled()
     var folderExpanded by remember { mutableStateOf(false) }
+    val folderSpan = secureIntSetting(SETTING_QS_FOLDER_SPAN, 1)
+    val mediaSpan = secureIntSetting(SETTING_QS_MEDIA_SPAN, 1)
+    val folderPosition = secureIntSetting(SETTING_QS_FOLDER_POSITION, POSITION_HEADER)
+    val mediaPosition = secureIntSetting(SETTING_QS_MEDIA_POSITION, POSITION_HEADER)
+    val headerShowsFolder =
+        folderEnabled && folderSpan < 2 && mediaSpan < 2 && folderPosition == POSITION_HEADER
+    val headerShowsTop2Tiles = !headerShowsFolder && !headerShowsMedia
+
+    if (folderEnabled && folderExpanded) {
+        Column(
+            modifier =
+                modifier
+                    .element(Elements.QuickSettingsContent)
+                    .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))
+                    .sysuiResTag("quick_settings_panel")
+        ) {
+            ConnectivityFolder(
+                tiles = viewModel.tileGridViewModel.tileViewModels,
+                modifier = Modifier.element(Elements.ConnectivityFolder),
+                expanded = true,
+                onExpandedChange = { folderExpanded = it },
+            )
+        }
+        return
+    }
 
     PenguinQuickSettingsPanelLayout(
         headerLeft =
             @Composable {
-                if (folderEnabled) {
+                if (headerShowsFolder) {
                     val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
                     val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
                     ConnectivityFolder(
@@ -165,41 +198,46 @@ private fun ContentScope.PenguinQuickSettingsContent(
                     onStopOrDispose { listening = false }
                 }
 
-                val excludeSpecs =
-                    if (folderEnabled || headerShowsMedia) emptyList() else top2Specs
+                val excludeSpecs = if (headerShowsTop2Tiles) top2Specs else emptyList()
 
                 Column(
                     verticalArrangement =
                         spacedBy(dimensionResource(id = R.dimen.qs_tile_margin_vertical))
                 ) {
-                    if (folderEnabled && headerShowsMedia) {
-                        Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
-                            Media(
-                                viewModelFactory = viewModel.mediaViewModelFactory,
-                                presentationStyle = MediaPresentationStyle.Default,
-                                behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
-                                onDismissed = viewModel::onMediaSwipeToDismiss,
-                                mediaSquishiness = mediaSquishiness,
-                                location = Media.Location.QS,
-                            )
-                        }
+                    if (folderEnabled && !headerShowsFolder && folderPosition <= POSITION_ABOVE_GRID) {
+                        ConnectivityFolder(
+                            tiles = viewModel.tileGridViewModel.tileViewModels,
+                            modifier = Modifier.element(Elements.ConnectivityFolder),
+                            onExpandedChange = { folderExpanded = it },
+                        )
+                    }
+                    val mediaOwnRow =
+                        showMedia && isAlwaysComposedContentVisible() && !headerShowsMedia
+                    if (mediaOwnRow && mediaPosition <= POSITION_ABOVE_GRID) {
+                        QsMedia(viewModel, mediaSquishiness)
                     }
                     Box {
                         GridAnchor()
-                        if (folderExpanded) {
-                            ConnectivityFolder(
-                                tiles = viewModel.tileGridViewModel.tileViewModels,
-                                expanded = true,
-                                onExpandedChange = { folderExpanded = it },
-                            )
-                        } else {
-                            TileGrid(
-                                viewModel = viewModel.tileGridViewModel,
-                                excludeSpecs = excludeSpecs,
-                                listening = { listening },
-                                modifier = Modifier.element(Elements.QuickSettingsTiles),
-                            )
-                        }
+                        TileGrid(
+                            viewModel = viewModel.tileGridViewModel,
+                            excludeSpecs = excludeSpecs,
+                            listening = { listening },
+                            modifier = Modifier.element(Elements.QuickSettingsTiles),
+                        )
+                    }
+                    if (mediaOwnRow && mediaPosition >= POSITION_BELOW_GRID) {
+                        QsMedia(viewModel, mediaSquishiness)
+                    }
+                    if (
+                        folderEnabled &&
+                            !headerShowsFolder &&
+                            folderPosition >= POSITION_BELOW_GRID
+                    ) {
+                        ConnectivityFolder(
+                            tiles = viewModel.tileGridViewModel.tileViewModels,
+                            modifier = Modifier.element(Elements.ConnectivityFolder),
+                            onExpandedChange = { folderExpanded = it },
+                        )
                     }
                 }
             },
@@ -209,6 +247,23 @@ private fun ContentScope.PenguinQuickSettingsContent(
                 .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))
                 .sysuiResTag("quick_settings_panel"),
     )
+}
+
+@Composable
+private fun ContentScope.QsMedia(
+    viewModel: QuickSettingsContainerViewModel,
+    mediaSquishiness: () -> Float,
+) {
+    Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
+        Media(
+            viewModelFactory = viewModel.mediaViewModelFactory,
+            presentationStyle = MediaPresentationStyle.Default,
+            behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+            onDismissed = viewModel::onMediaSwipeToDismiss,
+            mediaSquishiness = mediaSquishiness,
+            location = Media.Location.QS,
+        )
+    }
 }
 
 @Composable
