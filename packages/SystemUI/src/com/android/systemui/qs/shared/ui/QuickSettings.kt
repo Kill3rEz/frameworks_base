@@ -44,6 +44,11 @@ object QuickSettings {
 
         val TileElementMatcher = ElementKey.withIdentity { it is TileIdentity }
 
+        val HeaderTiles =
+            ElementKey("QuickSettingsHeaderTiles", contentPicker = SharedQsTileContentPicker)
+
+        val ConnectivityFolder = ElementKey("ConnectivityFolder")
+
         val QuickQuickSettingsAndMedia = ElementKey("QuickQuickSettingsAndMedia")
         val SplitShadeQuickSettings = ElementKey("SplitShadeQuickSettings")
     }

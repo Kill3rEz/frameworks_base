@@ -29,6 +29,8 @@ import com.android.systemui.qs.panels.ui.viewmodel.DetailsViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.EditModeViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.MediaInRowInLandscapeViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.TileGridViewModel
+import com.android.systemui.qs.shared.style.QsPanelStyle
+import com.android.systemui.qs.shared.style.QsPanelStyleRepository
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shade.ui.viewmodel.ShadeHeaderViewModel
 import dagger.assisted.Assisted
@@ -51,7 +53,10 @@ constructor(
     val mediaViewModelFactory: MediaViewModel.Factory,
     mediaInRowInLandscapeViewModelFactory: MediaInRowInLandscapeViewModel.Factory,
     @ShadeDisplayAware shadeDisplayTypeRepository: DisplayTypeRepository,
+    qsPanelStyleRepository: QsPanelStyleRepository,
 ) : HydratedActivatable() {
+
+    val panelStyle: QsPanelStyle by qsPanelStyleRepository.style.hydratedStateOf()
 
     val isBrightnessSliderVisible by
         shadeDisplayTypeRepository.displayType

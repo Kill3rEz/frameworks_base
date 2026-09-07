@@ -139,6 +139,7 @@ import com.android.compose.modifiers.height
 import com.android.compose.modifiers.padding
 import com.android.compose.modifiers.thenIf
 import com.android.compose.theme.LocalAndroidColorScheme
+import com.android.systemui.qs.shared.style.isStockQsStyle
 import com.android.compose.theme.PlatformTheme
 import com.android.settingslib.display.BrightnessUtils.GAMMA_SPACE_MAX
 import com.android.settingslib.display.BrightnessUtils.GAMMA_SPACE_MIN
@@ -1435,7 +1436,7 @@ private fun ContentScope.Header(
     enabled: Boolean,
     leftContent: @Composable () -> Unit = {}
 ) {
-    val tileHeight = dimensionResource(id = R.dimen.custom_qs_tile_height)
+    val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
     val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
     val headerHeight = tileHeight * 2 + tileSpacing
     val horizontalSpacing = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
@@ -1780,21 +1781,38 @@ fun VerticalSlider(
     housingHeight: Dp,
 ) {
     val housingWidth = 75.dp
+    val iconSize = 24.dp
+    val iconBottomPadding = 16.dp
+
+    val iconCoveredFraction =
+        if (housingHeight > 0.dp) (iconBottomPadding + iconSize) / housingHeight else 0f
+    val iconTint =
+        if (value > iconCoveredFraction) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
 
     Box(
         modifier = modifier
             .width(housingWidth)
             .height(housingHeight)
             .clip(RoundedCornerShape(percent = 50))
-            .background(LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = 0.45f))
+            .background(
+                LocalAndroidColorScheme.current.surfaceEffect1.copy(
+                    alpha = if (isStockQsStyle) 1f else 0.45f
+                )
+            )
             .sliderGestures(scope, onValueChanged, onValueChangeFinished, onLongPress),
         contentAlignment = Alignment.BottomCenter
     ) {
+        val fillHeight = housingHeight * value
+        val fillCapRadius = (housingWidth / 2).coerceAtMost(fillHeight / 2)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(value)
-                .clip(RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
+                .clip(RoundedCornerShape(topStart = fillCapRadius, topEnd = fillCapRadius))
                 .background(
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -1803,10 +1821,10 @@ fun VerticalSlider(
         Icon(
             painter = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface,
+            tint = iconTint,
             modifier = Modifier
-                .padding(bottom = 16.dp)
-                .size(24.dp)
+                .padding(bottom = iconBottomPadding)
+                .size(iconSize)
         )
     }
 }
