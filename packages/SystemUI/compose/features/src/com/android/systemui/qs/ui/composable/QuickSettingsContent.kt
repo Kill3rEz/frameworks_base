@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.android.compose.animation.scene.ContentScope
@@ -53,6 +55,14 @@ import com.android.systemui.qs.composefragment.POSITION_HEADER
 import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_POSITION
 import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_SPAN
 import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_POSITION
+import com.android.systemui.qs.composefragment.PenguinMediaCard
+import com.android.systemui.qs.panels.ui.compose.FOLDER_SPEC
+import com.android.systemui.qs.panels.ui.compose.MEDIA_SPEC
+import com.android.systemui.qs.panels.ui.compose.SLIDERS_SPEC
+import com.android.systemui.qs.pipeline.shared.TileSpec
+import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_STYLE
+import com.android.systemui.qs.composefragment.SETTING_QS_SLIDERS_POSITION
+import com.android.systemui.qs.composefragment.SETTING_QS_SLIDERS_SPAN
 import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_SPAN
 import com.android.systemui.qs.composefragment.secureIntSetting
 import com.android.systemui.qs.composefragment.VolumeLayout
@@ -98,6 +108,12 @@ private fun ContentScope.PenguinQuickSettingsContent(
     var folderExpanded by remember { mutableStateOf(false) }
     val folderSpan = secureIntSetting(SETTING_QS_FOLDER_SPAN, 1)
     val mediaSpan = secureIntSetting(SETTING_QS_MEDIA_SPAN, 1)
+    val headerHeight =
+        dimensionResource(id = R.dimen.common_tile_default_tile_height) * 2 +
+            dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+    val slidersPosition = secureIntSetting(SETTING_QS_SLIDERS_POSITION, POSITION_HEADER)
+    val slidersSpan = secureIntSetting(SETTING_QS_SLIDERS_SPAN, 1)
+    val slidersInHeader = slidersPosition == POSITION_HEADER
     val folderPosition = secureIntSetting(SETTING_QS_FOLDER_POSITION, POSITION_HEADER)
     val mediaPosition = secureIntSetting(SETTING_QS_MEDIA_POSITION, POSITION_HEADER)
     val headerShowsFolder =
@@ -126,26 +142,15 @@ private fun ContentScope.PenguinQuickSettingsContent(
         headerLeft =
             @Composable {
                 if (headerShowsFolder) {
-                    val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
-                    val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
                     ConnectivityFolder(
                         tiles = viewModel.tileGridViewModel.tileViewModels,
                         modifier = Modifier.element(Elements.ConnectivityFolder),
-                        compactHeight = tileHeight * 2 + tileSpacing,
+                        compactHeight = headerHeight,
                         expanded = false,
                         onExpandedChange = { folderExpanded = it },
                     )
                 } else if (headerShowsMedia) {
-                    Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
-                        Media(
-                            viewModelFactory = viewModel.mediaViewModelFactory,
-                            presentationStyle = MediaPresentationStyle.Default,
-                            behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
-                            onDismissed = viewModel::onMediaSwipeToDismiss,
-                            mediaSquishiness = mediaSquishiness,
-                            location = Media.Location.QS,
-                        )
-                    }
+                    QsMedia(viewModel, mediaSquishiness, headerHeight)
                 } else {
                     var listening by remember { mutableStateOf(false) }
                     LifecycleStartEffect(Unit) {
@@ -163,31 +168,14 @@ private fun ContentScope.PenguinQuickSettingsContent(
                     }
                 }
             },
+        headerRightPresent = slidersInHeader,
         headerRight =
             @Composable {
-                var isBrightnessSliderInteractable by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) {
-                    snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
-                        .filterNotNull()
-                        .collect { isBrightnessSliderInteractable = it >= .5f }
-                }
-                val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
-                val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
-                val headerHeight = tileHeight * 2 + tileSpacing
-                Element(modifier = Modifier, key = Elements.BrightnessSlider) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .thenIf(!isBrightnessSliderInteractable) { Modifier.gesturesDisabled() },
-                        horizontalArrangement = spacedBy(
-                            dimensionResource(id = R.dimen.qs_tile_margin_horizontal),
-                            Alignment.CenterHorizontally
-                        ),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        BrightnessLayout(enable = isBrightnessSliderInteractable, sliderHeight = headerHeight)
-                        VolumeLayout(enable = isBrightnessSliderInteractable, sliderHeight = headerHeight)
-                    }
+                if (slidersInHeader) {
+                    QsSliders(
+                        sliderHeight = headerHeight,
+                        gap = dimensionResource(id = R.dimen.qs_tile_margin_horizontal),
+                    )
                 }
             },
         tiles =
@@ -204,18 +192,39 @@ private fun ContentScope.PenguinQuickSettingsContent(
                     verticalArrangement =
                         spacedBy(dimensionResource(id = R.dimen.qs_tile_margin_vertical))
                 ) {
-                    if (folderEnabled && !headerShowsFolder && folderPosition <= POSITION_ABOVE_GRID) {
-                        ConnectivityFolder(
-                            tiles = viewModel.tileGridViewModel.tileViewModels,
-                            modifier = Modifier.element(Elements.ConnectivityFolder),
-                            onExpandedChange = { folderExpanded = it },
-                        )
-                    }
                     val mediaOwnRow =
                         showMedia && isAlwaysComposedContentVisible() && !headerShowsMedia
-                    if (mediaOwnRow && mediaPosition <= POSITION_ABOVE_GRID) {
-                        QsMedia(viewModel, mediaSquishiness)
+                    val folderInGrid = folderEnabled && !headerShowsFolder
+                    val gap = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
+                    fun elementsAt(slot: Int): List<PanelElement> = buildList {
+                        val matches = { position: Int ->
+                            if (slot <= POSITION_ABOVE_GRID) position <= POSITION_ABOVE_GRID
+                            else position >= POSITION_BELOW_GRID
+                        }
+                        if (folderInGrid && matches(folderPosition)) {
+                            add(
+                                PanelElement(folderSpan) {
+                                    ConnectivityFolder(
+                                        tiles = viewModel.tileGridViewModel.tileViewModels,
+                                        modifier = Modifier.element(Elements.ConnectivityFolder),
+                                        compactHeight = if (folderSpan < 2) headerHeight else null,
+                                        onExpandedChange = { folderExpanded = it },
+                                    )
+                                }
+                            )
+                        }
+                        if (mediaOwnRow && matches(mediaPosition)) {
+                            add(PanelElement(mediaSpan) { QsMedia(viewModel, mediaSquishiness) })
+                        }
+                        if (!slidersInHeader && matches(slidersPosition)) {
+                            add(
+                                PanelElement(slidersSpan) {
+                                    QsSliders(sliderHeight = CompactSliderHeight, gap = gap)
+                                }
+                            )
+                        }
                     }
+                    PanelElementRows(elementsAt(POSITION_ABOVE_GRID), gap)
                     Box {
                         GridAnchor()
                         TileGrid(
@@ -225,20 +234,7 @@ private fun ContentScope.PenguinQuickSettingsContent(
                             modifier = Modifier.element(Elements.QuickSettingsTiles),
                         )
                     }
-                    if (mediaOwnRow && mediaPosition >= POSITION_BELOW_GRID) {
-                        QsMedia(viewModel, mediaSquishiness)
-                    }
-                    if (
-                        folderEnabled &&
-                            !headerShowsFolder &&
-                            folderPosition >= POSITION_BELOW_GRID
-                    ) {
-                        ConnectivityFolder(
-                            tiles = viewModel.tileGridViewModel.tileViewModels,
-                            modifier = Modifier.element(Elements.ConnectivityFolder),
-                            onExpandedChange = { folderExpanded = it },
-                        )
-                    }
+                    PanelElementRows(elementsAt(POSITION_BELOW_GRID), gap)
                 }
             },
         modifier =
@@ -250,11 +246,94 @@ private fun ContentScope.PenguinQuickSettingsContent(
 }
 
 @Composable
+fun panelElementPreviews(
+    viewModel: QuickSettingsContainerViewModel
+): Map<TileSpec, @Composable () -> Unit> {
+    val folderHeight = CompactSliderHeight
+    return mapOf(
+        FOLDER_SPEC to
+            {
+                ConnectivityFolder(
+                    tiles = viewModel.tileGridViewModel.tileViewModels,
+                    compactHeight = folderHeight,
+                )
+            },
+        MEDIA_SPEC to
+            {
+                PenguinMediaCard(
+                    viewModelFactory = viewModel.mediaViewModelFactory,
+                    behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                    modifier = Modifier.height(folderHeight),
+                )
+            },
+        SLIDERS_SPEC to
+            {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = spacedBy(8.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BrightnessLayout(enable = false, sliderHeight = folderHeight)
+                    VolumeLayout(enable = false, sliderHeight = folderHeight)
+                }
+            },
+    )
+}
+
+private val CompactSliderHeight = 96.dp
+private val PenguinMediaHeight = 132.dp
+
+private class PanelElement(val span: Int, val content: @Composable () -> Unit)
+
+@Composable
+private fun PanelElementRows(elements: List<PanelElement>, gap: Dp) {
+    elements.filter { it.span >= 2 }.forEach { Box(Modifier.fillMaxWidth()) { it.content() } }
+    elements.filter { it.span < 2 }.chunked(2).forEach { pair ->
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = spacedBy(gap)) {
+            pair.forEach { element -> Box(Modifier.weight(1f)) { element.content() } }
+            if (pair.size == 1) Box(Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun ContentScope.QsSliders(sliderHeight: Dp, gap: Dp) {
+    var interactable by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
+            .filterNotNull()
+            .collect { interactable = it >= .5f }
+    }
+    Element(modifier = Modifier, key = Elements.BrightnessSlider) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth().thenIf(!interactable) { Modifier.gesturesDisabled() },
+            horizontalArrangement = spacedBy(gap, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BrightnessLayout(enable = interactable, sliderHeight = sliderHeight)
+            VolumeLayout(enable = interactable, sliderHeight = sliderHeight)
+        }
+    }
+}
+
+@Composable
 private fun ContentScope.QsMedia(
     viewModel: QuickSettingsContainerViewModel,
     mediaSquishiness: () -> Float,
+    height: Dp = PenguinMediaHeight,
 ) {
-    Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
+    if (secureIntSetting(SETTING_QS_MEDIA_STYLE, 0) != 0) {
+        Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
+            PenguinMediaCard(
+                viewModelFactory = viewModel.mediaViewModelFactory,
+                behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                modifier = Modifier.height(height),
+            )
+        }
+        return
+    }
+    Element(key = Media.Elements.MediaCarousel, modifier = Modifier.height(height)) {
         Media(
             viewModelFactory = viewModel.mediaViewModelFactory,
             presentationStyle = MediaPresentationStyle.Default,
@@ -272,6 +351,7 @@ private fun PenguinQuickSettingsPanelLayout(
     headerRight: @Composable () -> Unit,
     tiles: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    headerRightPresent: Boolean = true,
 ) {
     Column(
         verticalArrangement = spacedBy(dimensionResource(id = R.dimen.qs_tile_margin_vertical)),
@@ -284,7 +364,7 @@ private fun PenguinQuickSettingsPanelLayout(
             verticalAlignment = Alignment.Top,
         ) {
             Box(modifier = Modifier.weight(1f)) { headerLeft() }
-            Box(modifier = Modifier.weight(1f)) { headerRight() }
+            if (headerRightPresent) Box(modifier = Modifier.weight(1f)) { headerRight() }
         }
         tiles()
     }

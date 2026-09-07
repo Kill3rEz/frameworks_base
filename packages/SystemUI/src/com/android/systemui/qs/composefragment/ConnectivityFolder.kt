@@ -89,6 +89,9 @@ const val POSITION_HEADER = -1
 const val POSITION_ABOVE_GRID = 0
 const val POSITION_BELOW_GRID = 1
 const val SETTING_QS_MEDIA_SPAN = "qs_media_span"
+const val SETTING_QS_SLIDERS_POSITION = "qs_sliders_position"
+const val SETTING_QS_SLIDERS_SPAN = "qs_sliders_span"
+const val SETTING_QS_MEDIA_STYLE = "qs_media_style"
 
 @Composable
 fun secureIntSetting(key: String, default: Int): Int {

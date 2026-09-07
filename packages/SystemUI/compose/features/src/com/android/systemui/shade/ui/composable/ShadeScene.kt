@@ -19,6 +19,10 @@ package com.android.systemui.shade.ui.composable
 import com.android.systemui.qs.composefragment.BrightnessLayout
 import com.android.systemui.qs.composefragment.ConnectivityFolder
 import com.android.systemui.qs.composefragment.connectivityFolderEnabled
+import com.android.systemui.qs.composefragment.POSITION_HEADER
+import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_POSITION
+import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_SPAN
+import com.android.systemui.qs.composefragment.secureIntSetting
 import com.android.systemui.qs.composefragment.VolumeLayout
 import com.android.systemui.qs.panels.ui.compose.TileGrid
 import androidx.compose.animation.core.animateFloatAsState
@@ -35,6 +39,7 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -422,7 +427,14 @@ private fun ContentScope.SingleShade(
                                         val top2Specs = remember(viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels) {
                                             viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
                                         }
-                                        if (connectivityFolderEnabled()) {
+                                        val folderInHeader =
+                                            connectivityFolderEnabled() &&
+                                                secureIntSetting(
+                                                    SETTING_QS_FOLDER_POSITION,
+                                                    POSITION_HEADER,
+                                                ) == POSITION_HEADER &&
+                                                secureIntSetting(SETTING_QS_FOLDER_SPAN, 1) < 2
+                                        if (folderInHeader) {
                                             val tileHeight =
                                                 dimensionResource(
                                                     id = R.dimen.common_tile_default_tile_height
@@ -531,6 +543,8 @@ private fun ContentScope.SingleShade(
     }
 }
 
+private val QqsHeaderHeight = 160.dp
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ContentScope.MediaAndQqsLayout(
@@ -570,7 +584,7 @@ private fun ContentScope.MediaAndQqsLayout(
             horizontalArrangement = spacedBy(dimensionResource(R.dimen.qs_tile_margin_horizontal)),
             verticalAlignment = Alignment.Top,
         ) {
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).height(QqsHeaderHeight)) {
                 if (showMedia) media() else tiles()
             }
             Box(modifier = Modifier.weight(1f)) {
@@ -583,8 +597,8 @@ private fun ContentScope.MediaAndQqsLayout(
                         ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        BrightnessLayout(enable = true, sliderHeight = 160.dp)
-                        VolumeLayout(enable = true, sliderHeight = 160.dp)
+                        BrightnessLayout(enable = true, sliderHeight = QqsHeaderHeight)
+                        VolumeLayout(enable = true, sliderHeight = QqsHeaderHeight)
                     }
                 }
             }

@@ -171,6 +171,7 @@ import com.android.systemui.qs.panels.shared.model.SizedTileImpl
 import com.android.systemui.qs.panels.ui.compose.DragAndDropState
 import com.android.systemui.qs.panels.ui.compose.DragType
 import com.android.systemui.qs.panels.ui.compose.EditTileListState
+import com.android.systemui.qs.panels.ui.compose.LocalPanelElementPreview
 import com.android.systemui.qs.panels.ui.compose.EditTileListState.Companion.INVALID_INDEX
 import com.android.systemui.qs.panels.ui.compose.dragAndDropRemoveZone
 import com.android.systemui.qs.panels.ui.compose.dragAndDropTileList
@@ -1336,6 +1337,11 @@ fun EditTile(
     progress: () -> Float,
     colors: TileColors = EditModeTileDefaults.editTileColors(),
 ) {
+    val preview = LocalPanelElementPreview.current[tile.tileSpec]
+    if (preview != null) {
+        Box(Modifier.fillMaxSize()) { preview() }
+        return
+    }
     val defaultStartPadding = CommonTileDefaults.StartPadding
     val iconSizeDiff = CommonTileDefaults.SmallTileIconSize - CommonTileDefaults.LargeTileIconSize
     val toggleTargetSize = ToggleTargetSize

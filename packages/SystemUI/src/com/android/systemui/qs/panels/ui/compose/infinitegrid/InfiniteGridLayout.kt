@@ -38,7 +38,10 @@ import com.android.systemui.haptics.msdl.qs.TileHapticsViewModel
 import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.qs.panels.shared.model.SizedTileImpl
 import com.android.systemui.qs.panels.ui.compose.EditTileListState
+import android.provider.Settings
 import com.android.systemui.qs.panels.ui.compose.LocalIsPaginatedGrid
+import com.android.systemui.qs.panels.ui.compose.PANEL_ELEMENT_SPECS
+import com.android.systemui.qs.panels.ui.compose.panelSpanSetting
 import com.android.systemui.qs.panels.ui.compose.PaginatableGridLayout
 import com.android.systemui.qs.panels.ui.compose.TileListener
 import com.android.systemui.qs.panels.ui.compose.bounceableInfo
@@ -197,6 +200,7 @@ constructor(
             }
         val scrollState = rememberScrollState()
         val coroutineScope = rememberCoroutineScope()
+        val editContext = LocalContext.current
         val dialogDelegate =
             rememberViewModel("InfiniteGridLayout.EditTileGrid") {
                 viewModel.resetDialogDelegateFactory.create {
@@ -220,17 +224,20 @@ constructor(
         val largeTilesSpan = columnsViewModel.largeSpan
         val largeTiles by viewModel.iconTilesViewModel.largeTilesState
 
+        val editLargeTiles = remember(largeTiles) { largeTiles + PANEL_ELEMENT_SPECS }
         val currentTiles by rememberUpdatedState(tiles.filter { it.isCurrent })
         val listState =
             remember(columns, largeTilesSpan) {
                 EditTileListState(
                     currentTiles,
-                    largeTiles,
+                    editLargeTiles,
                     columns = columns,
                     largeTilesSpan = largeTilesSpan,
                 )
             }
-        LaunchedEffect(currentTiles, largeTiles) { listState.updateTiles(currentTiles, largeTiles) }
+        LaunchedEffect(currentTiles, editLargeTiles) {
+            listState.updateTiles(currentTiles, editLargeTiles)
+        }
 
         DefaultEditTileGrid(
             listState = listState,
@@ -260,7 +267,16 @@ constructor(
                     dialogDelegate.showDialog()
                 }
                 is EditAction.ResizeTile -> {
-                    iconTilesViewModel.resize(action.tileSpec, action.toIcon)
+                    val spanSetting = action.tileSpec.panelSpanSetting()
+                    if (spanSetting != null) {
+                        Settings.Secure.putInt(
+                            editContext.contentResolver,
+                            spanSetting,
+                            if (action.toIcon) 1 else 2,
+                        )
+                    } else {
+                        iconTilesViewModel.resize(action.tileSpec, action.toIcon)
+                    }
                 }
                 is EditAction.SetTiles -> {
                     onSetTiles(action.tileSpecs)

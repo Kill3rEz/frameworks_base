@@ -285,12 +285,18 @@ private fun ContentScope.QuickSettingsScene(
                     GridAnchor()
                     EditMode(
                         viewModel.qsContainerViewModel.editModeViewModel,
-                        Modifier.testTag("edit_mode_scene")
-                            .padding(horizontal = QuickSettingsShade.Dimensions.HorizontalPadding)
-                            .padding(
-                                top =
-                                    headerViewModel.statusBarHeightPx.toDp(LocalContext.current).dp
-                            ),
+                        modifier =
+                            Modifier.testTag("edit_mode_scene")
+                                .padding(
+                                    horizontal = QuickSettingsShade.Dimensions.HorizontalPadding
+                                )
+                                .padding(
+                                    top =
+                                        headerViewModel.statusBarHeightPx
+                                            .toDp(LocalContext.current)
+                                            .dp
+                                ),
+                        previews = panelElementPreviews(viewModel.qsContainerViewModel),
                     )
                 }
             }
