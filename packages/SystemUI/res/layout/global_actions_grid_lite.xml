@@ -54,8 +54,8 @@
           app:layout_constraintTop_toTopOf="parent"
           app:flow_wrapMode="chain"
           app:flow_maxElementsWrap="2"
-          app:flow_horizontalGap="@dimen/global_actions_lite_padding"
-          app:flow_verticalGap="@dimen/global_actions_lite_padding"
+          app:flow_horizontalGap="@dimen/power_menu_button_gap_horizontal"
+          app:flow_verticalGap="@dimen/power_menu_button_gap_vertical"
           app:flow_horizontalStyle="packed"/>
     </com.android.systemui.common.ui.view.LaunchableConstraintLayout>
   </com.android.systemui.globalactions.GlobalActionsLayoutLite>

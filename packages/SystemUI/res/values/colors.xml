@@ -48,15 +48,71 @@
 
     <!-- The color of the background in the grid of the Global Actions menu -->
     <color name="global_actions_grid_background">#F1F3F4</color>
-    <color name="global_actions_grid_background_blur">@color/customColorSurfaceEffect0</color>
-    <color name="global_actions_grid_background_blur_fallback">@android:color/system_accent1_200</color>
+    <!-- Transparent when blur is up, so the buttons float over the blurred wallpaper with no card.
+         The fallback stays opaque: without blur the buttons would sit unreadably on top of
+         whatever is behind the dialog. -->
+    <color name="global_actions_grid_background_blur">@android:color/transparent</color>
+    <!-- Fallback card drawn when blur is unavailable. It has to be the same surface colour the
+         standalone power/restart dialog uses, otherwise the two menus look like they belong to
+         different apps. -->
+    <color name="global_actions_grid_background_blur_fallback">@color/materialColorSurfaceContainerLow</color>
 
     <!-- Colors for Power Menu Lite -->
+    <!-- Tint applied to the (opaque) button oval. Translucent, so whatever is behind the power
+         menu - blurred wallpaper, or the fallback card - shows through the buttons. Light theme
+         backdrop, so the tint darkens and the foreground is dark. -->
+    <color name="global_actions_lite_button_tint">#33000000</color>
+    <color name="global_actions_lite_button_icon">#1B1B1B</color>
+    <!-- Used instead of the theme colours when the dialog is drawn over blur. The blurred backdrop
+         is dark whichever theme is in use, so the menu keeps its dark theme look there. These have
+         no values-night counterpart on purpose: they are already the dark theme values. -->
+    <color name="global_actions_lite_button_tint_blur">#40F8F8F8</color>
+    <color name="global_actions_lite_button_icon_blur">#FFFFFF</color>
+    <color name="global_actions_lite_emergency_background_blur">#F55E57</color>
     <color name="global_actions_lite_button_background_focused">#808080</color>
     <color name="global_actions_lite_emergency_background">#D8372D</color>
     <color name="global_actions_lite_emergency_icon">#FFFFFF</color>
 
     <color name="global_actions_shutdown_ui_text">@color/control_primary_text</color>
+
+    <!-- Colors for the iOS style power menu. It always draws over a black scrim, so these do not
+         follow the light/dark theme. -->
+    <color name="power_menu_ios_track">#1FF8F8F8</color>
+    <color name="power_menu_ios_thumb">#14F8F8F8</color>
+    <color name="power_menu_ios_foreground">#FFFFFFFF</color>
+    <color name="power_menu_ios_emergency_track">#33FF3B30</color>
+    <color name="power_menu_ios_emergency_thumb">#4DFF3B30</color>
+    <color name="power_menu_ios_emergency_foreground">#FFFF453A</color>
+    <color name="power_menu_ios_hint">#99EBEBF5</color>
+    <color name="power_menu_ios_close_background">#29F8F8F8</color>
+    <!-- Backdrop used when window blur is unavailable, see power_menu_ios_backdrop.xml. -->
+    <color name="power_menu_ios_backdrop_center">#FF1C1B1F</color>
+    <color name="power_menu_ios_backdrop_edge">#FF000000</color>
+
+    <!-- Colors for the expandable volume panel style. The pills are drawn straight on top of the
+         wallpaper with no card behind them, so these are fixed instead of following the theme: the
+         wallpaper is whatever the user picked, and a themed pill would disappear into half of them. -->
+    <color name="volume_panel_expandable_track_active">#FFFFFFFF</color>
+    <!-- Translucent white rather than black: the empty part of a pill has to stay visible on a dark
+         wallpaper, otherwise pills at different volumes look like pills of different heights. -->
+    <color name="volume_panel_expandable_track_inactive">#4DFFFFFF</color>
+    <color name="volume_panel_expandable_icon_on_active">#FF1B1B1F</color>
+    <color name="volume_panel_expandable_icon_on_inactive">#FFFFFFFF</color>
+    <!-- Buttons are darker than the pills so they read as controls, not as sliders. -->
+    <color name="volume_panel_expandable_button_background">#59000000</color>
+
+    <!-- Colors for the One UI volume panel style: white pills with dark icons on a frosted card.
+         Fixed rather than themed, because the card is translucent over the wallpaper and these are
+         the colors the design uses whichever theme is in use. -->
+    <!-- Tint over the blurred wallpaper. -->
+    <color name="volume_panel_oneui_background_blur">#4DFFFFFF</color>
+    <!-- Card drawn when blur is unavailable: opaque, or the pills would sit on the wallpaper. -->
+    <color name="volume_panel_oneui_background_fallback">#E6C7C7C9</color>
+    <color name="volume_panel_oneui_track_active">#FFF7F7F7</color>
+    <color name="volume_panel_oneui_track_inactive">#59FFFFFF</color>
+    <color name="volume_panel_oneui_icon">#FF1B1B1B</color>
+    <color name="volume_panel_oneui_label">#FF3C3C3C</color>
+    <color name="volume_panel_oneui_button_selected">#33000000</color>
 
     <!-- Shadows under the clock, date and other keyguard text fields -->
     <color name="keyguard_shadow_color">#B2000000</color>
