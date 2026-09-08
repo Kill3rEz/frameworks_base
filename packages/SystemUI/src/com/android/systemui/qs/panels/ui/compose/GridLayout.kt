@@ -42,6 +42,7 @@ interface GridLayout {
         forceLargeTiles: Boolean = false,
         listening: () -> Boolean,
         enableRevealEffect: Boolean,
+        belowTiles: @Composable () -> Unit = {},
     )
 
     @Composable

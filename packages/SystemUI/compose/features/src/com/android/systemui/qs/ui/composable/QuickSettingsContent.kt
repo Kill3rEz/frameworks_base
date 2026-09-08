@@ -50,6 +50,7 @@ import com.android.systemui.media.remedia.ui.compose.MediaPresentationStyle
 import com.android.systemui.qs.composefragment.BrightnessLayout
 import com.android.systemui.qs.composefragment.ConnectivityFolder
 import com.android.systemui.qs.composefragment.connectivityFolderEnabled
+import com.android.systemui.qs.composefragment.connectivityFolderSpecs
 import com.android.systemui.qs.composefragment.POSITION_ABOVE_GRID
 import com.android.systemui.qs.composefragment.POSITION_BELOW_GRID
 import com.android.systemui.qs.composefragment.POSITION_HEADER
@@ -102,13 +103,25 @@ private fun ContentScope.PenguinQuickSettingsContent(
 ) {
     val showMedia = viewModel.showMedia
     val mediaWantsHeader = showMedia && isAlwaysComposedContentVisible()
-    val top2Specs = remember(viewModel.tileGridViewModel.tileViewModels) {
-        viewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
-    }
+    val folderEnabled = connectivityFolderEnabled()
+    val folderMemberSpecs =
+        if (folderEnabled) connectivityFolderSpecs() else emptyList()
+    val availableTiles =
+        remember(viewModel.tileGridViewModel.tileViewModels, folderMemberSpecs) {
+            viewModel.tileGridViewModel.tileViewModels.filterNot {
+                it.spec.spec in folderMemberSpecs
+            }
+        }
+    val inFolderSpecs =
+        remember(viewModel.tileGridViewModel.tileViewModels, folderMemberSpecs) {
+            viewModel.tileGridViewModel.tileViewModels
+                .map { it.spec }
+                .filter { it.spec in folderMemberSpecs }
+        }
+    val top2Specs = remember(availableTiles) { availableTiles.take(2).map { it.spec } }
     val topHeaderSpec = remember(viewModel.tileGridViewModel.tileViewModels) {
         viewModel.tileGridViewModel.tileViewModels.take(1).map { it.spec }
     }
-    val folderEnabled = connectivityFolderEnabled()
     var folderExpanded by remember { mutableStateOf(false) }
     val panelVisible = isAlwaysComposedContentVisible()
     LaunchedEffect(panelVisible) { if (!panelVisible) folderExpanded = false }
@@ -255,14 +268,12 @@ private fun ContentScope.PenguinQuickSettingsContent(
                     val belowElements = elementsAt(POSITION_BELOW_GRID).sortedBy { it.order }
                     val aboveNeedsFiller = aboveElements.count { it.span < 2 } % 2 == 1
                     val belowNeedsFiller = belowElements.count { it.span < 2 } % 2 == 1
-                    val pool =
-                        viewModel.tileGridViewModel.tileViewModels
-                            .map { it.spec }
-                            .filterNot { it in headerSpecs }
+                    val pool = availableTiles.map { it.spec }.filterNot { it in headerSpecs }
                     val aboveFiller = if (aboveNeedsFiller) pool.take(2) else emptyList()
                     val belowFiller =
                         if (belowNeedsFiller) pool.drop(aboveFiller.size).take(2) else emptyList()
-                    val excludeSpecs = headerSpecs + aboveFiller + belowFiller
+                    val excludeSpecs =
+                        headerSpecs + aboveFiller + belowFiller + inFolderSpecs
 
                     PanelElementRows(aboveElements, gap) {
                         FillerTiles(viewModel, aboveFiller, listening)
@@ -274,10 +285,21 @@ private fun ContentScope.PenguinQuickSettingsContent(
                             excludeSpecs = excludeSpecs,
                             listening = { listening },
                             modifier = Modifier.element(Elements.QuickSettingsTiles),
+                            belowTiles = {
+                                val rowGap = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+                                Column(
+                                    modifier =
+                                        Modifier.thenIf(belowElements.isNotEmpty()) {
+                                            Modifier.padding(top = rowGap)
+                                        },
+                                    verticalArrangement = spacedBy(rowGap),
+                                ) {
+                                    PanelElementRows(belowElements, gap) {
+                                        FillerTiles(viewModel, belowFiller, listening)
+                                    }
+                                }
+                            },
                         )
-                    }
-                    PanelElementRows(belowElements, gap) {
-                        FillerTiles(viewModel, belowFiller, listening)
                     }
                 }
             },

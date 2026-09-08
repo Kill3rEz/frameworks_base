@@ -87,6 +87,7 @@ constructor(
         forceLargeTiles: Boolean,
         listening: () -> Boolean,
         enableRevealEffect: Boolean,
+        belowTiles: @Composable () -> Unit,
     ) {
         val viewModel =
             rememberViewModel(traceName = "InfiniteGridLayout.TileGrid") {
@@ -160,6 +161,7 @@ constructor(
                 }
             }
 
+            belowTiles()
             if (!isPaginated && isMainGrid) {
                 Row(
                     modifier = Modifier.requiredHeight(48.dp).fillMaxWidth(),

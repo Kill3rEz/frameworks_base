@@ -37,6 +37,7 @@ fun ContentScope.TileGrid(
     forceLargeTiles: Boolean = false,
     listening: () -> Boolean = { true },
     enableRevealEffect: Boolean = false,
+    belowTiles: @Composable () -> Unit = {},
 ) {
     val gridLayout = viewModel.gridLayout
     val tiles = viewModel.tileViewModels.filter {
@@ -50,6 +51,7 @@ fun ContentScope.TileGrid(
             forceLargeTiles = forceLargeTiles,
             listening = listening,
             enableRevealEffect = enableRevealEffect,
+            belowTiles = belowTiles,
         )
     }
 }

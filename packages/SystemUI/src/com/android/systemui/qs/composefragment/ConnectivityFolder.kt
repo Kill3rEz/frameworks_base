@@ -114,6 +114,12 @@ fun secureIntSetting(key: String, default: Int): Int {
 }
 
 @Composable
+fun connectivityFolderSpecs(): List<String> {
+    val (large, small) = folderSpecs()
+    return large + small
+}
+
+@Composable
 private fun folderSpecs(): Pair<List<String>, List<String>> {
     val resolver = LocalContext.current.contentResolver
     fun read(key: String, fallback: List<String>): List<String> {
