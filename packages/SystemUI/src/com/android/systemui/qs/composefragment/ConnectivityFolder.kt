@@ -28,9 +28,11 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -59,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.android.compose.theme.LocalAndroidColorScheme
 import com.android.systemui.common.shared.model.Icon
+import com.android.compose.modifiers.thenIf
 import com.android.systemui.common.ui.compose.Icon
 import com.android.systemui.plugins.qs.QSTile
 import com.android.systemui.qs.panels.ui.compose.TileListener
@@ -191,6 +194,7 @@ fun ConnectivityFolder(
         modifier =
             modifier
                 .fillMaxWidth()
+                .thenIf(compactHeight != null) { Modifier.aspectRatio(1f) }
                 .clip(RoundedCornerShape(28.dp))
                 .background(glassSurface())
                 .padding(CardPadding),
@@ -198,23 +202,31 @@ fun ConnectivityFolder(
     ) {
         if (compactHeight == null) {
             Row(horizontalArrangement = spacedBy(CellSpacing), modifier = Modifier.fillMaxWidth()) {
-                large.forEach { tile -> Cell(cell) { FolderCircle(tile, cell * 0.88f) } }
+                large.forEach { tile ->
+                    Cell(cell) { size -> FolderCircle(tile, size * 0.88f) }
+                }
                 if (small.isNotEmpty()) {
-                    Cell(cell) {
-                        SmallCluster(small, cell * 0.34f, onClick = { onExpandedChange(true) })
+                    Cell(cell) { size ->
+                        SmallCluster(small, size * 0.34f, onClick = { onExpandedChange(true) })
                     }
                 }
             }
         } else {
-            Row(horizontalArrangement = spacedBy(CellSpacing), modifier = Modifier.fillMaxWidth()) {
-                Cell(cell) { large.getOrNull(0)?.let { FolderCircle(it, cell * 0.88f) } }
-                Cell(cell) { large.getOrNull(1)?.let { FolderCircle(it, cell * 0.88f) } }
+            Row(
+                horizontalArrangement = spacedBy(CellSpacing),
+                modifier = Modifier.fillMaxWidth().weight(1f),
+            ) {
+                Cell(null) { size -> large.getOrNull(0)?.let { FolderCircle(it, size * 0.82f) } }
+                Cell(null) { size -> large.getOrNull(1)?.let { FolderCircle(it, size * 0.82f) } }
             }
-            Row(horizontalArrangement = spacedBy(CellSpacing), modifier = Modifier.fillMaxWidth()) {
-                Cell(cell) { large.getOrNull(2)?.let { FolderCircle(it, cell * 0.96f) } }
-                Cell(cell) {
+            Row(
+                horizontalArrangement = spacedBy(CellSpacing),
+                modifier = Modifier.fillMaxWidth().weight(1f),
+            ) {
+                Cell(null) { size -> large.getOrNull(2)?.let { FolderCircle(it, size * 0.90f) } }
+                Cell(null) { size ->
                     if (small.isNotEmpty()) {
-                        SmallCluster(small, cell * 0.38f, onClick = { onExpandedChange(true) })
+                        SmallCluster(small, size * 0.34f, onClick = { onExpandedChange(true) })
                     }
                 }
             }
@@ -308,12 +320,12 @@ private fun FolderBigCard(tile: TileViewModel) {
 }
 
 @Composable
-private fun RowScope.Cell(height: Dp, content: @Composable () -> Unit) {
-    Box(
-        modifier = Modifier.weight(1f).height(height),
+private fun RowScope.Cell(height: Dp?, content: @Composable (Dp) -> Unit) {
+    BoxWithConstraints(
+        modifier = Modifier.weight(1f).thenIf(height != null) { Modifier.height(height!!) },
         contentAlignment = Alignment.Center,
     ) {
-        content()
+        content(minOf(maxWidth, maxHeight))
     }
 }
 
@@ -418,7 +430,7 @@ private fun FolderRow(tile: TileViewModel) {
 }
 
 @Composable
-private fun glassSurface(): Color =
+internal fun glassSurface(): Color =
     LocalAndroidColorScheme.current.surfaceEffect1.copy(
         alpha = if (isStockQsStyle) 1f else GlassSurfaceAlpha
     )

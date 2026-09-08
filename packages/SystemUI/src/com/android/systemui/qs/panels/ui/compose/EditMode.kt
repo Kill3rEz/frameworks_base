@@ -56,7 +56,6 @@ fun TileSpec.panelSpanSetting(): String? =
     when (this) {
         FOLDER_SPEC -> SETTING_QS_FOLDER_SPAN
         MEDIA_SPEC -> SETTING_QS_MEDIA_SPAN
-        SLIDERS_SPEC -> SETTING_QS_SLIDERS_SPAN
         else -> null
     }
 
