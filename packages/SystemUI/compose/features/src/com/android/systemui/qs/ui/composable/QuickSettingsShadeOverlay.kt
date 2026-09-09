@@ -104,6 +104,7 @@ import com.android.systemui.qs.panels.ui.compose.TileGrid
 import com.android.systemui.qs.panels.ui.compose.toolbar.Toolbar
 import com.android.systemui.qs.panels.ui.viewmodel.toolbar.ToolbarViewModel
 import com.android.systemui.qs.tiles.dialog.AudioDetailsViewModel
+import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.ui.composable.QuickSettingsShade.systemGestureExclusionInShade
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsShadeOverlayActionsViewModel
@@ -391,93 +392,103 @@ private fun ContentScope.QuickSettingsLayout(
 
         VerticalSeparator(QuickSettingsShade.Dimensions.ToolbarBottomPadding)
 
-        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-            val isIdle = layoutState.transitionState is TransitionState.Idle
-            val horizontalSpacing = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
-            val showMedia = qsContainerViewModel.showMedia
-            val top2Specs = remember(qsContainerViewModel.tileGridViewModel.tileViewModels) {
-                qsContainerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    if (showMedia) {
-                        Media(
-                            viewModelFactory = qsContainerViewModel.mediaViewModelFactory,
-                            presentationStyle = MediaPresentationStyle.Default,
-                            behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
-                            onDismissed = qsContainerViewModel::onMediaSwipeToDismiss,
-                            modifier = Modifier.fillMaxWidth(),
-                            location = Media.Location.QS,
-                        )
-                    } else {
-                        var listening by remember { mutableStateOf(false) }
-                        LifecycleStartEffect(Unit) {
-                            listening = true
-                            onStopOrDispose { listening = false }
-                        }
-                        TileGrid(
-                            viewModel = qsContainerViewModel.tileGridViewModel,
-                            includeSpecs = top2Specs,
-                            columnsOverride = 1,
-                            forceLargeTiles = true,
-                            listening = { listening },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
-                        val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
-                        val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
-                        val headerHeight = tileHeight * 2 + tileSpacing
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(
-                                horizontalSpacing,
-                                Alignment.CenterHorizontally
-                            ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            BrightnessLayout(enable = isIdle, sliderHeight = headerHeight)
-                            VolumeLayout(enable = isIdle, sliderHeight = headerHeight)
-                        }
-                    }
-                }
-            }
-
-            VerticalSeparator(dimensionResource(R.dimen.qs_tile_margin_vertical))
-
-            val excludeSpecs = top2Specs
-
-            GridAnchor()
-            TileGrid(
-                viewModel = qsContainerViewModel.tileGridViewModel,
-                excludeSpecs = excludeSpecs,
-                modifier = Modifier.fillMaxWidth(),
-                enableRevealEffect = TileRevealFlag.isEnabled,
-            )
-
-            val buildNumberViewModel =
-                rememberViewModel("QuickSettingsShadeOverlay.BuildNumber") {
-                    buildNumberViewModelFactory.create()
-                }
-
-            if (buildNumberViewModel.buildNumber != null) {
-                VerticalSeparator(QuickSettingsShade.Dimensions.ShortPadding)
-                BuildNumber(
-                    viewModel = buildNumberViewModel,
-                    modifier =
-                        Modifier.align(Alignment.Start)
-                            .padding(start = QuickSettingsShade.Dimensions.HorizontalPadding),
+        if (qsContainerViewModel.panelStyle != QsPanelStyle.Default) {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                QuickSettingsContent(
+                    viewModel = qsContainerViewModel,
+                    mediaInRow = false,
                 )
+                VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
             }
+        } else {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                val isIdle = layoutState.transitionState is TransitionState.Idle
+                val horizontalSpacing = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
+                val showMedia = qsContainerViewModel.showMedia
+                val top2Specs = remember(qsContainerViewModel.tileGridViewModel.tileViewModels) {
+                    qsContainerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
+                }
 
-            VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (showMedia) {
+                            Media(
+                                viewModelFactory = qsContainerViewModel.mediaViewModelFactory,
+                                presentationStyle = MediaPresentationStyle.Default,
+                                behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                                onDismissed = qsContainerViewModel::onMediaSwipeToDismiss,
+                                modifier = Modifier.fillMaxWidth(),
+                                location = Media.Location.QS,
+                            )
+                        } else {
+                            var listening by remember { mutableStateOf(false) }
+                            LifecycleStartEffect(Unit) {
+                                listening = true
+                                onStopOrDispose { listening = false }
+                            }
+                            TileGrid(
+                                viewModel = qsContainerViewModel.tileGridViewModel,
+                                includeSpecs = top2Specs,
+                                columnsOverride = 1,
+                                forceLargeTiles = true,
+                                listening = { listening },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
+                            val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
+                            val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+                            val headerHeight = tileHeight * 2 + tileSpacing
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    horizontalSpacing,
+                                    Alignment.CenterHorizontally
+                                ),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                BrightnessLayout(enable = isIdle, sliderHeight = headerHeight)
+                                VolumeLayout(enable = isIdle, sliderHeight = headerHeight)
+                            }
+                        }
+                    }
+                }
+
+                VerticalSeparator(dimensionResource(R.dimen.qs_tile_margin_vertical))
+
+                val excludeSpecs = top2Specs
+
+                GridAnchor()
+                TileGrid(
+                    viewModel = qsContainerViewModel.tileGridViewModel,
+                    excludeSpecs = excludeSpecs,
+                    modifier = Modifier.fillMaxWidth(),
+                    enableRevealEffect = TileRevealFlag.isEnabled,
+                )
+
+                val buildNumberViewModel =
+                    rememberViewModel("QuickSettingsShadeOverlay.BuildNumber") {
+                        buildNumberViewModelFactory.create()
+                    }
+
+                if (buildNumberViewModel.buildNumber != null) {
+                    VerticalSeparator(QuickSettingsShade.Dimensions.ShortPadding)
+                    BuildNumber(
+                        viewModel = buildNumberViewModel,
+                        modifier =
+                            Modifier.align(Alignment.Start)
+                                .padding(start = QuickSettingsShade.Dimensions.HorizontalPadding),
+                    )
+                }
+
+                VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
+            }
         }
     }
 }
