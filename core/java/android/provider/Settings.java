@@ -8091,6 +8091,10 @@ public final class Settings {
          * @hide
          */
         public static final String STATUS_BAR_SHOW_DYNAMIC_ISLAND = "status_bar_show_dynamic_island";
+        /**
+         * @hide
+         */
+        public static final String MEDIA_WAVEFORM_SEEKBAR = "media_waveform_seekbar";
 
         /**
          * @hide
