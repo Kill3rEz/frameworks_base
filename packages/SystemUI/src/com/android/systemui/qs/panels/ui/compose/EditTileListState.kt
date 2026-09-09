@@ -218,7 +218,14 @@ class EditTileListState(
 
     private fun List<EditTileViewModel>.toGridCells(largeTiles: Set<TileSpec>): List<GridCell> {
         return map {
-                SizedTileImpl(it, if (largeTiles.contains(it.tileSpec)) largeTilesSpan else 1)
+                SizedTileImpl(
+                    it,
+                    if (it.tileSpec in PANEL_ELEMENT_SPECS || largeTiles.contains(it.tileSpec)) {
+                        largeTilesSpan
+                    } else {
+                        1
+                    },
+                )
             }
             .toGridCells(columns)
     }

@@ -69,6 +69,7 @@ import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.qs.panels.ui.compose.toolbar.EditModeButton
 import com.android.systemui.qs.composefragment.MyUiCardSpecs
+import com.android.systemui.qs.composefragment.LocalMyUiInteractive
 import com.android.systemui.qs.composefragment.MyUiGridGap
 import com.android.systemui.qs.composefragment.MyUiTileAspect
 import com.android.systemui.qs.composefragment.MyUiConnectivityCard
@@ -377,7 +378,11 @@ private fun ContentScope.PenguinQuickSettingsContent(
                             else slidersPosition
                         if (matches(slidersSlot)) {
                             add(
-                                PanelElement(slidersSpan, slidersOrder) {
+                                PanelElement(
+                                    slidersSpan,
+                                    slidersOrder,
+                                    alignEnd = slidersSpan < 2,
+                                ) {
                                     if (slidersSpan < 2) {
                                         QsStandingSliders(
                                             sliderHeight = standingSliderHeight,
@@ -509,6 +514,52 @@ fun panelElementPreviews(
 }
 
 @Composable
+fun qsHeaderPreview(viewModel: QuickSettingsContainerViewModel): (@Composable () -> Unit)? {
+    val style =
+        QsPanelStyle.fromValue(
+            secureIntSetting(QsPanelStyle.SETTING_NAME, QsPanelStyle.Penguin.value)
+        )
+    if (style != QsPanelStyle.MyUi) return null
+    val tiles = viewModel.tileGridViewModel.tileViewModels
+    return {
+        val gap = MyUiGridGap
+        CompositionLocalProvider(LocalMyUiInteractive provides false) {
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val column = (maxWidth - gap * 3) / 4
+                val headerHeight = column / MyUiTileAspect * 2 + gap
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(headerHeight),
+                    horizontalArrangement = spacedBy(gap),
+                ) {
+                    Box(Modifier.weight(1f)) { MyUiConnectivityCard(tiles = tiles) }
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = spacedBy(gap),
+                    ) {
+                        Box(Modifier.weight(1f)) {
+                            VolumeLayout(
+                                enable = false,
+                                verticalCornerRadius = MyUiSliderCorner,
+                                verticalWidth = null,
+                                sliderHeight = headerHeight,
+                            )
+                        }
+                        Box(Modifier.weight(1f)) {
+                            BrightnessLayout(
+                                enable = false,
+                                verticalCornerRadius = MyUiSliderCorner,
+                                verticalWidth = null,
+                                sliderHeight = headerHeight,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun PanelElementPreview(span: Int, content: @Composable () -> Unit) {
     val margin = dimensionResource(id = R.dimen.qs_horizontal_margin)
     val gap = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
@@ -523,8 +574,11 @@ private fun PanelElementPreview(span: Int, content: @Composable () -> Unit) {
                         measurable.measure(Constraints(minWidth = target, maxWidth = target))
                     val scale =
                         min(
-                            constraints.maxWidth.toFloat() / placeable.width.coerceAtLeast(1),
-                            constraints.maxHeight.toFloat() / placeable.height.coerceAtLeast(1),
+                            1f,
+                            min(
+                                constraints.maxWidth.toFloat() / placeable.width.coerceAtLeast(1),
+                                constraints.maxHeight.toFloat() / placeable.height.coerceAtLeast(1),
+                            ),
                         )
                     layout(constraints.maxWidth, constraints.maxHeight) {
                         placeable.placeWithLayer(
@@ -550,6 +604,7 @@ private val PenguinMediaHeight = 132.dp
 private class PanelElement(
     val span: Int,
     val order: Int,
+    val alignEnd: Boolean = false,
     val content: @Composable () -> Unit,
 )
 
@@ -562,8 +617,9 @@ private fun PanelElementRows(
     elements.filter { it.span >= 2 }.forEach { Box(Modifier.fillMaxWidth()) { it.content() } }
     elements.filter { it.span < 2 }.chunked(2).forEach { pair ->
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = spacedBy(gap)) {
+            if (pair.size == 1 && pair[0].alignEnd) Box(Modifier.weight(1f)) { filler() }
             pair.forEach { element -> Box(Modifier.weight(1f)) { element.content() } }
-            if (pair.size == 1) Box(Modifier.weight(1f)) { filler() }
+            if (pair.size == 1 && !pair[0].alignEnd) Box(Modifier.weight(1f)) { filler() }
         }
     }
 }

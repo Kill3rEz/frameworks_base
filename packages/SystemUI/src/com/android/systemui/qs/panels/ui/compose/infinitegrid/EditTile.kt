@@ -172,6 +172,7 @@ import com.android.systemui.qs.panels.ui.compose.DragAndDropState
 import com.android.systemui.qs.panels.ui.compose.DragType
 import com.android.systemui.qs.panels.ui.compose.EditTileListState
 import com.android.systemui.qs.panels.ui.compose.LocalPanelElementPreview
+import com.android.systemui.qs.panels.ui.compose.LocalQsHeaderPreview
 import com.android.systemui.qs.panels.ui.compose.PANEL_ELEMENT_SPECS
 import com.android.systemui.qs.panels.ui.compose.EditTileListState.Companion.INVALID_INDEX
 import com.android.systemui.qs.panels.ui.compose.dragAndDropRemoveZone
@@ -409,7 +410,9 @@ private fun EditModeScrollableColumn(
                     }
                 },
     ) {
-        QsHeaderPreview(modifier = Modifier.fillMaxWidth())
+        LocalQsHeaderPreview.current?.let { header ->
+            Box(Modifier.fillMaxWidth()) { header() }
+        }
 
         content()
 
@@ -417,59 +420,6 @@ private fun EditModeScrollableColumn(
     }
 }
 
-@Composable
-private fun QsHeaderPreview(modifier: Modifier = Modifier) {
-    val tileHeight = dimensionResource(id = R.dimen.custom_qs_tile_height)
-    val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
-    val headerHeight = tileHeight * 2 + tileSpacing
-    val horizontalSpacing = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
-    val glass = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
-    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-
-    Row(modifier = modifier.height(headerHeight), verticalAlignment = Alignment.Top) {
-        Box(
-            modifier =
-                Modifier.weight(1f)
-                    .fillMaxHeight()
-                    .padding(end = horizontalSpacing / 2)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(glass),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "Media",
-                color = labelColor,
-                style = MaterialTheme.typography.labelMedium,
-            )
-        }
-        Row(
-            modifier = Modifier.weight(1f).fillMaxHeight().padding(start = horizontalSpacing / 2),
-            horizontalArrangement = spacedBy(horizontalSpacing, Alignment.CenterHorizontally),
-        ) {
-            HeaderSliderPreview(iconRes = R.drawable.ic_qs_brightness_auto_off_new, tint = labelColor)
-            HeaderSliderPreview(iconRes = R.drawable.ic_volume_media, tint = labelColor)
-        }
-    }
-}
-
-@Composable
-private fun HeaderSliderPreview(iconRes: Int, tint: Color) {
-    Box(
-        modifier =
-            Modifier.width(75.dp)
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(percent = 50))
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)),
-        contentAlignment = Alignment.BottomCenter,
-    ) {
-        Icon(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.padding(bottom = 16.dp).size(24.dp),
-        )
-    }
-}
 
 @Composable
 private fun NavBarInsetScrollZone(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
@@ -1067,9 +1017,9 @@ private fun LazyGridItemScope.TileGridCell(
         selectionState.unSelect()
         onRemoveTile(cell.tile.tileSpec)
     }
+    val isPanelElement = cell.tile.tileSpec in PANEL_ELEMENT_SPECS
     val cellHeight =
-        if (cell.tile.tileSpec in PANEL_ELEMENT_SPECS) TileHeight * 2 + TileArrangementPadding
-        else TileHeight
+        if (isPanelElement) TileHeight * 2 + TileArrangementPadding else TileHeight
     InteractiveTileContainer(
         tileState = tileState,
         resizingState = resizingState,
@@ -1155,8 +1105,8 @@ private fun LazyGridItemScope.TileGridCell(
                 )
                 .thenIf(isSelectable) { draggableModifier }
                 .tileBackground(
-                    cornerRadius = InactiveTileCornerRadius,
-                    alpha = { containerAlpha },
+                    cornerRadius = if (isPanelElement) 0.dp else InactiveTileCornerRadius,
+                    alpha = { if (isPanelElement) 0f else containerAlpha },
                     color = { colors.background },
                 )
                 .keyboardShortcuts(cell.tile.tileSpec, selectionState) {

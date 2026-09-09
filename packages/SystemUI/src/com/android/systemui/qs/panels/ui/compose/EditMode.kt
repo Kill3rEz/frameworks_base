@@ -58,19 +58,26 @@ fun TileSpec.panelSpanSetting(): String? =
     when (this) {
         FOLDER_SPEC -> SETTING_QS_FOLDER_SPAN
         MEDIA_SPEC -> SETTING_QS_MEDIA_SPAN
+        SLIDERS_SPEC -> SETTING_QS_SLIDERS_SPAN
         else -> null
     }
 
 val LocalPanelElementPreview =
     compositionLocalOf<Map<TileSpec, @Composable () -> Unit>> { emptyMap() }
 
+val LocalQsHeaderPreview = compositionLocalOf<(@Composable () -> Unit)?> { null }
+
 @Composable
 fun EditMode(
     viewModel: EditModeViewModel,
     modifier: Modifier = Modifier,
     previews: Map<TileSpec, @Composable () -> Unit> = emptyMap(),
+    headerPreview: (@Composable () -> Unit)? = null,
 ) {
-    CompositionLocalProvider(LocalPanelElementPreview provides previews) {
+    CompositionLocalProvider(
+        LocalPanelElementPreview provides previews,
+        LocalQsHeaderPreview provides headerPreview,
+    ) {
         EditModeContent(viewModel, modifier)
     }
 }

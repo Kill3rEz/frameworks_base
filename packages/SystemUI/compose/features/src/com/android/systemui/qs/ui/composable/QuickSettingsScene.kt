@@ -297,6 +297,8 @@ private fun ContentScope.QuickSettingsScene(
                                             .dp
                                 ),
                         previews = panelElementPreviews(viewModel.qsContainerViewModel),
+                        headerPreview =
+                            qsHeaderPreview(viewModel.qsContainerViewModel),
                     )
                 }
             }
