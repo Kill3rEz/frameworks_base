@@ -98,6 +98,9 @@ import com.android.systemui.statusbar.chips.ui.compose.OngoingActivityChips
 import com.android.systemui.statusbar.core.NewStatusBarIcons
 import com.android.systemui.statusbar.core.StatusBarEventForwardingModernization
 import com.android.systemui.statusbar.core.StatusBarForDesktop
+import android.view.Gravity
+import com.android.systemui.statusbar.quickactions.popups.ui.compose.StatusBarDynamicIslandContainer
+import com.android.systemui.statusbar.quickactions.popups.ui.viewmodel.DynamicIslandChipsViewModel
 import com.android.systemui.statusbar.events.domain.interactor.SystemStatusEventAnimationInteractor
 import com.android.systemui.statusbar.layout.ui.viewmodel.AppHandlesViewModel
 import com.android.systemui.statusbar.notification.icon.ui.viewbinder.ConnectedDisplaysStatusBarNotificationIconViewStore
@@ -150,6 +153,7 @@ constructor(
     @DisplayAware private val homeStatusBarViewModelFactory: HomeStatusBarViewModelFactory,
     @DisplayAware private val headlineViewModelFactory: HeadlineViewModel.Factory,
     private val statusBarRegionSamplingViewModelFactory: StatusBarRegionSamplingViewModel.Factory,
+    private val dynamicIslandChipsViewModelFactory: DynamicIslandChipsViewModel.Factory,
     private val shadeWindowRootView: WindowRootView,
 ) {
     fun create(root: ViewGroup, andThen: (ViewGroup) -> Unit): ComposeView {
@@ -174,6 +178,7 @@ constructor(
                         eventAnimationInteractor = eventAnimationInteractor,
                         statusBarRegionSamplingViewModelFactory =
                             statusBarRegionSamplingViewModelFactory,
+                        dynamicIslandChipsViewModelFactory = dynamicIslandChipsViewModelFactory,
                         onViewCreated = andThen,
                         modifier = Modifier.sysUiResTagContainer(),
                     )
@@ -212,6 +217,7 @@ fun StatusBarRoot(
     darkIconDispatcher: DarkIconDispatcher,
     eventAnimationInteractor: SystemStatusEventAnimationInteractor,
     statusBarRegionSamplingViewModelFactory: StatusBarRegionSamplingViewModel.Factory,
+    dynamicIslandChipsViewModelFactory: DynamicIslandChipsViewModel.Factory,
     onViewCreated: (ViewGroup) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -288,6 +294,33 @@ fun StatusBarRoot(
                     phoneStatusBarView.requireViewById<NotificationIconContainer>(
                         R.id.notificationIcons
                     )
+
+                // Android 17 moved quick action chips to an overlay, so the Dynamic Island
+                // gets its own centred host over the status bar contents.
+                val centeredArea =
+                    phoneStatusBarView.requireViewById<ViewGroup>(R.id.centered_area)
+                centeredArea.addView(
+                    ComposeView(phoneStatusBarView.context).apply {
+                        layoutParams =
+                            LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                                )
+                                .apply { gravity = Gravity.CENTER }
+                        setContent {
+                            PlatformTheme {
+                                val islandViewModel =
+                                    rememberViewModel(traceName = "DynamicIsland") {
+                                        dynamicIslandChipsViewModelFactory.create()
+                                    }
+                                StatusBarDynamicIslandContainer(
+                                    chips = islandViewModel.shownPopupChips,
+                                    onMediaControlPopupVisibilityChanged = {},
+                                )
+                            }
+                        }
+                    }
+                )
 
                 // If the flag is enabled, create and add a compose section to the end
                 // of the system_icons container

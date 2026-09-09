@@ -8081,6 +8081,46 @@ public final class Settings {
             return isCallingPackageAllowedToWriteSettings(context, Process.myUid(),
                     context.getOpPackageName(), false);
         }
+
+        /**
+         * @hide
+         */
+        public static final String STATUS_BAR_SHOW_MUSIC_TICKER = "status_bar_show_music_ticker";
+
+        /**
+         * @hide
+         */
+        public static final String STATUS_BAR_SHOW_DYNAMIC_ISLAND = "status_bar_show_dynamic_island";
+
+        /**
+         * @hide
+         */
+        public static final String STATUS_BAR_DYNAMIC_ISLAND_FLASHLIGHT = "status_bar_dynamic_island_flashlight";
+
+        /**
+         * @hide
+         */
+        public static final String STATUS_BAR_DYNAMIC_ISLAND_LIVE_SCORES = "status_bar_dynamic_island_live_scores";
+
+        /**
+         * @hide
+         */
+        public static final String STATUS_BAR_DYNAMIC_ISLAND_MEDIA_CONTROLS = "status_bar_dynamic_island_media_controls";
+
+        /**
+         * @hide
+         */
+        public static final String STATUS_BAR_DYNAMIC_ISLAND_SCREEN_RECORDING = "status_bar_dynamic_island_screen_recording";
+
+        /**
+         * @hide
+         */
+        public static final String STATUS_BAR_DYNAMIC_ISLAND_STOPWATCH = "status_bar_dynamic_island_stopwatch";
+
+        /**
+         * @hide
+         */
+        public static final String STATUS_BAR_DYNAMIC_ISLAND_LYRICS = "status_bar_dynamic_island_lyrics";
     }
 
     /**

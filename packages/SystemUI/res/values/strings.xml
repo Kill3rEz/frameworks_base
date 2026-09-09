@@ -5092,4 +5092,17 @@
     <string name="active_edge_activity_select_title">Select activity</string>
     <!-- Title of the expanded Quick Settings connectivity folder [CHAR LIMIT=30] -->
     <string name="quick_settings_connectivity_folder_title">Connectivity</string>
+    <string name="dynamic_island_action_lap">Lap</string>
+    <string name="dynamic_island_action_resume">Resume</string>
+    <string name="dynamic_island_action_snooze">Snooze</string>
+    <string name="dynamic_island_action_stop">Stop</string>
+    <string name="dynamic_island_alarm_active_title">Alarm</string>
+    <string name="dynamic_island_alarm_title">Next alarm</string>
+    <string name="dynamic_island_flashlight_enabled">Enabled</string>
+    <string name="dynamic_island_flashlight_short">ON</string>
+    <string name="dynamic_island_open_clock_action">Open clock</string>
+    <string name="dynamic_island_screen_record_active">Recording is active</string>
+    <string name="dynamic_island_screen_record_countdown">Starts in %1$ss</string>
+    <string name="dynamic_island_screen_record_short">REC</string>
+    <string name="dynamic_island_stopwatch_title">Stopwatch</string>
 </resources>
