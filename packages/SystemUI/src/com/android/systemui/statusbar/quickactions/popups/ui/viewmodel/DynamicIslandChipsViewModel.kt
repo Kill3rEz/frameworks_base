@@ -40,6 +40,9 @@ import com.android.systemui.statusbar.quickactions.stopwatch.ui.viewmodel.Stopwa
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.awaitCancellation
+import com.android.systemui.keyguard.domain.interactor.KeyguardTransitionInteractor
+import com.android.systemui.keyguard.shared.model.KeyguardState
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
@@ -51,6 +54,7 @@ class DynamicIslandChipsViewModel
 @AssistedInject
 constructor(
     @Application private val context: Context,
+    private val keyguardTransitionInteractor: KeyguardTransitionInteractor,
     mediaControlChipFactory: MediaControlChipViewModel.Factory,
     screenRecordChipFactory: ScreenRecordPopupChipViewModel.Factory,
     liveScoreChipFactory: LiveScorePopupChipViewModel.Factory,
@@ -70,7 +74,7 @@ constructor(
         object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
                 isDynamicIslandEnabled = readDynamicIslandEnabled()
-                if (!isDynamicIslandEnabled) {
+                if (!isDynamicIslandEnabled || isOnLockscreen) {
                     currentShownPopupChipId = null
                 }
             }
@@ -78,6 +82,7 @@ constructor(
 
     /** The ID of the current chip that is showing its popup, or `null` if no chip is shown. */
     private var currentShownPopupChipId by mutableStateOf<PopupChipId?>(null)
+    private var isOnLockscreen by mutableStateOf(false)
 
     private val incomingPopupChipBundle: PopupChipBundle by derivedStateOf {
         PopupChipBundle(
@@ -129,6 +134,11 @@ constructor(
 
     override suspend fun onActivated(): Nothing {
         coroutineScope {
+            launch {
+                keyguardTransitionInteractor.isFinishedIn(KeyguardState.LOCKSCREEN).collectLatest {
+                    isOnLockscreen = it
+                }
+            }
             context.contentResolver.registerContentObserver(
                 Settings.System.getUriFor(
                     Settings.System.STATUS_BAR_SHOW_DYNAMIC_ISLAND
