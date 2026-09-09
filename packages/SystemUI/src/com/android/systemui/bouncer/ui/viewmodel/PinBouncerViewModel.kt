@@ -122,22 +122,30 @@ constructor(
     /** Whether the PinBouncer UI should request keyboard focus. */
     val isFocusRequested = _isFocusRequested.asStateFlow()
 
+    /**
+     * Auto-confirm is a lockscreen PIN setting. SIM PIN/PUK length is 4-8 digits, so the confirm
+     * button must stay visible and auto-submit must stay off.
+     */
+    private val isAutoConfirmEnabled: StateFlow<Boolean> =
+        if (authenticationMethod == AuthenticationMethodModel.Sim) {
+            MutableStateFlow(false)
+        } else {
+            interactor.isAutoConfirmEnabled
+        }
+
     /** Appearance of the backspace button. */
     val backspaceButtonAppearance: ActionButtonAppearance by
-        combine(
-                mutablePinInput,
-                interactor.isAutoConfirmEnabled,
-                ::computeBackspaceButtonAppearance,
-            )
+        combine(mutablePinInput, isAutoConfirmEnabled, ::computeBackspaceButtonAppearance)
             .hydratedStateOf(
                 initialValue =
                     computeBackspaceButtonAppearance(
                         mutablePinInput.value,
-                        interactor.isAutoConfirmEnabled.value,
+                        isAutoConfirmEnabled.value,
                     )
             )
 
-    private val _confirmButtonAppearance = MutableStateFlow(ActionButtonAppearance.Hidden)
+    private val _confirmButtonAppearance =
+        MutableStateFlow(computeConfirmButtonAppearance(isAutoConfirmEnabled.value))
     /** Appearance of the confirm button. */
     val confirmButtonAppearance: StateFlow<ActionButtonAppearance> =
         _confirmButtonAppearance.asStateFlow()
@@ -178,8 +186,8 @@ constructor(
             }
             launch { mutablePinInput.collect { _readyToTryAuthenticate.value = !it.isEmpty() } }
             launch {
-                interactor.isAutoConfirmEnabled
-                    .map { if (it) ActionButtonAppearance.Hidden else ActionButtonAppearance.Shown }
+                isAutoConfirmEnabled
+                    .map(::computeConfirmButtonAppearance)
                     .collect { _confirmButtonAppearance.value = it }
             }
             launch {
@@ -222,7 +230,9 @@ constructor(
         val maxInputLength = hintedPinLength.value ?: Int.MAX_VALUE
         if (pinInput.getPin().size < maxInputLength) {
             mutablePinInput.value = pinInput.append(input)
-            tryAuthenticate(useAutoConfirm = true)
+            if (authenticationMethod != AuthenticationMethodModel.Sim) {
+                tryAuthenticate(useAutoConfirm = true)
+            }
         }
     }
 
@@ -268,6 +278,16 @@ constructor(
 
     override fun getInput(): List<Any> {
         return mutablePinInput.value.getPin()
+    }
+
+    private fun computeConfirmButtonAppearance(
+        isAutoConfirmEnabled: Boolean
+    ): ActionButtonAppearance {
+        return if (isAutoConfirmEnabled) {
+            ActionButtonAppearance.Hidden
+        } else {
+            ActionButtonAppearance.Shown
+        }
     }
 
     private fun computeBackspaceButtonAppearance(

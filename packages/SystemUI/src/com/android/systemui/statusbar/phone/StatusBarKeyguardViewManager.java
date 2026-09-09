@@ -768,31 +768,41 @@ public class StatusBarKeyguardViewManager implements RemoteInputController.Callb
         boolean showBouncer = needsFullscreenBouncer() && !mDozing && !mIsSleeping;
         if (showBouncer) {
             // The keyguard might be showing (already). So we need to hide it.
-            if (!primaryBouncerIsShowing()) {
-                if (SceneContainerFlag.isEnabled()) {
-                    mCentralSurfaces.hideKeyguard();
-                    mSceneInteractorLazy.get().showOverlay(
+            if (SceneContainerFlag.isEnabled()) {
+                // primaryBouncerIsShowing() tracks the legacy view, which is typically false when
+                // the scene overlay is used. Do not call showOverlay if the bouncer is already
+                // current — SceneFramework rejects that as a no-op ("already a current overlay")
+                // and the log noise hides the real SIM PIN handoff. Auth method PIN → Sim is
+                // refreshed by AuthenticationRepository observing SIM lock state.
+                mCentralSurfaces.hideKeyguard();
+                SceneInteractor sceneInteractor = mSceneInteractorLazy.get();
+                boolean bouncerOverlayShowing = sceneInteractor.getCurrentOverlays()
+                        .getValue().contains(Overlays.Bouncer);
+                if (!bouncerOverlayShowing) {
+                    sceneInteractor.showOverlay(
                             Overlays.Bouncer,
                             TAG + "#showBouncerOrKeyguard"
                     );
+                } else if (!isFalsingReset) {
+                    Log.i(TAG, "Sim bouncer overlay already showing, skipping overlay request");
+                }
+            } else if (!primaryBouncerIsShowing()) {
+                if (mPrimaryBouncerInteractor.show(/* isScrimmed= */ true, reason)) {
+                    mAttemptsToShowBouncer = 0;
+                    mCentralSurfaces.hideKeyguard();
                 } else {
-                    if (mPrimaryBouncerInteractor.show(/* isScrimmed= */ true, reason)) {
+                    if (mAttemptsToShowBouncer > 6) {
                         mAttemptsToShowBouncer = 0;
-                        mCentralSurfaces.hideKeyguard();
+                        Log.e(TAG, "Too many failed attempts to show bouncer, showing "
+                                 + "keyguard instead");
+                        mCentralSurfaces.showKeyguard();
                     } else {
-                        if (mAttemptsToShowBouncer > 6) {
-                            mAttemptsToShowBouncer = 0;
-                            Log.e(TAG, "Too many failed attempts to show bouncer, showing "
-                                     + "keyguard instead");
-                            mCentralSurfaces.showKeyguard();
-                        } else {
-                            Log.v(TAG, "Failed to show bouncer, attempt #: "
-                                    + mAttemptsToShowBouncer++);
-                            mExecutor.executeDelayed(() ->
-                                    showBouncerOrKeyguard(hideBouncerWhenShowing, isFalsingReset,
-                                        reason),
-                                    500);
-                        }
+                        Log.v(TAG, "Failed to show bouncer, attempt #: "
+                                + mAttemptsToShowBouncer++);
+                        mExecutor.executeDelayed(() ->
+                                showBouncerOrKeyguard(hideBouncerWhenShowing, isFalsingReset,
+                                    reason),
+                                500);
                     }
                 }
             } else if (!isFalsingReset) {

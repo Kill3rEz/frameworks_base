@@ -98,12 +98,15 @@ constructor(
      * [hintedPinLength].
      */
     val isAutoConfirmEnabled: StateFlow<Boolean> =
-        combine(repository.isAutoConfirmFeatureEnabled, repository.hasLockoutOccurred) {
-                featureEnabled,
-                hasLockoutOccurred ->
+        combine(
+                repository.isAutoConfirmFeatureEnabled,
+                repository.hasLockoutOccurred,
+                repository.authenticationMethod,
+            ) { featureEnabled, hasLockoutOccurred, authMethod ->
                 // Disable auto-confirm if lockout occurred since the last successful
-                // authentication attempt.
-                featureEnabled && !hasLockoutOccurred
+                // authentication attempt. SIM PIN/PUK is variable-length (4-8), so never
+                // auto-confirm it even if the lockscreen PIN setting is enabled.
+                featureEnabled && !hasLockoutOccurred && authMethod == Pin
             }
             .stateIn(
                 scope = applicationScope,

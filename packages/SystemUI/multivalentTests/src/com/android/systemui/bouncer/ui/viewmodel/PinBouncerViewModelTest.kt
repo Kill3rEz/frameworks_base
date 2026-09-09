@@ -392,6 +392,24 @@ class PinBouncerViewModelTest : SysuiTestCase() {
         }
 
     @Test
+    fun confirmButtonAppearance_simPin_alwaysShownEvenWithAutoConfirm() =
+        kosmos.runTest {
+            fakeAuthenticationRepository.setAutoConfirmFeatureEnabled(true)
+            val underTest =
+                pinBouncerViewModelFactory.create(
+                    isInputEnabled = MutableStateFlow(true),
+                    onIntentionalUserInput = {},
+                    authenticationMethod = AuthenticationMethodModel.Sim,
+                    bouncerHapticPlayer = bouncerHapticPlayer,
+                )
+            underTest.activateIn(testScope)
+            val confirmButtonAppearance by collectLastValue(underTest.confirmButtonAppearance)
+            runCurrent()
+
+            assertThat(confirmButtonAppearance).isEqualTo(ActionButtonAppearance.Shown)
+        }
+
+    @Test
     fun isDigitButtonAnimationEnabled() =
         kosmos.runTest {
             val isAnimationEnabled by collectLastValue(underTest.isDigitButtonAnimationEnabled)

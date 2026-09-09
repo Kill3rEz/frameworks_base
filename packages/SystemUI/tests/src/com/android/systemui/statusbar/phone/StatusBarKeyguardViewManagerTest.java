@@ -94,6 +94,7 @@ import com.android.systemui.navigationbar.TaskbarDelegate;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.ActivityStarter.OnDismissAction;
 import com.android.systemui.scene.domain.interactor.SceneInteractor;
+import com.android.systemui.scene.shared.model.Overlays;
 import com.android.systemui.securelockdevice.domain.interactor.SecureLockDeviceInteractor;
 import com.android.systemui.shade.NotificationShadeWindowView;
 import com.android.systemui.shade.ShadeController;
@@ -126,7 +127,9 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
+import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 
 @SmallTest
 @RunWith(AndroidJUnit4.class)
@@ -211,6 +214,8 @@ public class StatusBarKeyguardViewManagerTest extends SysuiTestCase {
         when(mNotificationShadeWindowView.getWindowInsetsController())
                 .thenReturn(mWindowInsetsController);
         when(mCommunalSceneInteractor.isIdleOnCommunal()).thenReturn(MutableStateFlow(false));
+        when(mSceneInteractor.getCurrentOverlays())
+                .thenReturn(MutableStateFlow(Collections.emptySet()));
 
         mStatusBarKeyguardViewManager =
                 new StatusBarKeyguardViewManager(
@@ -922,6 +927,34 @@ public class StatusBarKeyguardViewManagerTest extends SysuiTestCase {
 
         // Do not refresh the full screen bouncer if the call is from falsing
         verify(mPrimaryBouncerInteractor, never()).show(true, TEST_REASON);
+    }
+
+    @Test
+    @EnableSceneContainer
+    public void testShowBouncerOrKeyguard_sceneContainer_showsBouncerOverlay() {
+        when(mKeyguardSecurityModel.getSecurityMode(anyInt())).thenReturn(
+                KeyguardSecurityModel.SecurityMode.SimPin);
+        when(mSceneInteractor.getCurrentOverlays())
+                .thenReturn(MutableStateFlow(Collections.emptySet()));
+
+        mStatusBarKeyguardViewManager.showBouncerOrKeyguard(false, false, TEST_REASON);
+
+        verify(mCentralSurfaces).hideKeyguard();
+        verify(mSceneInteractor).showOverlay(eq(Overlays.Bouncer), anyString());
+    }
+
+    @Test
+    @EnableSceneContainer
+    public void testShowBouncerOrKeyguard_sceneContainer_skipsIfBouncerOverlayAlreadyShowing() {
+        when(mKeyguardSecurityModel.getSecurityMode(anyInt())).thenReturn(
+                KeyguardSecurityModel.SecurityMode.SimPin);
+        when(mSceneInteractor.getCurrentOverlays())
+                .thenReturn(MutableStateFlow(Set.of(Overlays.Bouncer)));
+
+        mStatusBarKeyguardViewManager.showBouncerOrKeyguard(false, false, TEST_REASON);
+
+        verify(mCentralSurfaces).hideKeyguard();
+        verify(mSceneInteractor, never()).showOverlay(eq(Overlays.Bouncer), anyString());
     }
 
     @Test

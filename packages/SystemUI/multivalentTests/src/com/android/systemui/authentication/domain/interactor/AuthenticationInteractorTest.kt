@@ -28,6 +28,7 @@ import com.android.internal.widget.LockPatternUtils
 import com.android.systemui.SysuiTestCase
 import com.android.systemui.authentication.data.repository.FakeAuthenticationRepository
 import com.android.systemui.authentication.data.repository.fakeAuthenticationRepository
+import com.android.systemui.authentication.shared.model.AuthenticationMethodModel
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.None
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Password
 import com.android.systemui.authentication.shared.model.AuthenticationMethodModel.Pattern
@@ -357,6 +358,18 @@ class AuthenticationInteractorTest : SysuiTestCase() {
             kosmos.fakeAuthenticationRepository.setAutoConfirmFeatureEnabled(true)
 
             assertThat(isAutoConfirmEnabled).isTrue()
+        }
+
+    @Test
+    fun isAutoConfirmEnabled_simPin_returnsFalseEvenIfFeatureEnabled() =
+        kosmos.runTest {
+            val isAutoConfirmEnabled by collectLastValue(underTest.isAutoConfirmEnabled)
+            kosmos.fakeAuthenticationRepository.setAutoConfirmFeatureEnabled(true)
+            kosmos.fakeAuthenticationRepository.setAuthenticationMethod(
+                AuthenticationMethodModel.Sim
+            )
+
+            assertThat(isAutoConfirmEnabled).isFalse()
         }
 
     @Test

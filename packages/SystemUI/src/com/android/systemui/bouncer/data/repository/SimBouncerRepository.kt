@@ -142,7 +142,7 @@ constructor(
             .map { state -> state?.subscriptionId ?: INVALID_SUBSCRIPTION_ID }
             .stateIn(
                 scope = applicationScope,
-                started = SharingStarted.WhileSubscribed(),
+                started = SharingStarted.Eagerly,
                 initialValue = INVALID_SUBSCRIPTION_ID,
             )
 

@@ -404,10 +404,14 @@ constructor(
                                         )
                                 ),
                         )
-                        sceneInteractor.showOverlay(
-                            overlay = Overlays.Bouncer,
-                            loggingReason = "Need to authenticate locked SIM card.",
-                        )
+                        // showOverlay is rejected if the bouncer is already current (for example
+                        // the default PIN pad shown at boot before SIM PIN is reported).
+                        if (Overlays.Bouncer !in sceneInteractor.transitionState.currentOverlays) {
+                            sceneInteractor.showOverlay(
+                                overlay = Overlays.Bouncer,
+                                loggingReason = "Need to authenticate locked SIM card.",
+                            )
+                        }
                     }
                     unlockStatus.isUnlocked &&
                         deviceEntryInteractor.canSwipeToEnter.value == false -> {
