@@ -18,12 +18,15 @@ package com.android.systemui.qs.ui.composable
 
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -35,9 +38,14 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.min
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.android.compose.animation.scene.ContentScope
 import com.android.compose.gesture.gesturesDisabled
@@ -57,6 +65,14 @@ import com.android.systemui.qs.composefragment.POSITION_HEADER
 import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_POSITION
 import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_SPAN
 import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_POSITION
+import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
+import com.android.systemui.lifecycle.rememberViewModel
+import com.android.systemui.qs.panels.ui.compose.toolbar.EditModeButton
+import com.android.systemui.qs.composefragment.MyUiCardSpecs
+import com.android.systemui.qs.composefragment.MyUiGridGap
+import com.android.systemui.qs.composefragment.MyUiTileAspect
+import com.android.systemui.qs.composefragment.MyUiConnectivityCard
+import com.android.systemui.qs.composefragment.MyUiTileGrid
 import com.android.systemui.qs.composefragment.PenguinMediaCard
 import com.android.systemui.qs.panels.ui.compose.FOLDER_SPEC
 import com.android.systemui.qs.panels.ui.compose.MEDIA_SPEC
@@ -90,6 +106,111 @@ fun ContentScope.QuickSettingsContent(
                 DefaultQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
             QsPanelStyle.Penguin ->
                 PenguinQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
+            QsPanelStyle.MyUi ->
+                MyUiQuickSettingsContent(viewModel, modifier, mediaSquishiness)
+        }
+    }
+}
+
+@Composable
+private fun ContentScope.MyUiQuickSettingsContent(
+    viewModel: QuickSettingsContainerViewModel,
+    modifier: Modifier = Modifier,
+    mediaSquishiness: () -> Float = { 1f },
+) {
+    val gap = MyUiGridGap
+    val allTiles = viewModel.tileGridViewModel.tileViewModels
+    val cardSpecs = MyUiCardSpecs(allTiles)
+    val gridTiles = remember(allTiles, cardSpecs) { allTiles.filterNot { it.spec in cardSpecs } }
+    var interactable by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
+            .filterNotNull()
+            .collect { interactable = it >= .5f }
+    }
+
+    Column(
+        verticalArrangement = spacedBy(gap),
+        modifier =
+            modifier
+                .element(Elements.QuickSettingsContent)
+                .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))
+                .sysuiResTag("quick_settings_panel"),
+    ) {
+        MyUiHeaderRow(tiles = allTiles, interactable = interactable)
+        if (viewModel.showMedia && isAlwaysComposedContentVisible()) {
+            QsMedia(viewModel, mediaSquishiness, square = false)
+        }
+        var listening by remember { mutableStateOf(false) }
+        LifecycleStartEffect(Unit) {
+            listening = true
+            onStopOrDispose { listening = false }
+        }
+        Box {
+            GridAnchor()
+            MyUiTileGrid(
+                tiles = gridTiles,
+                columns = 4,
+                gap = gap,
+                modifier = Modifier.element(Elements.QuickSettingsTiles),
+            )
+        }
+        val editButtonViewModel =
+            rememberViewModel(traceName = "MyUiQuickSettings-editButton") {
+                viewModel.editModeButtonViewModelFactory.create()
+            }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            EditModeButton(viewModel = editButtonViewModel, isVisible = interactable)
+        }
+    }
+}
+
+@Composable
+fun ContentScope.MyUiHeaderRow(
+    tiles: List<TileViewModel>,
+    interactable: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val gap = MyUiGridGap
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val column = (maxWidth - gap * 3) / 4
+        val headerHeight = column / MyUiTileAspect * 2 + gap
+        Row(
+            modifier = Modifier.fillMaxWidth().height(headerHeight),
+            horizontalArrangement = spacedBy(gap),
+        ) {
+            Box(Modifier.weight(1f)) {
+                MyUiConnectivityCard(
+                    tiles = tiles,
+                    modifier = Modifier.element(Elements.ConnectivityFolder),
+                )
+            }
+            Element(key = Elements.BrightnessSlider, modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier =
+                        Modifier.fillMaxWidth().thenIf(!interactable) {
+                            Modifier.gesturesDisabled()
+                        },
+                    horizontalArrangement = spacedBy(gap),
+                ) {
+                    Box(Modifier.weight(1f)) {
+                        VolumeLayout(
+                            enable = interactable,
+                            verticalCornerRadius = MyUiSliderCorner,
+                            verticalWidth = null,
+                            sliderHeight = headerHeight,
+                        )
+                    }
+                    Box(Modifier.weight(1f)) {
+                        BrightnessLayout(
+                            enable = interactable,
+                            verticalCornerRadius = MyUiSliderCorner,
+                            verticalWidth = null,
+                            sliderHeight = headerHeight,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -130,6 +251,8 @@ private fun ContentScope.PenguinQuickSettingsContent(
     val headerHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
     val slidersPosition = secureIntSetting(SETTING_QS_SLIDERS_POSITION, POSITION_HEADER)
     val slidersSpan = secureIntSetting(SETTING_QS_SLIDERS_SPAN, 1)
+    val standingSliderHeight =
+        headerHeight * 2 + dimensionResource(id = R.dimen.qs_tile_margin_vertical)
     val slidersInHeader = false
     val folderPosition = secureIntSetting(SETTING_QS_FOLDER_POSITION, POSITION_HEADER)
     val mediaPosition = secureIntSetting(SETTING_QS_MEDIA_POSITION, POSITION_HEADER)
@@ -254,12 +377,19 @@ private fun ContentScope.PenguinQuickSettingsContent(
                             else slidersPosition
                         if (matches(slidersSlot)) {
                             add(
-                                PanelElement(2, slidersOrder) {
-                                    QsSliders(
-                                        sliderHeight = LyingSliderHeight,
-                                        gap = gap,
-                                        horizontal = true,
-                                    )
+                                PanelElement(slidersSpan, slidersOrder) {
+                                    if (slidersSpan < 2) {
+                                        QsStandingSliders(
+                                            sliderHeight = standingSliderHeight,
+                                            gap = gap,
+                                        )
+                                    } else {
+                                        QsSliders(
+                                            sliderHeight = LyingSliderHeight,
+                                            gap = gap,
+                                            horizontal = true,
+                                        )
+                                    }
                                 }
                             )
                         }
@@ -315,46 +445,105 @@ private fun ContentScope.PenguinQuickSettingsContent(
 fun panelElementPreviews(
     viewModel: QuickSettingsContainerViewModel
 ): Map<TileSpec, @Composable () -> Unit> {
-    val previewHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
+    val elementHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
+    val standingHeight =
+        elementHeight * 2 + dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+    val gap = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
+    val folderSpan = secureIntSetting(SETTING_QS_FOLDER_SPAN, 1)
+    val mediaSpan = secureIntSetting(SETTING_QS_MEDIA_SPAN, 1)
+    val slidersStanding = secureIntSetting(SETTING_QS_SLIDERS_SPAN, 1) < 2
     return mapOf(
         FOLDER_SPEC to
-            { ConnectivityFolder(tiles = viewModel.tileGridViewModel.tileViewModels) },
+            {
+                PanelElementPreview(span = folderSpan) {
+                    ConnectivityFolder(
+                        tiles = viewModel.tileGridViewModel.tileViewModels,
+                        interactive = false,
+                        compactHeight = if (folderSpan < 2) elementHeight else null,
+                    )
+                }
+            },
         MEDIA_SPEC to
             {
-                PenguinMediaCard(
-                    viewModelFactory = viewModel.mediaViewModelFactory,
-                    behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
-                    square = false,
-                    modifier = Modifier.height(previewHeight),
-                )
+                PanelElementPreview(span = mediaSpan) {
+                    PenguinMediaCard(
+                        viewModelFactory = viewModel.mediaViewModelFactory,
+                        behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                        square = mediaSpan < 2,
+                        interactive = false,
+                    )
+                }
             },
         SLIDERS_SPEC to
             {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = spacedBy(8.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(Modifier.weight(1f)) {
-                        BrightnessLayout(
-                            enable = false,
-                            horizontal = true,
-                            sliderHeight = LyingSliderHeight,
-                        )
-                    }
-                    Box(Modifier.weight(1f)) {
-                        VolumeLayout(
-                            enable = false,
-                            horizontal = true,
-                            sliderHeight = LyingSliderHeight,
-                        )
+                PanelElementPreview(span = if (slidersStanding) 1 else 2) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = spacedBy(gap),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(Modifier.weight(1f)) {
+                            VolumeLayout(
+                                enable = false,
+                                horizontal = !slidersStanding,
+                                verticalCornerRadius = MyUiSliderCorner,
+                                verticalWidth = null,
+                                sliderHeight =
+                                    if (slidersStanding) standingHeight else LyingSliderHeight,
+                            )
+                        }
+                        Box(Modifier.weight(1f)) {
+                            BrightnessLayout(
+                                enable = false,
+                                horizontal = !slidersStanding,
+                                verticalCornerRadius = MyUiSliderCorner,
+                                verticalWidth = null,
+                                sliderHeight =
+                                    if (slidersStanding) standingHeight else LyingSliderHeight,
+                            )
+                        }
                     }
                 }
             },
     )
 }
 
+@Composable
+private fun PanelElementPreview(span: Int, content: @Composable () -> Unit) {
+    val margin = dimensionResource(id = R.dimen.qs_horizontal_margin)
+    val gap = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
+    val panelWidth = LocalConfiguration.current.screenWidthDp.dp - margin * 2
+    val width = if (span >= 2) panelWidth else (panelWidth - gap) / 2
+    Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
+        Box(
+            modifier =
+                Modifier.layout { measurable, constraints ->
+                    val target = width.roundToPx()
+                    val placeable =
+                        measurable.measure(Constraints(minWidth = target, maxWidth = target))
+                    val scale =
+                        min(
+                            constraints.maxWidth.toFloat() / placeable.width.coerceAtLeast(1),
+                            constraints.maxHeight.toFloat() / placeable.height.coerceAtLeast(1),
+                        )
+                    layout(constraints.maxWidth, constraints.maxHeight) {
+                        placeable.placeWithLayer(
+                            x = (constraints.maxWidth - placeable.width) / 2,
+                            y = (constraints.maxHeight - placeable.height) / 2,
+                        ) {
+                            scaleX = scale
+                            scaleY = scale
+                        }
+                    }
+                }
+        ) {
+            content()
+        }
+    }
+}
+
 private val CompactSliderHeight = 96.dp
+internal val MyUiSliderCorner = 22.dp
 private val LyingSliderHeight = 56.dp
 private val PenguinMediaHeight = 132.dp
 
@@ -421,6 +610,40 @@ private fun ContentScope.QsSliders(sliderHeight: Dp, gap: Dp, horizontal: Boolea
                 VolumeLayout(
                     enable = interactable,
                     horizontal = true,
+                    sliderHeight = sliderHeight,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContentScope.QsStandingSliders(sliderHeight: Dp, gap: Dp) {
+    var interactable by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
+            .filterNotNull()
+            .collect { interactable = it >= .5f }
+    }
+    Element(modifier = Modifier, key = Elements.BrightnessSlider) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth().thenIf(!interactable) { Modifier.gesturesDisabled() },
+            horizontalArrangement = spacedBy(gap),
+        ) {
+            Box(Modifier.weight(1f)) {
+                VolumeLayout(
+                    enable = interactable,
+                    verticalCornerRadius = MyUiSliderCorner,
+                    verticalWidth = null,
+                    sliderHeight = sliderHeight,
+                )
+            }
+            Box(Modifier.weight(1f)) {
+                BrightnessLayout(
+                    enable = interactable,
+                    verticalCornerRadius = MyUiSliderCorner,
+                    verticalWidth = null,
                     sliderHeight = sliderHeight,
                 )
             }

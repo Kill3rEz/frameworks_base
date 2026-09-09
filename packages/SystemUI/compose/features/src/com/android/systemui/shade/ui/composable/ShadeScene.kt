@@ -18,12 +18,14 @@ package com.android.systemui.shade.ui.composable
 
 import com.android.systemui.qs.composefragment.BrightnessLayout
 import com.android.systemui.qs.composefragment.ConnectivityFolder
+import com.android.systemui.qs.composefragment.MyUiGridGap
 import com.android.systemui.qs.composefragment.connectivityFolderEnabled
 import com.android.systemui.qs.composefragment.POSITION_HEADER
 import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_POSITION
 import com.android.systemui.qs.composefragment.POSITION_ABOVE_GRID
 import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_SPAN
 import com.android.systemui.qs.composefragment.SETTING_QS_SLIDERS_POSITION
+import com.android.systemui.qs.composefragment.SETTING_QS_SLIDERS_SPAN
 import com.android.systemui.qs.composefragment.secureIntSetting
 import com.android.systemui.qs.composefragment.VolumeLayout
 import com.android.systemui.qs.panels.ui.compose.TileGrid
@@ -113,6 +115,8 @@ import com.android.systemui.qs.composefragment.ui.GridAnchor
 import com.android.systemui.qs.footer.ui.compose.FooterActionsWithAnimatedVisibility
 import com.android.systemui.qs.panels.ui.compose.EditMode
 import com.android.systemui.qs.panels.ui.compose.QuickQuickSettings
+import com.android.systemui.qs.ui.composable.MyUiHeaderRow
+import com.android.systemui.qs.ui.composable.MyUiSliderCorner
 import com.android.systemui.qs.shared.style.LocalQsPanelStyle
 import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.ui.QuickSettings
@@ -383,6 +387,7 @@ private fun ContentScope.SingleShade(
             },
             mediaAndQqsHeader = {
                 val isDefaultStyle = viewModel.panelStyle == QsPanelStyle.Default
+                val isMyUiStyle = viewModel.panelStyle == QsPanelStyle.MyUi
                 val qqsShowsMedia =
                     !isDefaultStyle &&
                         viewModel.isQsEnabled &&
@@ -534,6 +539,14 @@ private fun ContentScope.SingleShade(
                     },
                     mediaInRow = mediaInRow,
                     isDefaultStyle = isDefaultStyle,
+                    isMyUiStyle = isMyUiStyle,
+                    myUiHeader = {
+                        MyUiHeaderRow(
+                            tiles =
+                                viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels,
+                            interactable = true,
+                        )
+                    },
                     showMedia = qqsShowsMedia,
                 )
                 }
@@ -590,11 +603,23 @@ private fun ContentScope.MediaAndQqsLayout(
     media: @Composable () -> Unit,
     mediaInRow: Boolean,
     isDefaultStyle: Boolean,
+    isMyUiStyle: Boolean,
+    myUiHeader: @Composable () -> Unit,
     showMedia: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val modifierAnimated =
         modifier.animateContentSizeNoClip(MaterialTheme.motionScheme.defaultSpatialSpec())
+    if (isMyUiStyle) {
+        Column(
+            modifier = modifierAnimated.fillMaxWidth(),
+            verticalArrangement = spacedBy(MyUiGridGap),
+        ) {
+            myUiHeader()
+            if (showMedia) media()
+        }
+        return
+    }
     if (isDefaultStyle) {
         if (mediaInRow) {
             Row(
@@ -629,25 +654,35 @@ private fun ContentScope.MediaAndQqsLayout(
         }
         val slidersAtTop =
             secureIntSetting(SETTING_QS_SLIDERS_POSITION, POSITION_HEADER) <= POSITION_ABOVE_GRID
+        val slidersStanding = secureIntSetting(SETTING_QS_SLIDERS_SPAN, 1) < 2
+        val standingHeight =
+            dimensionResource(R.dimen.common_tile_default_tile_height) * 2 +
+                dimensionResource(R.dimen.qs_tile_margin_vertical)
+        val gap = dimensionResource(R.dimen.qs_tile_margin_horizontal)
         if (slidersAtTop) Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement =
-                    spacedBy(dimensionResource(R.dimen.qs_tile_margin_horizontal)),
+                horizontalArrangement = spacedBy(gap),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(Modifier.weight(1f)) {
-                    BrightnessLayout(
+                    VolumeLayout(
                         enable = true,
-                        horizontal = true,
-                        sliderHeight = QqsLyingSliderHeight,
+                        horizontal = !slidersStanding,
+                        verticalCornerRadius = MyUiSliderCorner,
+                        verticalWidth = null,
+                        sliderHeight =
+                            if (slidersStanding) standingHeight else QqsLyingSliderHeight,
                     )
                 }
                 Box(Modifier.weight(1f)) {
-                    VolumeLayout(
+                    BrightnessLayout(
                         enable = true,
-                        horizontal = true,
-                        sliderHeight = QqsLyingSliderHeight,
+                        horizontal = !slidersStanding,
+                        verticalCornerRadius = MyUiSliderCorner,
+                        verticalWidth = null,
+                        sliderHeight =
+                            if (slidersStanding) standingHeight else QqsLyingSliderHeight,
                     )
                 }
             }

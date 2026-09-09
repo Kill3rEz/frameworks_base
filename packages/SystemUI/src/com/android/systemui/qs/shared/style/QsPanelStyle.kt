@@ -19,7 +19,9 @@ package com.android.systemui.qs.shared.style
 enum class QsPanelStyle(val value: Int) {
     Default(0),
 
-    Penguin(1);
+    Penguin(1),
+
+    MyUi(2);
 
     companion object {
         const val SETTING_NAME = "qs_panel_style"

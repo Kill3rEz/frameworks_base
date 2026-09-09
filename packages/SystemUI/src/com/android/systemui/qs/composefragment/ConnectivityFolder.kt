@@ -42,6 +42,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -159,13 +161,40 @@ private const val GlassSurfaceAlpha = 0.45f
 private val CardPadding = 10.dp
 private val CellSpacing = 6.dp
 
+private val LocalFolderInteractive = compositionLocalOf { true }
+
+@Composable
+private fun Modifier.folderClickable(
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = onClick,
+): Modifier =
+    if (LocalFolderInteractive.current) {
+        combinedClickable(onClick = onClick, onLongClick = onLongClick)
+    } else {
+        this
+    }
+
 @Composable
 fun ConnectivityFolder(
     tiles: List<TileViewModel>,
     modifier: Modifier = Modifier,
+    interactive: Boolean = true,
     compactHeight: Dp? = null,
     expanded: Boolean = false,
     onExpandedChange: (Boolean) -> Unit = {},
+) {
+    CompositionLocalProvider(LocalFolderInteractive provides interactive) {
+        ConnectivityFolderContent(tiles, modifier, compactHeight, expanded, onExpandedChange)
+    }
+}
+
+@Composable
+private fun ConnectivityFolderContent(
+    tiles: List<TileViewModel>,
+    modifier: Modifier,
+    compactHeight: Dp?,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
 ) {
     val bySpec = remember(tiles) { tiles.associateBy { it.spec.spec } }
     val (largeSpecs, smallSpecs) = folderSpecs()
@@ -267,7 +296,9 @@ private fun ExpandedSheet(
                 text = stringResource(R.string.quick_settings_done),
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onDone),
+                modifier =
+                    Modifier.clip(RoundedCornerShape(12.dp))
+                        .folderClickable(onClick = onDone),
             )
         }
         rows.take(1).forEach { FolderRow(it) }
@@ -291,7 +322,7 @@ private fun FolderBigCard(tile: TileViewModel) {
                 .height(BigCardHeight)
                 .clip(RoundedCornerShape(26.dp))
                 .background(glassSurface())
-                .combinedClickable(
+                .folderClickable(
                     onClick = { tile.primaryAction(uiState) },
                     onLongClick = { tile.settingsClick(null) },
                 )
@@ -344,7 +375,7 @@ private fun FolderCircle(tile: TileViewModel, diameter: Dp) {
             Modifier.size(diameter)
                 .clip(CircleShape)
                 .background(folderBackground(active))
-                .combinedClickable(
+                .folderClickable(
                     onClick = { tile.primaryAction(uiState) },
                     onLongClick = { tile.settingsClick(null) },
                 ),
@@ -359,7 +390,7 @@ private fun SmallCluster(tiles: List<TileViewModel>, dot: Dp, onClick: () -> Uni
     Box(
         modifier =
             Modifier.clip(RoundedCornerShape(20.dp))
-                .combinedClickable(onClick = onClick, onLongClick = onClick)
+                .folderClickable(onClick = onClick)
                 .padding(4.dp)
     ) {
         Column(
@@ -399,7 +430,7 @@ private fun FolderRow(tile: TileViewModel) {
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(26.dp))
                 .background(glassSurface())
-                .combinedClickable(
+                .folderClickable(
                     onClick = { tile.primaryAction(uiState) },
                     onLongClick = { tile.settingsClick(null) },
                 )
@@ -450,7 +481,7 @@ private fun folderForeground(active: Boolean): Color =
     if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
 
 @Composable
-private fun rememberTileState(tile: TileViewModel): Pair<TileUiState, Icon> {
+internal fun rememberTileState(tile: TileViewModel): Pair<TileUiState, Icon> {
     val context = LocalContext.current
     val resources = context.resources
     val state by
@@ -464,7 +495,7 @@ private fun rememberTileState(tile: TileViewModel): Pair<TileUiState, Icon> {
     return state.first to context.folderIcon(state.second)
 }
 
-private fun Context.folderIcon(icon: IconProvider): Icon {
+internal fun Context.folderIcon(icon: IconProvider): Icon {
     return icon.icon?.let {
         if (it is QSTileImpl.ResourceIcon) {
             Icon.Resource(it.resId, null)
@@ -501,6 +532,6 @@ fun connectivityFolderEnabled(): Boolean {
     return enabled
 }
 
-private fun TileViewModel.primaryAction(uiState: TileUiState) {
+internal fun TileViewModel.primaryAction(uiState: TileUiState) {
     if (uiState.handlesToggleClick) toggleClick() else mainClick(null)
 }

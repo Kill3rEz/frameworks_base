@@ -1561,6 +1561,8 @@ fun ContentScope.AnimatedSliders(vm: QSFragmentComposeViewModel, enable: Boolean
 fun VolumeLayout(
     enable: Boolean,
     horizontal: Boolean = false,
+    verticalCornerRadius: Dp? = null,
+    verticalWidth: Dp? = 75.dp,
     vm: QSFragmentComposeViewModel? = null,
     sliderHeight: Dp,
 ) {
@@ -1646,6 +1648,8 @@ fun VolumeLayout(
                     icon = icon,
                     modifier = Modifier,
                     housingHeight = sliderHeight,
+                    cornerRadius = verticalCornerRadius,
+                    housingWidth = verticalWidth,
                 )
             }
         }
@@ -1657,6 +1661,8 @@ fun VolumeLayout(
 fun BrightnessLayout(
     enable: Boolean,
     horizontal: Boolean = false,
+    verticalCornerRadius: Dp? = null,
+    verticalWidth: Dp? = 75.dp,
     vm: QSFragmentComposeViewModel? = null,
     sliderHeight: Dp,
 ) {
@@ -1792,6 +1798,8 @@ fun BrightnessLayout(
                     icon = icon,
                     modifier = Modifier,
                     housingHeight = sliderHeight,
+                    cornerRadius = verticalCornerRadius,
+                    housingWidth = verticalWidth,
                 )
             }
         }
@@ -1808,8 +1816,9 @@ fun VerticalSlider(
     icon: Painter,
     modifier: Modifier = Modifier,
     housingHeight: Dp,
+    cornerRadius: Dp? = null,
+    housingWidth: Dp? = 75.dp,
 ) {
-    val housingWidth = 75.dp
     val iconSize = 24.dp
     val iconBottomPadding = 16.dp
 
@@ -1824,9 +1833,11 @@ fun VerticalSlider(
 
     Box(
         modifier = modifier
-            .width(housingWidth)
+            .then(housingWidth?.let { Modifier.width(it) } ?: Modifier.fillMaxWidth())
             .height(housingHeight)
-            .clip(RoundedCornerShape(percent = 50))
+            .clip(
+                cornerRadius?.let { RoundedCornerShape(it) } ?: RoundedCornerShape(percent = 50)
+            )
             .background(
                 LocalAndroidColorScheme.current.surfaceEffect1.copy(
                     alpha = if (isStockQsStyle) 1f else 0.45f
@@ -1836,7 +1847,9 @@ fun VerticalSlider(
         contentAlignment = Alignment.BottomCenter
     ) {
         val fillHeight = housingHeight * value
-        val fillCapRadius = (housingWidth / 2).coerceAtMost(fillHeight / 2)
+        val fillCapRadius =
+            if (cornerRadius != null) 0.dp
+            else ((housingWidth ?: 0.dp) / 2).coerceAtMost(fillHeight / 2)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
