@@ -84,6 +84,12 @@ class SquigglyProgress : Drawable() {
             invalidateSelf()
         }
 
+    var drawRemainingLine: Boolean = true
+        set(value) {
+            field = value
+            invalidateSelf()
+        }
+
     init {
         wavePaint.strokeCap = Paint.Cap.ROUND
         linePaint.strokeCap = Paint.Cap.ROUND
@@ -199,7 +205,7 @@ class SquigglyProgress : Drawable() {
         canvas.drawPath(path, wavePaint)
         canvas.restore()
 
-        if (transitionEnabled) {
+        if (drawRemainingLine && transitionEnabled) {
             // If there's a smooth transition, we draw the rest of the
             // path in a different color (using different clip params)
             canvas.save()
