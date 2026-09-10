@@ -104,7 +104,6 @@ import com.android.systemui.media.controls.ui.viewmodel.SeekBarViewModel;
 import com.android.systemui.media.controls.util.MediaDataUtils;
 import com.android.systemui.media.controls.util.MediaUiEventLogger;
 import com.android.systemui.media.dialog.MediaOutputDialogManager;
-import com.android.systemui.media.MediaSessionManager;
 import com.android.systemui.monet.ColorScheme;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.FalsingManager;
@@ -924,9 +923,6 @@ public class MediaControlPanel {
                     return;
                 }
                 mArtworkBoundId = reqId;
-
-                MediaSessionManager.Companion.get().onAlbumArtChanged(albumArt);
-                MediaSessionManager.Companion.get().onMediaColorsChanged(colorScheme.getAccent1().getS100());
 
                 // Transition Colors to current color scheme
                 boolean colorSchemeChanged;

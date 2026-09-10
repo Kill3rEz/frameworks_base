@@ -1,19 +1,8 @@
 /*
- * Copyright (C) 2025 The AxionAOSP Project
- *           (C) 2024-2026 Lunaris AOSP
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-FileCopyrightText: 2026 kenway214
+ * SPDX-License-Identifier: Apache-2.0
  */
+
 package com.android.systemui.pulse
 
 import android.animation.Animator
@@ -33,11 +22,10 @@ class PulseView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     private var renderer: PulseRenderer? = null
-    private var engine: PulseEngine? = null
     private var isAttached = false
     private var isVisible = false
     private var settingsRepo: PulseSettingsRepository? = null
-    
+
     private var fadeAnimator: ValueAnimator? = null
     private val fadeInterpolator = DecelerateInterpolator()
 
@@ -46,18 +34,15 @@ class PulseView @JvmOverloads constructor(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
         )
-        // Start with alpha 0 for smooth fade in
-        alpha = 0f
+        alpha = 1f
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        isClickable = false
+        isFocusable = false
     }
 
     fun initialize(settingsRepo: PulseSettingsRepository) {
         this.settingsRepo = settingsRepo
-
         renderer = PulseRenderer(context, settingsRepo)
-        engine = PulseEngine(context, settingsRepo) { processedHeights ->
-            renderer?.updateHeights(processedHeights)
-            postInvalidate()
-        }
     }
 
     override fun onAttachedToWindow() {
@@ -70,7 +55,6 @@ class PulseView @JvmOverloads constructor(
         isAttached = false
         fadeAnimator?.cancel()
         fadeAnimator = null
-        engine?.stop()
         renderer?.cleanup()
     }
 
@@ -82,9 +66,10 @@ class PulseView @JvmOverloads constructor(
         }
     }
 
-    fun updateVisualizerData(data: PulseData) {
-        if (isAttached && isVisible && data.isDataValid) {
-            engine?.processFFT(data.fftBytes!!)
+    fun updateHeights(heights: FloatArray) {
+        if (isAttached && isVisible) {
+            renderer?.updateHeights(heights)
+            postInvalidateOnAnimation()
         }
     }
 
@@ -95,6 +80,10 @@ class PulseView @JvmOverloads constructor(
     fun setVisibility(visible: Boolean) {
         isVisible = visible
         visibility = if (visible) VISIBLE else GONE
+        if (visible) {
+            alpha = 1f
+            postInvalidateOnAnimation()
+        }
     }
 
     fun fadeIn(durationMs: Long) {
@@ -112,7 +101,7 @@ class PulseView @JvmOverloads constructor(
                     alpha = 1f
                     fadeAnimator = null
                 }
-                
+
                 override fun onAnimationCancel(animation: Animator) {
                     fadeAnimator = null
                 }
@@ -123,7 +112,7 @@ class PulseView @JvmOverloads constructor(
 
     fun fadeOut(durationMs: Long, onComplete: (() -> Unit)? = null) {
         fadeAnimator?.cancel()
-        
+
         fadeAnimator = ValueAnimator.ofFloat(alpha, 0f).apply {
             duration = durationMs
             interpolator = fadeInterpolator
@@ -138,7 +127,7 @@ class PulseView @JvmOverloads constructor(
                     fadeAnimator = null
                     onComplete?.invoke()
                 }
-                
+
                 override fun onAnimationCancel(animation: Animator) {
                     setVisibility(false)
                     fadeAnimator = null

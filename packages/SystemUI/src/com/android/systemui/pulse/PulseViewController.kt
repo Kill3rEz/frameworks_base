@@ -1,19 +1,8 @@
 /*
- * Copyright (C) 2025 The AxionAOSP Project
- *           (C) 2024-2026 Lunaris AOSP
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-FileCopyrightText: 2026 kenway214
+ * SPDX-License-Identifier: Apache-2.0
  */
+
 package com.android.systemui.pulse
 
 import android.content.Context
@@ -23,16 +12,14 @@ import com.android.systemui.media.MediaSessionManager
 import com.android.systemui.util.ScrimUtils
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @SysUISingleton
 class PulseViewController @Inject constructor(
-    private val context: Context
-) : PulseAudioDataProcessor.DataListener,
-    MediaSessionManager.MediaDataListener,
+    private val context: Context,
+    private val mediaSessionManager: MediaSessionManager,
+) : MediaSessionManager.MediaDataListener,
     ScrimUtils.ScrimEventListener {
 
     private val mainScope = MainScope()
@@ -42,7 +29,7 @@ class PulseViewController @Inject constructor(
     private var bouncerShowingOrKeyguardDismissing = false
     private var keyguardShowing = false
     private var isDozing = false
-    private var isPulsing = false
+    private var isScreenOff = false
 
     private val settingsRepository: PulseSettingsRepository =
         PulseSettingsRepository(context)
@@ -50,13 +37,20 @@ class PulseViewController @Inject constructor(
     private val view: PulseView =
         PulseView(context)
 
-    private val audioProcessor: PulseAudioDataProcessor =
-        PulseAudioDataProcessor(context).apply {
-            setDataListener(this@PulseViewController)
+    private val audioProcessor: PulseAudioProcessor =
+        PulseAudioProcessor(context, settingsRepository).apply {
+            setDataListener { heights ->
+                if (pulseRunning) {
+                    view.updateHeights(heights)
+                }
+            }
         }
 
     val pulseEnabled: Boolean
         get() = settingsRepository.isPulseEnabled()
+
+    val ambientEnabled: Boolean
+        get() = settingsRepository.isPulseShowOnAmbient()
 
     private val isCollapsed: Boolean
         get() = ScrimUtils.get().isPanelFullyCollapsed()
@@ -65,16 +59,8 @@ class PulseViewController @Inject constructor(
         set(value) {
             if (value == field) return
             field = value
-            updatePulseDisplay(value)
+            updatePulse(value)
         }
-
-    private var showDelayJob: Job? = null
-    private var hideDelayJob: Job? = null
-    
-    private val PULSE_SHOW_DELAY_MS = 300L
-    private val PULSE_HIDE_DELAY_MS = 100L
-    private val PULSE_FADE_IN_DURATION_MS = 200L
-    private val PULSE_FADE_OUT_DURATION_MS = 150L
 
     init {
         INSTANCE = this
@@ -89,60 +75,26 @@ class PulseViewController @Inject constructor(
 
     private fun updateState() {
         if (!pulseEnabled) {
-            showDelayJob?.cancel()
-            hideDelayJob?.cancel()
             pulseRunning = false
             return
         }
-        
-        val shouldShow = isMediaPlaying 
+        pulseRunning = isMediaPlaying
                 && !bouncerShowingOrKeyguardDismissing
                 && isCollapsed
-                && ((keyguardShowing && !isDozing && !isPulsing)
-                || ((isDozing || isPulsing) && settingsRepository.isPulseShowOnAmbient()))
-        
-        showDelayJob?.cancel()
-        hideDelayJob?.cancel()
-        
-        if (shouldShow && !pulseRunning) {
-            showDelayJob = mainScope.launch {
-                delay(PULSE_SHOW_DELAY_MS)
-                if (isMediaPlaying 
-                    && !bouncerShowingOrKeyguardDismissing
-                    && isCollapsed
-                    && ((keyguardShowing && !isDozing && !isPulsing)
-                    || ((isDozing || isPulsing) && settingsRepository.isPulseShowOnAmbient()))) {
-                    pulseRunning = true
-                }
-            }
-        } else if (!shouldShow && pulseRunning) {
-            hideDelayJob = mainScope.launch {
-                delay(PULSE_HIDE_DELAY_MS)
-                if (!(isMediaPlaying 
-                    && !bouncerShowingOrKeyguardDismissing
-                    && isCollapsed
-                    && ((keyguardShowing && !isDozing && !isPulsing)
-                    || ((isDozing || isPulsing) && settingsRepository.isPulseShowOnAmbient())))) {
-                    pulseRunning = false
-                }
-            }
-        }
+                && ((keyguardShowing && !isDozing && !isScreenOff)
+                || (isDozing && ambientEnabled))
     }
 
     private fun onSettingsChanged() {
         val enabled = pulseEnabled
         if (enabled && !listenersRegistered) {
             ScrimUtils.get().addListener(this)
-            MediaSessionManager.get().addListener(this)
+            mediaSessionManager.addListener(this)
             listenersRegistered = true
-            keyguardShowing = ScrimUtils.get().isKeyguardShowing()
-            isDozing = ScrimUtils.get().isDozing()
         } else if (!enabled && listenersRegistered) {
             ScrimUtils.get().removeListener(this)
-            MediaSessionManager.get().removeListener(this)
+            mediaSessionManager.removeListener(this)
             listenersRegistered = false
-            showDelayJob?.cancel()
-            hideDelayJob?.cancel()
             pulseRunning = false
             mainScope.launch {
                 view.setVisibility(false)
@@ -150,25 +102,16 @@ class PulseViewController @Inject constructor(
             }
         }
         updateState()
+        updatePulse(pulseRunning)
     }
 
-    private fun updatePulseDisplay(show: Boolean) {
+    private fun updatePulse(show: Boolean) {
         mainScope.launch {
-            if (show) {
+            view.setVisibility(show)
+            if (pulseEnabled && show) {
                 audioProcessor.startCapture()
-                view.fadeIn(PULSE_FADE_IN_DURATION_MS)
             } else {
-                view.fadeOut(PULSE_FADE_OUT_DURATION_MS) {
-                    audioProcessor.stopCapture()
-                }
-            }
-        }
-    }
-
-    override fun onDataUpdate(data: PulseData) {
-        if (pulseRunning) {
-            mainScope.launch { 
-                view.updateVisualizerData(data) 
+                audioProcessor.stopCapture()
             }
         }
     }
@@ -189,11 +132,9 @@ class PulseViewController @Inject constructor(
 
     override fun onDozingChanged(dozing: Boolean) {
         isDozing = dozing
-        updateState()
-    }
-
-    override fun setPulsing(pulsing: Boolean) {
-        isPulsing = pulsing
+        if (dozing) {
+            isScreenOff = false
+        }
         updateState()
     }
 
@@ -211,24 +152,12 @@ class PulseViewController @Inject constructor(
 
     override fun onKeyguardFadingAwayChanged(fadingAway: Boolean) {
         bouncerShowingOrKeyguardDismissing = fadingAway
-        if (fadingAway) {
-            showDelayJob?.cancel()
-            hideDelayJob?.cancel()
-            pulseRunning = false
-        } else {
-            updateState()
-        }
+        updateState()
     }
 
     override fun onKeyguardGoingAwayChanged(goingAway: Boolean) {
         bouncerShowingOrKeyguardDismissing = goingAway
-        if (goingAway) {
-            showDelayJob?.cancel()
-            hideDelayJob?.cancel()
-            pulseRunning = false
-        } else {
-            updateState()
-        }
+        updateState()
     }
 
     override fun onPrimaryBouncerShowingChanged(showing: Boolean) {
@@ -237,12 +166,13 @@ class PulseViewController @Inject constructor(
     }
 
     override fun onScreenTurnedOff() {
-        showDelayJob?.cancel()
-        hideDelayJob?.cancel()
         pulseRunning = false
+        isScreenOff = true
+        updateState()
     }
 
     override fun onStartedWakingUp() {
+        isScreenOff = false
         updateState()
     }
 
@@ -252,17 +182,18 @@ class PulseViewController @Inject constructor(
     }
 
     fun destroy() {
-        showDelayJob?.cancel()
-        hideDelayJob?.cancel()
         pulseRunning = false
         settingsRepository.stopObserving()
         if (listenersRegistered) {
             ScrimUtils.get().removeListener(this)
-            MediaSessionManager.get().removeListener(this)
+            mediaSessionManager.removeListener(this)
             listenersRegistered = false
         }
         audioProcessor.cleanup()
         mainScope.cancel()
+        if (INSTANCE === this) {
+            INSTANCE = null
+        }
     }
 
     companion object {

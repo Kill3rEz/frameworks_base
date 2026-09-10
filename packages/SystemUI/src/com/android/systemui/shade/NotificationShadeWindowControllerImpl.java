@@ -80,6 +80,7 @@ import com.android.systemui.statusbar.policy.ConfigurationController.Configurati
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.topui.TopUiController;
 import com.android.systemui.user.domain.interactor.SelectedUserInteractor;
+import com.android.systemui.util.ScrimUtils;
 import com.android.systemui.util.kotlin.JavaAdapter;
 import com.android.systemui.Flags;
 
@@ -271,6 +272,7 @@ public class NotificationShadeWindowControllerImpl
         if (mCurrentState.shadeOrQsExpanded != isExpanded) {
             mCurrentState.shadeOrQsExpanded = isExpanded;
             apply(mCurrentState);
+            ScrimUtils.get().setExpandedFraction(isExpanded ? 1f : 0f);
 
             final IBinder token = mWindowRootView.getWindowToken();
             if (token != null) {
@@ -839,6 +841,9 @@ public class NotificationShadeWindowControllerImpl
     public void setBouncerShowing(boolean showing) {
         mCurrentState.bouncerShowing = showing;
         apply(mCurrentState);
+        if (SceneContainerFlag.isEnabled()) {
+            ScrimUtils.get().onPrimaryBouncerShowingChanged(showing);
+        }
     }
 
     @Override
@@ -875,6 +880,7 @@ public class NotificationShadeWindowControllerImpl
     private void onQsExpansionChanged(Boolean expanded) {
         mCurrentState.qsExpanded = expanded;
         apply(mCurrentState);
+        ScrimUtils.get().setQsVisible(expanded);
     }
 
     @VisibleForTesting

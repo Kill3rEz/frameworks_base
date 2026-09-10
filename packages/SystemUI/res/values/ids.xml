@@ -313,6 +313,7 @@
 
     <!-- Custom overlay on lockscreen/doze -->
     <item type="id" name="custom_overlay_container" />
+    <item type="id" name="custom_overlay_foreground" />
     
     <!-- Clock face -->
     <item type="id" name="original_text_color" />

@@ -15,104 +15,171 @@
  */
 package com.android.systemui.media
 
-import android.content.res.Resources
-import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
+import android.content.Context
 import android.graphics.drawable.Drawable
-import android.media.MediaMetadata
 import android.media.session.PlaybackState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.graphics.toArgb
+import com.android.app.tracing.coroutines.launchTraced as launch
+import com.android.systemui.CoreStartable
+import com.android.systemui.common.shared.model.Icon
+import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.Application
+import com.android.systemui.media.remedia.domain.interactor.MediaInteractor
+import com.android.systemui.media.remedia.domain.model.MediaSessionModel
+import com.android.systemui.media.remedia.shared.model.MediaSessionState
 import com.android.systemui.util.WeakListenerManager
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
 
-class MediaSessionManager private constructor() {
+@SysUISingleton
+class MediaSessionManager
+@Inject
+constructor(
+    @Application private val context: Context,
+    @Application private val applicationScope: CoroutineScope,
+    private val mediaInteractor: MediaInteractor,
+) : CoreStartable {
 
     interface MediaDataListener {
         fun onPlaybackStateChanged(state: Int) {}
-        fun onAlbumArtChanged(drawable: Drawable) {}
+        fun onAlbumArtChanged(drawable: Drawable?) {}
+        fun onAppIconChanged(drawable: Drawable?) {}
         fun onMediaColorsChanged(color: Int) {}
         fun onMetadataChanged(track: String, artist: String) {}
     }
 
     private val listenerManager = WeakListenerManager<MediaDataListener>()
-
-    @Volatile
-    private var currentPlaybackState: Int = PlaybackState.STATE_NONE
-
-    @Volatile
-    private var currentAlbumArt: Drawable? = null
-
-    @Volatile
-    private var currentMediaColor: Int? = null
-
-    @Volatile
-    var trackTitle: String = "Unknown"
-
-    @Volatile
-    var artist: String = "Unknown"
+    @Volatile private var currentSession = ResolvedMediaSession()
 
     val isMediaPlaying: Boolean
-        get() = currentPlaybackState == PlaybackState.STATE_PLAYING
+        get() = currentSession.playbackState == PlaybackState.STATE_PLAYING
+
+    private var isStarted = false
+
+    init {
+        INSTANCE = this
+        start()
+    }
+
+    override fun start() {
+        if (isStarted) return
+        isStarted = true
+        applicationScope.launch {
+            snapshotFlow { mediaInteractor.currentSessionSnapshot() }.collect(::updateSession)
+        }
+    }
 
     fun addListener(listener: MediaDataListener) {
         listenerManager.addListener(listener)
 
         listenerManager.notifyOnBackground {
             if (it === listener) {
-                it.onPlaybackStateChanged(currentPlaybackState)
-                it.onMetadataChanged(trackTitle, artist)
-                currentAlbumArt?.let { art -> it.onAlbumArtChanged(art) }
-                currentMediaColor?.let { color -> it.onMediaColorsChanged(color) }
+                val session = currentSession
+                it.onPlaybackStateChanged(session.playbackState)
+                it.onMetadataChanged(session.title, session.artist)
+                it.onAlbumArtChanged(session.albumArt)
+                it.onAppIconChanged(session.appIcon)
+                session.mediaColor?.let { color -> it.onMediaColorsChanged(color) }
             }
         }
     }
 
     fun removeListener(listener: MediaDataListener) = listenerManager.removeListener(listener)
 
-    fun onPlaybackStateChanged(state: Int) {
-        if (currentPlaybackState != state) {
-            currentPlaybackState = state
-            listenerManager.notifyOnBackground { it.onPlaybackStateChanged(state) }
+    private fun updateSession(session: MediaSessionSnapshot?) {
+        val previous = currentSession
+        val updated = session?.resolve() ?: ResolvedMediaSession()
+        if (previous == updated) return
+        currentSession = updated
+
+        if (previous.playbackState != updated.playbackState) {
+            listenerManager.notifyOnBackground {
+                it.onPlaybackStateChanged(updated.playbackState)
+            }
+        }
+        if (previous.title != updated.title || previous.artist != updated.artist) {
+            listenerManager.notifyOnBackground { it.onMetadataChanged(updated.title, updated.artist) }
+        }
+        if (previous.albumArt !== updated.albumArt) {
+            listenerManager.notifyOnBackground { it.onAlbumArtChanged(updated.albumArt) }
+        }
+        if (previous.appIcon !== updated.appIcon) {
+            listenerManager.notifyOnBackground { it.onAppIconChanged(updated.appIcon) }
+        }
+        if (previous.mediaColor != updated.mediaColor && updated.mediaColor != null) {
+            listenerManager.notifyOnBackground { it.onMediaColorsChanged(updated.mediaColor) }
         }
     }
 
-    fun onAlbumArtChanged(drawable: Drawable) {
-        currentAlbumArt = drawable
-        listenerManager.notifyOnBackground { it.onAlbumArtChanged(drawable) }
+    private fun MediaInteractor.currentSessionSnapshot(): MediaSessionSnapshot? {
+        val currentSessions = sessions
+        val currentSession = currentSessions.getOrNull(currentCarouselIndex)
+        val session =
+            currentSession?.takeIf { it.isDisplayable() }
+                ?: currentSessions.firstOrNull { it.isDisplayable() }
+                ?: return null
+        return MediaSessionSnapshot(
+            playbackState = session.state.toPlaybackState(),
+            albumArt = session.background,
+            appIcon = session.appIcon,
+            mediaColor = session.colorScheme?.primary?.toArgb(),
+            title = session.title,
+            artist = session.subtitle,
+        )
     }
 
-    fun onMediaColorsChanged(color: Int) {
-        currentMediaColor = color
-        listenerManager.notifyOnBackground { it.onMediaColorsChanged(color) }
-    }
+    private fun MediaSessionModel.isDisplayable(): Boolean = isActive && title.isNotBlank()
 
-    fun onMetadataChanged(metadata: MediaMetadata) {
-        val newTitle = metadata.getString(MediaMetadata.METADATA_KEY_TITLE) ?: "Unknown"
-        val newArtist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST) ?: "Unknown"
-
-        if (trackTitle != newTitle || artist != newArtist) {
-            trackTitle = newTitle
-            artist = newArtist
-            listenerManager.notifyOnBackground { it.onMetadataChanged(trackTitle, artist) }
+    private fun MediaSessionState.toPlaybackState(): Int =
+        when (this) {
+            MediaSessionState.Playing -> PlaybackState.STATE_PLAYING
+            MediaSessionState.Paused -> PlaybackState.STATE_PAUSED
+            MediaSessionState.Buffering -> PlaybackState.STATE_BUFFERING
         }
 
-        extractAlbumArt(metadata)?.let { bitmap ->
-            val drawable = BitmapDrawable(Resources.getSystem(), bitmap)
-            onAlbumArtChanged(drawable)
+    private fun Icon.toDrawable(): Drawable? =
+        when (this) {
+            is Icon.Loaded -> drawable
+            is Icon.Resource -> context.getDrawable(resId)
         }
-    }
 
-    private fun extractAlbumArt(metadata: MediaMetadata): Bitmap? {
-        metadata.getBitmap(MediaMetadata.METADATA_KEY_ART)?.let { return it }
-        metadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)?.let { return it }
-        return null
-    }
+    private fun MediaSessionSnapshot.resolve() =
+        ResolvedMediaSession(
+            playbackState = playbackState,
+            albumArt = albumArt?.toDrawable(),
+            appIcon = appIcon.toDrawable(),
+            mediaColor = mediaColor,
+            title = title,
+            artist = artist,
+        )
+
+    private data class MediaSessionSnapshot(
+        val playbackState: Int,
+        val albumArt: Icon?,
+        val appIcon: Icon,
+        val mediaColor: Int?,
+        val title: String,
+        val artist: String,
+    )
+
+    private data class ResolvedMediaSession(
+        val playbackState: Int = PlaybackState.STATE_NONE,
+        val albumArt: Drawable? = null,
+        val appIcon: Drawable? = null,
+        val mediaColor: Int? = null,
+        val title: String = "",
+        val artist: String = "",
+    )
 
     companion object {
         @Volatile
         private var INSTANCE: MediaSessionManager? = null
 
+        @JvmStatic
         fun get(): MediaSessionManager {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: MediaSessionManager().also { INSTANCE = it }
+                INSTANCE ?: throw IllegalStateException("MediaSessionManager not initialized yet")
             }
         }
     }

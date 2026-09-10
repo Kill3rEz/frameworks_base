@@ -440,6 +440,7 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
     private final ActivityStarter mActivityStarter;
     private final MediaViewController mMediaViewController;
     private final PulseViewController mPulseViewController;
+    private boolean mCustomOverlayHierarchyListenerInstalled;
 
     private DisplayManager mDisplayManager;
 
@@ -946,65 +947,152 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
         attachCustomOverlays();
     }
 
-    private void attachCustomOverlays() {
+    private ViewGroup getOverlayRoot() {
         if (SceneContainerFlag.isEnabled()) {
-            attachCustomOverlaysToSceneContainer();
-        } else {
-            attachCustomOverlaysToLegacy();
+            ViewGroup windowRoot = mNotificationShadeWindowController.getWindowRootView();
+            if (windowRoot != null) {
+                return windowRoot;
+            }
         }
+        return getNotificationShadeWindowView();
     }
 
-    private void attachCustomOverlaysToSceneContainer() {
-        ViewGroup root = (ViewGroup) mNotificationShadeWindowController.getWindowRootView();
-
-        FrameLayout bgContainer = root.findViewById(R.id.custom_overlay_container);
-        if (bgContainer == null) {
-            bgContainer = new FrameLayout(mContext);
-            bgContainer.setId(R.id.custom_overlay_container);
-            bgContainer.setLayoutParams(new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT));
-            // Insert after index 0 (hidden legacy window), before scene container composable
-            root.addView(bgContainer, 1);
+    private FrameLayout ensureOverlayContainer(ViewGroup root, int id, boolean foreground) {
+        FrameLayout container = root.findViewById(id);
+        if (container != null && container.getParent() != root) {
+            // Scene container hides the legacy shade; never keep overlays parented there.
+            detachFromParent(container);
+            container = null;
         }
-
-        detachFromParent(mMediaViewController.getMediaArtScrim());
-        detachFromParent(mPulseViewController.getPulseView());
-
-        bgContainer.addView(mMediaViewController.getMediaArtScrim(),
-                new FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT));
-        bgContainer.addView(mPulseViewController.getPulseView(),
-                new FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT));
-    }
-
-    private void attachCustomOverlaysToLegacy() {
-        ViewGroup root = (ViewGroup) getNotificationShadeWindowView();
-
-        FrameLayout container = root.findViewById(R.id.custom_overlay_container);
         if (container == null) {
             container = new FrameLayout(mContext);
-            container.setId(R.id.custom_overlay_container);
+            container.setId(id);
             container.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
+            container.setClickable(false);
+            container.setFocusable(false);
+            container.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            container.setClipChildren(false);
+            container.setClipToPadding(false);
 
-            View scrimInFront = root.findViewById(R.id.scrim_in_front);
-            int scrimIndex = Math.max(root.indexOfChild(scrimInFront) - 3, 0);
-            root.addView(container, scrimIndex);
+            if (foreground || !SceneContainerFlag.isEnabled()) {
+                root.addView(container);
+            } else {
+                View scene = root.findViewById(R.id.scene_container_root_composable);
+                int index = scene != null ? Math.max(root.indexOfChild(scene), 0) : 1;
+                root.addView(container, index);
+            }
         }
+
+        if (foreground) {
+            container.bringToFront();
+        } else if (SceneContainerFlag.isEnabled()) {
+            View scene = root.findViewById(R.id.scene_container_root_composable);
+            if (scene != null) {
+                int sceneIndex = root.indexOfChild(scene);
+                int overlayIndex = root.indexOfChild(container);
+                if (overlayIndex > sceneIndex) {
+                    root.removeView(container);
+                    root.addView(container, sceneIndex);
+                }
+            }
+        }
+        return container;
+    }
+
+    private void installOverlayZOrderListener(ViewGroup root) {
+        if (mCustomOverlayHierarchyListenerInstalled) {
+            return;
+        }
+        mCustomOverlayHierarchyListenerInstalled = true;
+        root.setOnHierarchyChangeListener(new ViewGroup.OnHierarchyChangeListener() {
+            @Override
+            public void onChildViewAdded(View parent, View child) {
+                int childId = child.getId();
+                if (childId == R.id.custom_overlay_container
+                        || childId == R.id.custom_overlay_foreground) {
+                    return;
+                }
+                if (root.findViewById(R.id.custom_overlay_foreground) == null
+                        || root.findViewById(R.id.custom_overlay_container) == null) {
+                    attachCustomOverlays();
+                    return;
+                }
+                View foreground = root.findViewById(R.id.custom_overlay_foreground);
+                if (foreground != null) {
+                    foreground.bringToFront();
+                }
+            }
+
+            @Override
+            public void onChildViewRemoved(View parent, View child) {}
+        });
+    }
+
+    private ViewGroup getScrimOverlayContainer() {
+        ViewGroup root = (ViewGroup) getNotificationShadeWindowView();
+
+        FrameLayout container = root.findViewById(R.id.custom_overlay_container);
+        if (container != null) {
+            return container;
+        }
+
+        container = new FrameLayout(mContext);
+        container.setId(R.id.custom_overlay_container);
+        container.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        container.setClickable(false);
+        container.setFocusable(false);
+        container.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        container.setClipChildren(false);
+        container.setClipToPadding(false);
+
+        View scrimInFront = root.findViewById(R.id.scrim_in_front);
+        int scrimIndex = Math.max(root.indexOfChild(scrimInFront) - 3, 0);
+        root.addView(container, scrimIndex);
+
+        return container;
+    }
+
+    private void attachCustomOverlays() {
+        if (SceneContainerFlag.isEnabled()) {
+            ViewGroup root = getOverlayRoot();
+            if (root == null) {
+                return;
+            }
+
+            FrameLayout background = ensureOverlayContainer(
+                    root, R.id.custom_overlay_container, false /* foreground */);
+            FrameLayout foreground = ensureOverlayContainer(
+                    root, R.id.custom_overlay_foreground, true /* foreground */);
+            installOverlayZOrderListener(root);
+
+            detachFromParent(mMediaViewController.getMediaArtScrim());
+            detachFromParent(mPulseViewController.getPulseView());
+
+            background.addView(mMediaViewController.getMediaArtScrim(),
+                    new FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT));
+            foreground.addView(mPulseViewController.getPulseView(),
+                    new FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT));
+            return;
+        }
+
+        ViewGroup overlay = getScrimOverlayContainer();
 
         detachFromParent(mMediaViewController.getMediaArtScrim());
         detachFromParent(mPulseViewController.getPulseView());
 
-        container.addView(mMediaViewController.getMediaArtScrim(),
+        overlay.addView(mMediaViewController.getMediaArtScrim(),
                 new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT));
-        container.addView(mPulseViewController.getPulseView(),
+        overlay.addView(mPulseViewController.getPulseView(),
                 new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT));
