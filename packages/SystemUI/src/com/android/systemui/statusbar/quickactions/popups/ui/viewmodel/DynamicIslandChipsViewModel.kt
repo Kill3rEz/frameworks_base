@@ -176,7 +176,7 @@ constructor(
         return Settings.System.getIntForUser(
             context.contentResolver,
             Settings.System.STATUS_BAR_SHOW_DYNAMIC_ISLAND,
-            0,
+            1,
             UserHandle.USER_CURRENT,
         ) != 0
     }
