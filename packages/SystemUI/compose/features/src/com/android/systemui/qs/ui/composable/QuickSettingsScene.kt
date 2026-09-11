@@ -297,6 +297,7 @@ private fun ContentScope.QuickSettingsScene(
                                             .dp
                                 ),
                         previews = panelElementPreviews(viewModel.qsContainerViewModel),
+                        previewHeights = panelElementPreviewHeights(),
                         headerPreview =
                             qsHeaderPreview(viewModel.qsContainerViewModel),
                     )

@@ -1565,6 +1565,7 @@ fun VolumeLayout(
     verticalWidth: Dp? = 75.dp,
     vm: QSFragmentComposeViewModel? = null,
     sliderHeight: Dp,
+    interactive: Boolean = true,
 ) {
     val context = LocalContext.current
     val audioManager = remember(context) {
@@ -1637,6 +1638,7 @@ fun VolumeLayout(
                     icon = icon,
                     modifier = Modifier,
                     housingHeight = sliderHeight,
+                    interactive = interactive,
                 )
             } else {
                 VerticalSlider(
@@ -1650,6 +1652,7 @@ fun VolumeLayout(
                     housingHeight = sliderHeight,
                     cornerRadius = verticalCornerRadius,
                     housingWidth = verticalWidth,
+                    interactive = interactive,
                 )
             }
         }
@@ -1665,6 +1668,7 @@ fun BrightnessLayout(
     verticalWidth: Dp? = 75.dp,
     vm: QSFragmentComposeViewModel? = null,
     sliderHeight: Dp,
+    interactive: Boolean = true,
 ) {
     val context = LocalContext.current
     val contentResolver = context.contentResolver
@@ -1787,6 +1791,7 @@ fun BrightnessLayout(
                     icon = icon,
                     modifier = Modifier,
                     housingHeight = sliderHeight,
+                    interactive = interactive,
                 )
             } else {
                 VerticalSlider(
@@ -1800,6 +1805,7 @@ fun BrightnessLayout(
                     housingHeight = sliderHeight,
                     cornerRadius = verticalCornerRadius,
                     housingWidth = verticalWidth,
+                    interactive = interactive,
                 )
             }
         }
@@ -1816,6 +1822,7 @@ fun VerticalSlider(
     icon: Painter,
     modifier: Modifier = Modifier,
     housingHeight: Dp,
+    interactive: Boolean = true,
     cornerRadius: Dp? = null,
     housingWidth: Dp? = 75.dp,
 ) {
@@ -1843,7 +1850,9 @@ fun VerticalSlider(
                     alpha = if (isStockQsStyle) 1f else 0.45f
                 )
             )
-            .sliderGestures(scope, onValueChanged, onValueChangeFinished, onLongPress),
+            .thenIf(interactive) {
+                Modifier.sliderGestures(scope, onValueChanged, onValueChangeFinished, onLongPress)
+            },
         contentAlignment = Alignment.BottomCenter
     ) {
         val fillHeight = housingHeight * value
@@ -1881,6 +1890,7 @@ fun HorizontalSlider(
     icon: Painter,
     modifier: Modifier = Modifier,
     housingHeight: Dp,
+    interactive: Boolean = true,
 ) {
     val iconSize = 22.dp
     val iconStartPadding = 14.dp
@@ -1895,12 +1905,14 @@ fun HorizontalSlider(
                         alpha = if (isStockQsStyle) 1f else 0.45f
                     )
                 )
-                .sliderGesturesHorizontal(
-                    scope,
-                    onValueChanged,
-                    onValueChangeFinished,
-                    onLongPress,
-                ),
+                .thenIf(interactive) {
+                    Modifier.sliderGesturesHorizontal(
+                        scope,
+                        onValueChanged,
+                        onValueChangeFinished,
+                        onLongPress,
+                    )
+                },
         contentAlignment = Alignment.CenterStart,
     ) {
         val fillWidth = maxWidth * value

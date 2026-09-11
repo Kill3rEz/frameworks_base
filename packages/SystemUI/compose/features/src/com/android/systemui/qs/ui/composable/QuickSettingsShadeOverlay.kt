@@ -320,6 +320,9 @@ private fun ContentScope.QuickSettingsContainer(
                                 horizontal = QuickSettingsShade.Dimensions.HorizontalPadding,
                                 vertical = QuickSettingsShade.Dimensions.VerticalPadding,
                             ),
+                    previews = panelElementPreviews(containerViewModel),
+                    previewHeights = panelElementPreviewHeights(),
+                    headerPreview = qsHeaderPreview(containerViewModel),
                 )
             }
 

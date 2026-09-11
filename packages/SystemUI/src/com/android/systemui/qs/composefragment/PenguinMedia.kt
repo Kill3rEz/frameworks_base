@@ -108,11 +108,13 @@ private fun PenguinMediaCardContent(
         return
     }
 
+    val moduleHeight = qsModuleHeight(2)
+
     Column(
         modifier =
             modifier
                 .fillMaxWidth()
-                .thenIf(square) { Modifier.aspectRatio(1f) }
+                .height(moduleHeight)
                 .clip(RoundedCornerShape(ArtworkCorner))
                 .background(glassSurface())
                 .padding(14.dp),

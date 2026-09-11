@@ -40,6 +40,14 @@ import com.android.systemui.qs.panels.shared.model.SizedTileImpl
 import com.android.systemui.qs.panels.ui.compose.EditTileListState
 import android.provider.Settings
 import com.android.systemui.qs.panels.ui.compose.LocalIsPaginatedGrid
+import com.android.systemui.qs.composefragment.DEFAULT_SLIDERS_SPAN
+import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_SPAN
+import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_SPAN
+import com.android.systemui.qs.composefragment.SETTING_QS_SLIDERS_SPAN
+import com.android.systemui.qs.composefragment.secureIntSetting
+import com.android.systemui.qs.panels.ui.compose.FOLDER_SPEC
+import com.android.systemui.qs.panels.ui.compose.MEDIA_SPEC
+import com.android.systemui.qs.panels.ui.compose.SLIDERS_SPEC
 import com.android.systemui.qs.panels.ui.compose.PANEL_ELEMENT_SPECS
 import com.android.systemui.qs.panels.ui.compose.panelSpanSetting
 import com.android.systemui.qs.panels.ui.compose.PaginatableGridLayout
@@ -227,14 +235,22 @@ constructor(
         val largeTiles by viewModel.iconTilesViewModel.largeTilesState
 
         val editLargeTiles = remember(largeTiles) { largeTiles + PANEL_ELEMENT_SPECS }
+        val fullWidthSpecs = buildSet {
+            if (secureIntSetting(SETTING_QS_FOLDER_SPAN, 1) >= 2) add(FOLDER_SPEC)
+            if (secureIntSetting(SETTING_QS_MEDIA_SPAN, 1) >= 2) add(MEDIA_SPEC)
+            if (secureIntSetting(SETTING_QS_SLIDERS_SPAN, DEFAULT_SLIDERS_SPAN) >= 2) {
+                add(SLIDERS_SPEC)
+            }
+        }
         val currentTiles by rememberUpdatedState(tiles.filter { it.isCurrent })
         val listState =
-            remember(columns, largeTilesSpan) {
+            remember(columns, largeTilesSpan, fullWidthSpecs) {
                 EditTileListState(
                     currentTiles,
                     editLargeTiles,
                     columns = columns,
                     largeTilesSpan = largeTilesSpan,
+                    fullWidthSpecs = fullWidthSpecs,
                 )
             }
         LaunchedEffect(currentTiles, editLargeTiles) {
