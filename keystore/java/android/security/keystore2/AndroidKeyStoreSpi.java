@@ -86,13 +86,9 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.NoSuchElementException;
 
 import javax.crypto.SecretKey;
-
-import android.security.trickystore.TrickyStoreService;
-import android.security.trickystore.CertificateHacker;
 
 /**
  * A java.security.KeyStore interface for the Android KeyStore. An instance of
@@ -119,8 +115,6 @@ public class AndroidKeyStoreSpi extends KeyStoreSpi {
 
     private KeyStore2 mKeyStore;
     private @KeyProperties.Namespace int mNamespace = KeyProperties.NAMESPACE_APPLICATION;
-    
-    private static final ThreadLocal<Boolean> sInHack = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
     // Defined in RFC 8410.
     private static final String ED25519_OID = "1.3.101.112";
@@ -185,20 +179,6 @@ public class AndroidKeyStoreSpi extends KeyStoreSpi {
         }
     }
 
-    private static int indexOf(byte[] array) {
-        final byte[] PATTERN = {48, 74, 4, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 10, 1, 2};
-        outer:
-        for (int i = 0; i < array.length - PATTERN.length + 1; i++) {
-            for (int j = 0; j < PATTERN.length; j++) {
-                if (array[i + j] != PATTERN[j]) {
-                    continue outer;
-                }
-            }
-            return i;
-        }
-        return -1;
-    }
-
     @Override
     public Certificate[] engineGetCertificateChain(String alias) {
         KeyEntryResponse response = getKeyMetadata(alias);
@@ -209,23 +189,6 @@ public class AndroidKeyStoreSpi extends KeyStoreSpi {
 
         final X509Certificate leaf = (X509Certificate) toCertificate(response.metadata.certificate);
         if (leaf == null) {
-            return null;
-        }
-
-        X509Certificate modLeaf = leaf;
-        try {
-            byte[] bytes = leaf.getEncoded();
-            if (bytes != null && bytes.length > 0) {
-                int index = indexOf(bytes);
-                if (index != -1) {
-                    bytes[index + 38] = 1;
-                    bytes[index + 41] = 0;
-                    CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
-                    X509Certificate modCert = (X509Certificate) certFactory.generateCertificate(new ByteArrayInputStream(bytes));
-                    modLeaf = modCert;
-                }
-            }
-        } catch (CertificateException e) {
             return null;
         }
 
@@ -247,9 +210,9 @@ public class AndroidKeyStoreSpi extends KeyStoreSpi {
             caList = new Certificate[1];
         }
 
-        caList[0] = modLeaf;
+        caList[0] = leaf;
 
-        return hackCertificateChainIfNeeded(caList);
+        return caList;
     }
 
     @Override
@@ -304,39 +267,6 @@ public class AndroidKeyStoreSpi extends KeyStoreSpi {
             Log.w(NAME, "Cannot read MGF1 Digest setter flag value", e);
             return false;
         }
-    }
-
-    private static Certificate[] hackCertificateChainIfNeeded(Certificate[] chain) {
-        if (chain == null || chain.length == 0) {
-            return chain;
-        }
-        if (sInHack.get()) {
-            return chain;
-        }
-        sInHack.set(Boolean.TRUE);
-        try {
-            TrickyStoreService service = TrickyStoreService.getInstance();
-            if (!service.hasKeyboxes()) {
-                return chain;
-            }
-
-            int callingUid = android.os.Binder.getCallingUid();
-            String[] packages = android.app.ActivityThread.getPackageManager()
-                    .getPackagesForUid(callingUid);
-
-            if (service.needHack(callingUid, packages)) {
-                Certificate[] hackedChain = CertificateHacker.hackCertificateChain(chain);
-                if (hackedChain != null) {
-                    Log.d(TAG, "TrickyStore: Hacked certificate chain for uid=" + callingUid);
-                    return hackedChain;
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "TrickyStore: Failed to hack certificate chain", e);
-        } finally {
-            sInHack.set(Boolean.FALSE);
-        }
-        return chain;
     }
 
     @Override
