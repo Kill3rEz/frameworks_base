@@ -33,7 +33,7 @@ fun TransitionBuilder.shadeToQuickSettingsTransition(
     translate(Notifications.Elements.NotificationScrim, Edge.Bottom)
     timestampRange(endMillis = 83) { fade(Elements.FooterActions) }
 
-    fractionRange(end = 0.15f) { fade(Elements.QuickSettingsContent) }
+    fractionRange(start = 0.55f, end = 0.9f) { fade(Elements.QuickSettingsContent) }
 
     anchoredTranslate(Elements.QuickSettingsContent, Elements.GridAnchor)
 

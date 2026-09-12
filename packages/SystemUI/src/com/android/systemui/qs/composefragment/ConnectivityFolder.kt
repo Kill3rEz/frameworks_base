@@ -90,6 +90,10 @@ const val SETTING_QS_FOLDER_SPAN = "qs_connectivity_folder_span"
 const val SETTING_QS_FOLDER_POSITION = "qs_connectivity_folder_position"
 const val SETTING_QS_MEDIA_POSITION = "qs_media_position"
 
+object ConnectivityFolderExpansion {
+    var expanded by mutableStateOf(false)
+}
+
 @Composable
 fun qsModuleHeight(rows: Int): Dp {
     val tile = dimensionResource(id = R.dimen.common_tile_default_tile_height)

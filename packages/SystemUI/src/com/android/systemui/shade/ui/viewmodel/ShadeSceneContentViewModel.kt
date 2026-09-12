@@ -41,6 +41,8 @@ import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.scene.shared.model.SceneFamilies
+import com.android.systemui.media.remedia.domain.interactor.MediaInteractor
+import com.android.systemui.qs.composefragment.ConnectivityFolderExpansion
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
 import com.android.systemui.shade.domain.interactor.ShadeStatusBarComponentsInteractor
@@ -70,6 +72,7 @@ constructor(
     val quickQuickSettingsViewModel: QuickQuickSettingsViewModel.Factory,
     val shadeHeaderViewModelFactory: ShadeHeaderViewModel.Factory,
     val mediaCarouselInteractor: MediaCarouselInteractor,
+    private val mediaInteractor: MediaInteractor,
     private val shadeModeInteractor: ShadeModeInteractor,
     val mediaViewModelFactory: MediaViewModel.Factory,
     private val footerActionsViewModelFactory: FooterActionsViewModel.Factory,
@@ -115,6 +118,14 @@ constructor(
     val showMedia: Boolean by
         // mediaCarouselInteractor.hasAnyMedia if in SplitShade.
         mediaCarouselInteractor.hasActiveMedia.hydratedStateOf()
+
+    val hasMediaCards: Boolean
+        get() = mediaInteractor.hasAnyMedia
+
+    fun onConnectivityFolderExpandRequested() {
+        ConnectivityFolderExpansion.expanded = true
+        sceneInteractor.changeScene(Scenes.QuickSettings, "Connectivity folder expanded from QQS.")
+    }
 
     val isQsEnabled: Boolean by
         shadeStatusBarComponentsInteractor.disableFlags

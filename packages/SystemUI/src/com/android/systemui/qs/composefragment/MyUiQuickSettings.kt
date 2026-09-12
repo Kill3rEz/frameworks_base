@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.android.systemui.common.ui.compose.Icon
+import com.android.systemui.common.ui.compose.PagerDots
 import com.android.systemui.qs.panels.ui.compose.TileListener
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 
@@ -67,6 +70,8 @@ private fun Modifier.myUiClickable(onClick: () -> Unit, onLongClick: () -> Unit)
 private val CardSpecs = listOf("internet", "wifi", "cell", "bt")
 
 internal const val MyUiTileAspect = 166f / 188f
+
+internal const val MyUiGridRows = 3
 internal val MyUiGridGap = 18.dp
 
 private val CardCorner = 22.dp
@@ -198,6 +203,7 @@ fun MyUiTileGrid(
     columns: Int,
     gap: Dp,
     modifier: Modifier = Modifier,
+    rows: Int = MyUiGridRows,
 ) {
     if (tiles.isEmpty()) return
     var listening by remember { mutableStateOf(false) }
@@ -207,11 +213,45 @@ fun MyUiTileGrid(
     }
     TileListener(tiles) { listening }
 
+    val pages = remember(tiles, columns, rows) { tiles.chunked(columns * rows) }
+    if (pages.size == 1) {
+        MyUiTilePage(pages[0], columns, gap, rows, modifier)
+        return
+    }
+    val pagerState = rememberPagerState(0) { pages.size }
+    LaunchedEffect(pagerState, listening) {
+        if (!listening) pagerState.scrollToPage(0)
+    }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = spacedBy(gap)) {
-        tiles.chunked(columns).forEach { row ->
+        HorizontalPager(state = pagerState, pageSpacing = gap) { page ->
+            MyUiTilePage(pages[page], columns, gap, rows)
+        }
+        PagerDots(
+            pagerState = pagerState,
+            activeColor = MaterialTheme.colorScheme.onSurface,
+            nonActiveColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
+    }
+}
+
+@Composable
+private fun MyUiTilePage(
+    tiles: List<TileViewModel>,
+    columns: Int,
+    gap: Dp,
+    rows: Int,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = spacedBy(gap)) {
+        val filled = tiles.chunked(columns)
+        repeat(rows) { index ->
+            val row = filled.getOrNull(index).orEmpty()
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = spacedBy(gap)) {
                 row.forEach { tile -> MyUiTile(tile, Modifier.weight(1f)) }
-                repeat(columns - row.size) { Box(Modifier.weight(1f)) }
+                repeat(columns - row.size) {
+                    Box(Modifier.weight(1f).aspectRatio(MyUiTileAspect))
+                }
             }
         }
     }

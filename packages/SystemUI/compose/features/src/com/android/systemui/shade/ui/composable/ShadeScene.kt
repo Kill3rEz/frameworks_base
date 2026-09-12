@@ -19,9 +19,11 @@ package com.android.systemui.shade.ui.composable
 import com.android.systemui.qs.composefragment.BrightnessLayout
 import com.android.systemui.qs.composefragment.ConnectivityFolder
 import com.android.systemui.qs.composefragment.MyUiGridGap
+import com.android.systemui.qs.composefragment.MyUiMediaCard
 import com.android.systemui.qs.composefragment.PenguinMediaCard
 import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_SPAN
 import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_STYLE
+import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_POSITION
 import com.android.systemui.qs.composefragment.connectivityFolderEnabled
 import com.android.systemui.qs.composefragment.connectivityFolderSpecs
 import com.android.systemui.qs.composefragment.POSITION_HEADER
@@ -401,8 +403,10 @@ private fun ContentScope.SingleShade(
                 val qqsShowsMedia =
                     !isDefaultStyle &&
                         viewModel.isQsEnabled &&
-                        viewModel.showMedia &&
-                        isAlwaysComposedContentVisible()
+                        viewModel.hasMediaCards &&
+                        isAlwaysComposedContentVisible() &&
+                        secureIntSetting(SETTING_QS_MEDIA_POSITION, POSITION_HEADER) <=
+                            POSITION_ABOVE_GRID
                 val qqsLayoutPaddingBottom = 16.dp
                 val qsHorizontalMargin =
                     shadeHorizontalPadding + dimensionResource(id = R.dimen.qs_horizontal_margin)
@@ -518,6 +522,9 @@ private fun ContentScope.SingleShade(
                                 Modifier.element(QuickSettings.Elements.ConnectivityFolder)
                                     .sysuiResTag("quick_qs_panel"),
                             compactHeight = folderCompact,
+                            onExpandedChange = {
+                                if (it) viewModel.onConnectivityFolderExpandRequested()
+                            },
                         )
                     },
                     qqsShowsFolder =
@@ -588,9 +595,12 @@ private fun ContentScope.SingleShade(
                     },
                     media = {
                         if (isAlwaysComposedContentVisible()) {
-                            if (viewModel.isQsEnabled && viewModel.showMedia) {
+                            if (viewModel.isQsEnabled && (viewModel.showMedia || qqsShowsMedia)) {
                                 Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
-                                    if (secureIntSetting(SETTING_QS_MEDIA_STYLE, 0) != 0) {
+                                    if (
+                                        secureIntSetting(SETTING_QS_MEDIA_SPAN, 1) < 2 ||
+                                            secureIntSetting(SETTING_QS_MEDIA_STYLE, 0) != 0
+                                    ) {
                                         PenguinMediaCard(
                                             viewModelFactory = viewModel.mediaViewModelFactory,
                                             behavior =
@@ -626,21 +636,10 @@ private fun ContentScope.SingleShade(
                     isMyUiStyle = isMyUiStyle,
                     myUiMedia = {
                         Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
-                            if (secureIntSetting(SETTING_QS_MEDIA_STYLE, 0) != 0) {
-                                PenguinMediaCard(
-                                    viewModelFactory = viewModel.mediaViewModelFactory,
-                                    behavior = ShadeSceneContentViewModel.qqsMediaUiBehavior,
-                                    square = false,
-                                )
-                            } else {
-                                Media(
-                                    viewModelFactory = viewModel.mediaViewModelFactory,
-                                    presentationStyle = MediaPresentationStyle.Default,
-                                    behavior = ShadeSceneContentViewModel.qqsMediaUiBehavior,
-                                    onDismissed = viewModel::onMediaSwipeToDismiss,
-                                    location = Media.Location.SHADE,
-                                )
-                            }
+                            MyUiMediaCard(
+                                viewModelFactory = viewModel.mediaViewModelFactory,
+                                behavior = ShadeSceneContentViewModel.qqsMediaUiBehavior,
+                            )
                         }
                     },
                     myUiHeader = {
