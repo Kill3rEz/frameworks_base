@@ -189,10 +189,6 @@ constructor(
     /**
      * Reads flashlight info from available [CameraCharacteristics].
      *
-     * On devices with multiple flash-capable back cameras, the HAL routes torch through the
-     * logical camera (which has physical camera IDs) rather than a plain physical camera.
-     * We prefer the logical camera to ensure torch commands reach the correct camera node.
-     *
      * @return the id of a connected camera that has flashlight, or null if none connected.
      * @throws CameraAccessException if the camera device have been disconnected
      */
@@ -207,16 +203,7 @@ constructor(
                 lensFacing == CameraCharacteristics.LENS_FACING_BACK
         }
 
-        fun isLogicalCamera(id: String): Boolean {
-            val cc = cameraManager.getCameraCharacteristics(id)
-            return cc.physicalCameraIds.isNotEmpty()
-        }
-
-        // Prefer logical multi-camera with flash — the HAL routes torch through these
-        // on devices where multiple cameras share a single flash unit.
-        val selectedId =
-            ids.firstOrNull { isBackFlashCamera(it) && isLogicalCamera(it) }
-                ?: ids.firstOrNull { isBackFlashCamera(it) }
+        val selectedId = ids.firstOrNull { isBackFlashCamera(it) }
 
         if (selectedId != null) {
             val cc = cameraManager.getCameraCharacteristics(selectedId)
