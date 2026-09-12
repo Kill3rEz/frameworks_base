@@ -11,6 +11,7 @@ public interface IObscuraService {
     void systemReadyInternal();
     boolean isPackageHidden(String packageName);
     boolean isPackageLauncherHidden(String packageName);
+    boolean isPackageDetached(String packageName);
     boolean isPackageIsolated(String packageName);
     boolean isSpoofSettingEnabled(String packageName, String settingKey);
     List<String> getEnabledSpoofSettings(String packageName);
@@ -18,4 +19,7 @@ public interface IObscuraService {
     int[] getRestrictedGids(String packageName);
     boolean isDataIsolationEnabled(String packageName);
     void launchHiddenApp(String packageName);
+    int getAppScopeMode(String packageName);
+    List<String> getAppScopeList(String packageName);
+    boolean shouldHidePackageFromCaller(String callerPackage, String targetPackage);
 }

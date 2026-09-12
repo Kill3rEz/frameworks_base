@@ -5965,17 +5965,21 @@ public final class InputMethodManagerService implements IInputMethodManagerImpl.
 
         String[] callingPackages = mContext.getPackageManager().getPackagesForUid(callingUid);
         if (callingPackages != null && callingPackages.length > 0) {
-            String callingPackage = callingPackages[0];
-            if (ObscuraService.get().isPackageIsolated(callingPackage)) {
+            for (String callingPackage : callingPackages) {
                 if (callingPackage.equals(targetPkgName)) {
                     return true;
                 }
-                for (InputMethodInfo imi : settings.getMethodList()) {
-                    if (imi.getPackageName().equals(targetPkgName)) {
-                        return imi.isSystem();
-                    }
+                if (ObscuraService.get().shouldHidePackageFromCaller(callingPackage, targetPkgName)) {
+                    return false;
                 }
-                return false;
+                if (ObscuraService.get().isPackageIsolated(callingPackage)) {
+                    for (InputMethodInfo imi : settings.getMethodList()) {
+                        if (imi.getPackageName().equals(targetPkgName)) {
+                            return imi.isSystem();
+                        }
+                    }
+                    return false;
+                }
             }
         }
         final boolean canAccess = !mPackageManagerInternal.filterAppAccess(

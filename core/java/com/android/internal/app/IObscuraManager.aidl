@@ -13,9 +13,12 @@ interface IObscuraManager {
     void setPackageHidden(String packageName, boolean hidden);
     boolean isPackageLauncherHidden(String packageName);
     void setPackageLauncherHidden(String packageName, boolean hidden);
+    boolean isPackageDetached(String packageName);
+    void setPackageDetached(String packageName, boolean detached);
 
     List<String> getHiddenPackages();
     List<String> getLauncherHiddenPackages();
+    List<String> getDetachedPackages();
     List<String> getLockablePackages();
 
     void registerHiddenNotificationListener(IHiddenNotificationListener listener);
@@ -43,4 +46,10 @@ interface IObscuraManager {
     String getSpoofedSetting(String callingPackage, String settingName);
 
     void launchHiddenApp(String packageName);
+
+    int getAppScopeMode(String packageName);
+    void setAppScopeMode(String packageName, int mode);
+    List<String> getAppScopeList(String packageName);
+    void setAppScopeList(String packageName, in List<String> packages);
+    boolean shouldHidePackageFromCaller(String callerPackage, String targetPackage);
 }

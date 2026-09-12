@@ -532,19 +532,57 @@ public class ComputerEngine implements Computer {
     public boolean shouldHideFromCaller(int callingUid, String targetPackage) {
         if (!isSystemReady()) return false;
         if (targetPackage == null) return false;
-        if (!ObscuraService.get().isPackageHidden(targetPackage)) return false;
-        if (PACKAGES_SHOULD_NOT_HIDE.contains(targetPackage)) return false;
+        if (callingUid < Process.FIRST_APPLICATION_UID) return false;
         if (Process.isIsolated(callingUid) || Process.isSdkSandboxUid(callingUid)) return false;
-        if (callingUid == Process.SYSTEM_UID || callingUid == Process.ROOT_UID) return false;
+        if (PACKAGES_SHOULD_NOT_HIDE.contains(targetPackage)) return false;
+
+        int uid = callingUid;
+        if (Process.isSdkSandboxUid(uid)) {
+            uid = getBaseSdkSandboxUid();
+        }
+        if (isKnownIsolatedComputeApp(uid)) {
+            uid = getIsolatedOwner(uid);
+        }
+
+        final int appId = UserHandle.getAppId(uid);
+        final Object obj = mSettings.getSettingBase(appId);
+        if (obj instanceof PackageStateInternal) {
+            final String callingPkg = ((PackageStateInternal) obj).getPackageName();
+            if (callingPkg != null) {
+                if (PACKAGES_SHOULD_NOT_HIDE.contains(callingPkg)) return false;
+                if (callingPkg.equals(targetPackage)) return false;
+                return ObscuraService.get().shouldHidePackageFromCaller(callingPkg, targetPackage);
+            }
+        } else if (obj instanceof SharedUserSetting) {
+            final SharedUserSetting sus = (SharedUserSetting) obj;
+            final ArraySet<PackageStateInternal> packageStates =
+                    (ArraySet<PackageStateInternal>) sus.getPackageStates();
+            if (packageStates != null) {
+                final int n = packageStates.size();
+                for (int index = 0; index < n; index++) {
+                    final PackageStateInternal ps = packageStates.valueAt(index);
+                    if (ps != null && ps.getPackageName() != null) {
+                        final String callingPkg = ps.getPackageName();
+                        if (PACKAGES_SHOULD_NOT_HIDE.contains(callingPkg)) return false;
+                        if (callingPkg.equals(targetPackage)) return false;
+                        if (ObscuraService.get().shouldHidePackageFromCaller(callingPkg, targetPackage)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+        }
+
+        // Fallback to PID if getSettingBase returned null
         String callingPkg = null;
-        int callingPid = Binder.getCallingPid();
         final ActivityManagerInternal ami = getAmInternal();
-        if (ami != null) callingPkg = ami.getPackageNameByPid(callingPid);
+        if (ami != null) callingPkg = ami.getPackageNameByPid(Binder.getCallingPid());
         if (callingPkg == null || TextUtils.isEmpty(callingPkg)) return false;
         if (PACKAGES_SHOULD_NOT_HIDE.contains(callingPkg)) return false;
-        if (ObscuraService.BLACKLISTED_PACKAGES != null && ObscuraService.BLACKLISTED_PACKAGES.contains(callingPkg)) return false;
         if (callingPkg.equals(targetPackage)) return false;
-        return true;
+
+        return ObscuraService.get().shouldHidePackageFromCaller(callingPkg, targetPackage);
     }
 
     private static final int SPOOF_INSTALL_DISABLED = 0;
@@ -555,24 +593,24 @@ public class ComputerEngine implements Computer {
     private int shouldSpoofInstallSource(int callingUid, String targetPackage) {
         if (!isSystemReady()) return SPOOF_INSTALL_DISABLED;
         if (targetPackage == null) return SPOOF_INSTALL_DISABLED;
-        if (!ObscuraService.get().isPackageHidden(targetPackage)) return SPOOF_INSTALL_DISABLED;
-        if (callingUid == Process.SYSTEM_UID || callingUid == Process.ROOT_UID) return SPOOF_INSTALL_DISABLED;
+        if (callingUid == Process.SYSTEM_UID || callingUid == Process.ROOT_UID || callingUid == Process.SHELL_UID) return SPOOF_INSTALL_DISABLED;
         if (Process.isIsolated(callingUid) || Process.isSdkSandboxUid(callingUid)) return SPOOF_INSTALL_DISABLED;
-        String callingPkg = null;
-        final ActivityManagerInternal ami = getAmInternal();
-        if (ami != null) callingPkg = ami.getPackageNameByPid(Binder.getCallingPid());
-        if (callingPkg == null) return SPOOF_INSTALL_DISABLED;
-        if (ObscuraService.BLACKLISTED_PACKAGES != null && ObscuraService.BLACKLISTED_PACKAGES.contains(callingPkg)) return SPOOF_INSTALL_DISABLED;
-        if (callingPkg.equals(targetPackage)) return SPOOF_INSTALL_DISABLED;
         final PackageStateInternal ps = mSettings.getPackage(targetPackage);
-        if (ps != null && ps.isSystem()) return SPOOF_INSTALL_SYSTEM;
-        return SPOOF_INSTALL_USER;
+        if (ps == null) return SPOOF_INSTALL_DISABLED;
+        if (ps.isSystem()) return SPOOF_INSTALL_SYSTEM;
+        if (ps.getAppId() == UserHandle.getAppId(callingUid) || shouldHideFromCaller(callingUid, targetPackage)) {
+            return SPOOF_INSTALL_USER;
+        }
+        return SPOOF_INSTALL_DISABLED;
     }
 
     private boolean isAppDetached(String packageName) {
         if (!isSystemReady()) return false;
         if (packageName == null || TextUtils.isEmpty(packageName)) return false;
-        if (!ObscuraService.get().isPackageIsolated(packageName)) return false;
+        final boolean isDetached = ObscuraService.get().isPackageDetached(packageName);
+        final boolean isIsolated = ObscuraService.get().isPackageIsolated(packageName);
+        if (!isDetached && !isIsolated) return false;
+
         final int callingUid = Binder.getCallingUid();
         String callingPackage = null;
         int callingPid = Binder.getCallingPid();
@@ -581,6 +619,9 @@ public class ComputerEngine implements Computer {
         if (callingPackage == null || TextUtils.isEmpty(callingPackage)) return false;
         boolean isFinsky = callingPackage.contains("com.android.vending");
         if (isFinsky) return true;
+
+        if (!isIsolated) return false;
+
         if (callingPackage.contains(packageName)) return false;
         if (packageName.contains("youtube") || packageName.contains("microg")
                 || packageName.contains("revanced") || packageName.contains("gms")) return false;
@@ -2813,6 +2854,9 @@ public class ComputerEngine implements Computer {
         // if the target and caller are the same application, don't filter
         if (isCallerSameApp(ps.getPackageName(), callingUid)) {
             return false;
+        }
+        if (shouldHideFromCaller(callingUid, ps.getPackageName())) {
+            return true;
         }
         if (callerIsInstantApp) {
             // both caller and target are both instant, but, different applications, filter

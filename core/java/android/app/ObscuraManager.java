@@ -25,6 +25,10 @@ public class ObscuraManager {
 
     public static final String SETTING_OBSCURA_CONFIG = "obscura_config";
 
+    public static final int SCOPE_MODE_DISABLED = 0;
+    public static final int SCOPE_MODE_BLACKLIST = 1;
+    public static final int SCOPE_MODE_WHITELIST = 2;
+
     public static final int GID_INET = 3003;
     public static final int GID_SDCARD_RW = 1015;
     public static final int GID_MEDIA_RW = 1023;
@@ -77,6 +81,22 @@ public class ObscuraManager {
         }
     }
 
+    public boolean isPackageDetached(@NonNull String packageName) {
+        try {
+            return mService.isPackageDetached(packageName);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    public void setPackageDetached(@NonNull String packageName, boolean detached) {
+        try {
+            mService.setPackageDetached(packageName, detached);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
     @NonNull
     public List<String> getHiddenPackages() {
         try {
@@ -91,6 +111,16 @@ public class ObscuraManager {
     public List<String> getLauncherHiddenPackages() {
         try {
             List<String> result = mService.getLauncherHiddenPackages();
+            return result != null ? result : Collections.emptyList();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    @NonNull
+    public List<String> getDetachedPackages() {
+        try {
+            List<String> result = mService.getDetachedPackages();
             return result != null ? result : Collections.emptyList();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -250,6 +280,48 @@ public class ObscuraManager {
     public void launchHiddenApp(@NonNull String packageName) {
         try {
             mService.launchHiddenApp(packageName);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    public int getAppScopeMode(@NonNull String packageName) {
+        try {
+            return mService.getAppScopeMode(packageName);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    public void setAppScopeMode(@NonNull String packageName, int mode) {
+        try {
+            mService.setAppScopeMode(packageName, mode);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    @NonNull
+    public List<String> getAppScopeList(@NonNull String packageName) {
+        try {
+            List<String> result = mService.getAppScopeList(packageName);
+            return result != null ? result : Collections.emptyList();
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    public void setAppScopeList(@NonNull String packageName, @NonNull List<String> packages) {
+        try {
+            mService.setAppScopeList(packageName, packages);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    public boolean shouldHidePackageFromCaller(@NonNull String callerPackage, @NonNull String targetPackage) {
+        try {
+            return mService.shouldHidePackageFromCaller(callerPackage, targetPackage);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }

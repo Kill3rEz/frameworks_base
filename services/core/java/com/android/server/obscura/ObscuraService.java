@@ -43,6 +43,13 @@ public class ObscuraService extends IObscuraManager.Stub implements IObscuraServ
             "android.uid.system",
             "android.uid.shell",
             "android.uid.systemui",
+            "com.android.shell",
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "app.lawnchair",
+            "app.lawnchair.playstore",
+            "com.teslacoilsw.launcher",
+            "com.actionlauncher.playstore",
             "com.android.permissioncontroller",
             "com.android.providers.downloads",
             "com.android.providers.downloads.ui",
@@ -84,26 +91,11 @@ public class ObscuraService extends IObscuraManager.Stub implements IObscuraServ
     };
 
     private void cleanupPackage(String packageName) {
-        if (mAppControlController == null) return;
-        boolean changed = false;
-
-        if (mAppControlController.isPackageHidden(packageName)) {
-            mAppControlController.setPackageHidden(packageName, false);
-            changed = true;
-        }
-        if (mAppControlController.isPackageLauncherHidden(packageName)) {
-            mAppControlController.setPackageLauncherHidden(packageName, false);
-            changed = true;
-        }
-        if (mAppControlController.isPackageIsolated(packageName)) {
-            mAppControlController.setPackageIsolated(packageName, false);
-            changed = true;
+        if (mAppControlController != null) {
+            mAppControlController.cleanupPackage(packageName);
         }
         if (mHiddenNotificationController != null) {
             mHiddenNotificationController.clearNotificationsForPackage(packageName);
-        }
-        if (changed) {
-            Slog.i(TAG, "Cleaned up entries for uninstalled package: " + packageName);
         }
     }
 
@@ -162,6 +154,25 @@ public class ObscuraService extends IObscuraManager.Stub implements IObscuraServ
     public List<String> getLauncherHiddenPackages() {
         if (mAppControlController == null) return java.util.Collections.emptyList();
         return mAppControlController.getLauncherHiddenPackages();
+    }
+
+    @Override
+    public boolean isPackageDetached(String packageName) {
+        if (mAppControlController == null) return false;
+        return mAppControlController.isPackageDetached(packageName);
+    }
+
+    @Override
+    public void setPackageDetached(String packageName, boolean detached) {
+        if (mAppControlController != null) {
+            mAppControlController.setPackageDetached(packageName, detached);
+        }
+    }
+
+    @Override
+    public List<String> getDetachedPackages() {
+        if (mAppControlController == null) return java.util.Collections.emptyList();
+        return mAppControlController.getDetachedPackages();
     }
 
     @Override
@@ -267,7 +278,40 @@ public class ObscuraService extends IObscuraManager.Stub implements IObscuraServ
 
     @Override
     public void launchHiddenApp(String packageName) {
-        mAppControlController.launchHiddenApp(packageName);
+        if (mAppControlController != null) {
+            mAppControlController.launchHiddenApp(packageName);
+        }
     }
 
+    @Override
+    public int getAppScopeMode(String packageName) {
+        if (mAppControlController == null) return android.app.ObscuraManager.SCOPE_MODE_DISABLED;
+        return mAppControlController.getAppScopeMode(packageName);
+    }
+
+    @Override
+    public void setAppScopeMode(String packageName, int mode) {
+        if (mAppControlController != null) {
+            mAppControlController.setAppScopeMode(packageName, mode);
+        }
+    }
+
+    @Override
+    public List<String> getAppScopeList(String packageName) {
+        if (mAppControlController == null) return java.util.Collections.emptyList();
+        return mAppControlController.getAppScopeList(packageName);
+    }
+
+    @Override
+    public void setAppScopeList(String packageName, List<String> packages) {
+        if (mAppControlController != null) {
+            mAppControlController.setAppScopeList(packageName, packages);
+        }
+    }
+
+    @Override
+    public boolean shouldHidePackageFromCaller(String callerPackage, String targetPackage) {
+        if (mAppControlController == null) return false;
+        return mAppControlController.shouldHidePackageFromCaller(callerPackage, targetPackage);
+    }
 }
