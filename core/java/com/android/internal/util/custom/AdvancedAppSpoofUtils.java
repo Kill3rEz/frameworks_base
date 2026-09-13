@@ -54,17 +54,66 @@ public final class AdvancedAppSpoofUtils {
         GPU_PRESETS.put("adreno840",    new String[]{"Adreno (TM) 840",              "Qualcomm",   "Adreno (TM) 840",              "0x5143"});
         GPU_PRESETS.put("adreno750",    new String[]{"Adreno (TM) 750",              "Qualcomm",   "Adreno (TM) 750",              "0x5143"});
         GPU_PRESETS.put("adreno740",    new String[]{"Adreno (TM) 740",              "Qualcomm",   "Adreno (TM) 740",              "0x5143"});
+        GPU_PRESETS.put("adreno735",    new String[]{"Adreno (TM) 735",              "Qualcomm",   "Adreno (TM) 735",              "0x5143"});
         GPU_PRESETS.put("adreno730",    new String[]{"Adreno (TM) 730",              "Qualcomm",   "Adreno (TM) 730",              "0x5143"});
         GPU_PRESETS.put("adreno720",    new String[]{"Adreno (TM) 720",              "Qualcomm",   "Adreno (TM) 720",              "0x5143"});
         GPU_PRESETS.put("mali_g925",    new String[]{"Mali-G925 Immortalis-MC12",    "ARM",        "Mali-G925 Immortalis-MC12",    "0x13B5"});
         GPU_PRESETS.put("mali_g920",    new String[]{"Mali-G920 Immortalis-MC12",    "ARM",        "Mali-G920 Immortalis-MC12",    "0x13B5"});
         GPU_PRESETS.put("mali_g720",    new String[]{"Mali-G720 Immortalis-MC12",    "ARM",        "Mali-G720 Immortalis-MC12",    "0x13B5"});
         GPU_PRESETS.put("mali_g715",    new String[]{"Mali-G715 Immortalis-MC11",    "ARM",        "Mali-G715 Immortalis-MC11",    "0x13B5"});
+        GPU_PRESETS.put("mali_g615",    new String[]{"Mali-G615 MC6",                "ARM",        "Mali-G615 MC6",                "0x13B5"});
+        GPU_PRESETS.put("mali_g78",     new String[]{"Mali-G78 MP24",                "ARM",        "Mali-G78 MP24",                "0x13B5"});
+        GPU_PRESETS.put("maleoon930",   new String[]{"Maleoon 930",                  "HiSilicon",  "Maleoon 930",                  "0x19E5"});
         GPU_PRESETS.put("maleoon920",   new String[]{"Maleoon 920",                  "HiSilicon",  "Maleoon 920",                  "0x19E5"});
         GPU_PRESETS.put("maleoon910",   new String[]{"Maleoon 910",                  "HiSilicon",  "Maleoon 910",                  "0x19E5"});
+        GPU_PRESETS.put("xclipse940",   new String[]{"Samsung Xclipse 940",          "Samsung",    "Samsung Xclipse 940",          "0x144D"});
+        GPU_PRESETS.put("xclipse920",   new String[]{"Samsung Xclipse 920",          "Samsung",    "Samsung Xclipse 920",          "0x144D"});
         GPU_PRESETS.put("apple_a18pro", new String[]{"Apple A18 Pro GPU",            "Apple",      "Apple A18 Pro",                "0x106B"});
+        GPU_PRESETS.put("apple_a17pro", new String[]{"Apple A17 Pro GPU",            "Apple",      "Apple A17 Pro",                "0x106B"});
 
         // ---- CPU Presets ----
+        // Snapdragon 8 Elite Gen 5 (SM8850-AB) - 4+4 Oryon V2
+        CPU_PRESETS.put("sd8elitegen5", new String[]{
+            "Qualcomm Technologies, Inc SM8850-AB",
+            "SM8850-AB",
+            "Qualcomm",
+            "sun",
+            "Processor\t: AArch64 Processor rev 5 (aarch64)\n" +
+            "processor\t: 0\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid sve sve2\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0xb\nCPU part\t: 0x803\nCPU revision\t: 1\n\n" +
+            "processor\t: 1\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid sve sve2\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0xb\nCPU part\t: 0x803\nCPU revision\t: 1\n\n" +
+            "processor\t: 2\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid sve sve2\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0xb\nCPU part\t: 0x803\nCPU revision\t: 1\n\n" +
+            "processor\t: 3\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid sve sve2\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0xb\nCPU part\t: 0x803\nCPU revision\t: 1\n\n" +
+            "processor\t: 4\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid sve sve2\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0xb\nCPU part\t: 0x802\nCPU revision\t: 1\n\n" +
+            "processor\t: 5\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid sve sve2\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0xb\nCPU part\t: 0x802\nCPU revision\t: 1\n\n" +
+            "processor\t: 6\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid sve sve2\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0xb\nCPU part\t: 0x802\nCPU revision\t: 1\n\n" +
+            "processor\t: 7\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid sve sve2\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0xb\nCPU part\t: 0x802\nCPU revision\t: 1\n\n" +
+            "Hardware\t: Qualcomm Technologies, Inc SM8850-AB\n"
+        });
+
         // Snapdragon 8 Elite (SM8750-AB) - 4+4 Oryon
         CPU_PRESETS.put("sd8elite", new String[]{
             "Qualcomm Technologies, Inc SM8750-AB",
@@ -274,6 +323,363 @@ public final class AdvancedAppSpoofUtils {
             "CPU variant\t: 0x2\nCPU part\t: 0xd05\nCPU revision\t: 0\n\n" +
             "Hardware\t: Kirin 9030 Pro\n"
         });
+
+        // Snapdragon 8 Gen 2 (SM8550-AB)
+        CPU_PRESETS.put("sd8gen2", new String[]{
+            "Qualcomm Technologies, Inc SM8550-AB",
+            "SM8550-AB",
+            "Qualcomm",
+            "kalama",
+            "Processor\t: AArch64 Processor rev 1 (aarch64)\n" +
+            "processor\t: 0\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x8\nCPU part\t: 0x001\nCPU revision\t: 1\n\n" +
+            "processor\t: 1\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x8\nCPU part\t: 0x001\nCPU revision\t: 1\n\n" +
+            "processor\t: 2\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x8\nCPU part\t: 0x001\nCPU revision\t: 1\n\n" +
+            "processor\t: 3\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x8\nCPU part\t: 0x001\nCPU revision\t: 1\n\n" +
+            "processor\t: 4\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x8\nCPU part\t: 0x000\nCPU revision\t: 0\n\n" +
+            "processor\t: 5\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x8\nCPU part\t: 0x000\nCPU revision\t: 0\n\n" +
+            "processor\t: 6\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x8\nCPU part\t: 0x000\nCPU revision\t: 0\n\n" +
+            "processor\t: 7\nBogoMIPS\t: 38.40\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32\n" +
+            "CPU implementer\t: 0x51\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x8\nCPU part\t: 0x000\nCPU revision\t: 0\n\n" +
+            "Hardware\t: Qualcomm Technologies, Inc SM8550-AB\n"
+        });
+
+        // Dimensity 9400+ (MT6991)
+        CPU_PRESETS.put("dimensity9400plus", new String[]{
+            "MediaTek Dimensity 9400+",
+            "MT6991",
+            "MediaTek",
+            "mt6991",
+            "processor\t: 0\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd81\nCPU revision\t: 1\n\n" +
+            "processor\t: 1\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd81\nCPU revision\t: 1\n\n" +
+            "processor\t: 2\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd81\nCPU revision\t: 1\n\n" +
+            "processor\t: 3\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd81\nCPU revision\t: 1\n\n" +
+            "processor\t: 4\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd82\nCPU revision\t: 1\n\n" +
+            "processor\t: 5\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd82\nCPU revision\t: 1\n\n" +
+            "processor\t: 6\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd82\nCPU revision\t: 1\n\n" +
+            "processor\t: 7\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti ecv afp wfxt\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd85\nCPU revision\t: 1\n\n" +
+            "Hardware\t: MediaTek Dimensity 9400+\n"
+        });
+
+        // Dimensity 8350 (MT6897)
+        CPU_PRESETS.put("dimensity8350", new String[]{
+            "MediaTek Dimensity 8350",
+            "MT6897",
+            "MediaTek",
+            "mt6897",
+            "processor\t: 0\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 bti\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd46\nCPU revision\t: 1\n\n" +
+            "processor\t: 1\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 bti\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd46\nCPU revision\t: 1\n\n" +
+            "processor\t: 2\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 bti\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd46\nCPU revision\t: 1\n\n" +
+            "processor\t: 3\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 bti\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd46\nCPU revision\t: 1\n\n" +
+            "processor\t: 4\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 bti\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd4d\nCPU revision\t: 0\n\n" +
+            "processor\t: 5\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 bti\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd4d\nCPU revision\t: 0\n\n" +
+            "processor\t: 6\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 bti\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd4d\nCPU revision\t: 0\n\n" +
+            "processor\t: 7\nBogoMIPS\t: 26.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm sb paca pacg dcpodp sve2 sveaes svepmull svebitperm svesha3 svesm4 flagm2 frint svei8mm svebf16 i8mm bf16 bti\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd4d\nCPU revision\t: 0\n\n" +
+            "Hardware\t: MediaTek Dimensity 8350\n"
+        });
+
+        // Kirin 9030S
+        CPU_PRESETS.put("kirin9030s", new String[]{
+            "HUAWEI Kirin9030S",
+            "Kirin 9030S",
+            "HiSilicon",
+            "hi6986",
+            "Processor\t: AArch64 Processor rev 0 (aarch64)\n" +
+            "processor\t: 0\nBogoMIPS\t: 2000.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd24\nCPU revision\t: 0\nCPU physical\t: 0\n\n" +
+            "processor\t: 1\nBogoMIPS\t: 2000.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd24\nCPU revision\t: 0\nCPU physical\t: 1\n\n" +
+            "processor\t: 2\nBogoMIPS\t: 2000.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd24\nCPU revision\t: 0\nCPU physical\t: 2\n\n" +
+            "processor\t: 3\nBogoMIPS\t: 2000.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd24\nCPU revision\t: 0\nCPU physical\t: 3\n\n" +
+            "processor\t: 4\nBogoMIPS\t: 2000.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd47\nCPU revision\t: 0\nCPU physical\t: 4\n\n" +
+            "processor\t: 5\nBogoMIPS\t: 2000.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd47\nCPU revision\t: 0\nCPU physical\t: 5\n\n" +
+            "processor\t: 6\nBogoMIPS\t: 2000.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd47\nCPU revision\t: 0\nCPU physical\t: 6\n\n" +
+            "processor\t: 7\nBogoMIPS\t: 2000.00\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve asimdfhm dit uscat ilrcpc flagm ssbs sb paca pacg dcpodp flagm2 frint svei8mm svebf16 i8mm bf16 dgh bti\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd06\nCPU revision\t: 0\nCPU physical\t: 7\n\n" +
+            "Hardware\t: HUAWEI Kirin9030S\n"
+        });
+
+        // Kirin 9020A
+        CPU_PRESETS.put("kirin9020a", new String[]{
+            "HiSilicon Kirin 9020A",
+            "Kirin 9020A",
+            "HiSilicon",
+            "hi6985",
+            "Processor\t: AArch64 Processor rev 1 (aarch64)\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd05\nCPU revision\t: 1\n\n" +
+            "processor\t: 0\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd05\nCPU revision\t: 1\n\n" +
+            "processor\t: 1\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd46\nCPU revision\t: 1\n\n" +
+            "processor\t: 2\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd46\nCPU revision\t: 1\n\n" +
+            "processor\t: 3\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd46\nCPU revision\t: 1\n\n" +
+            "processor\t: 4\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd23\nCPU revision\t: 1\n\n" +
+            "processor\t: 5\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd23\nCPU revision\t: 1\n\n" +
+            "processor\t: 6\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd23\nCPU revision\t: 1\n\n" +
+            "processor\t: 7\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd23\nCPU revision\t: 1\n\n" +
+            "Hardware\t: HiSilicon Kirin 9020A\n"
+        });
+
+        // Kirin 9000S
+        CPU_PRESETS.put("kirin9000s", new String[]{
+            "HiSilicon Kirin 9000S",
+            "Kirin 9000S",
+            "HiSilicon",
+            "hi6980",
+            "Processor\t: AArch64 Processor rev 0 (aarch64)\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd0c\nCPU revision\t: 0\n\n" +
+            "processor\t: 0\nBogoMIPS\t: 26.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd0c\nCPU revision\t: 0\n\n" +
+            "processor\t: 1\nBogoMIPS\t: 26.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd0a\nCPU revision\t: 0\n\n" +
+            "processor\t: 2\nBogoMIPS\t: 26.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd0a\nCPU revision\t: 0\n\n" +
+            "processor\t: 3\nBogoMIPS\t: 26.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd0a\nCPU revision\t: 0\n\n" +
+            "processor\t: 4\nBogoMIPS\t: 26.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x3\nCPU part\t: 0xd0b\nCPU revision\t: 0\n\n" +
+            "processor\t: 5\nBogoMIPS\t: 26.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x3\nCPU part\t: 0xd0b\nCPU revision\t: 0\n\n" +
+            "processor\t: 6\nBogoMIPS\t: 26.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x3\nCPU part\t: 0xd0b\nCPU revision\t: 0\n\n" +
+            "processor\t: 7\nBogoMIPS\t: 26.00\n" +
+            "CPU implementer\t: 0x48\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x3\nCPU part\t: 0xd0b\nCPU revision\t: 0\n\n" +
+            "Hardware\t: HiSilicon Kirin 9000S\n"
+        });
+
+        // Kirin 9000
+        CPU_PRESETS.put("kirin9000", new String[]{
+            "HiSilicon Kirin 9000",
+            "Kirin 9000",
+            "HiSilicon",
+            "kirin9000",
+            "Processor\t: AArch64 Processor rev 0 (aarch64)\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd0d\nCPU revision\t: 0\n\n" +
+            "processor\t: 0\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd0d\nCPU revision\t: 0\n\n" +
+            "processor\t: 1\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd0d\nCPU revision\t: 0\n\n" +
+            "processor\t: 2\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd0d\nCPU revision\t: 0\n\n" +
+            "processor\t: 3\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x2\nCPU part\t: 0xd0d\nCPU revision\t: 0\n\n" +
+            "processor\t: 4\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd05\nCPU revision\t: 0\n\n" +
+            "processor\t: 5\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd05\nCPU revision\t: 0\n\n" +
+            "processor\t: 6\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd05\nCPU revision\t: 0\n\n" +
+            "processor\t: 7\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd05\nCPU revision\t: 0\n\n" +
+            "Hardware\t: HiSilicon Kirin 9000\n"
+        });
+
+        // Xiaomi Xring O1 (10-core)
+        CPU_PRESETS.put("xuanjie_o1", new String[]{
+            "Xiaomi Xring O1",
+            "Xring O1",
+            "Xiaomi",
+            "xring_o1",
+            "Processor\t: AArch64 Processor rev 0 (aarch64)\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid sve sve2\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4d\nCPU revision\t: 0\n\n" +
+            "processor\t: 0\nBogoMIPS\t: 78.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4d\nCPU revision\t: 0\n\n" +
+            "processor\t: 1\nBogoMIPS\t: 78.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4d\nCPU revision\t: 0\n\n" +
+            "processor\t: 2\nBogoMIPS\t: 78.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4e\nCPU revision\t: 0\n\n" +
+            "processor\t: 3\nBogoMIPS\t: 78.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4e\nCPU revision\t: 0\n\n" +
+            "processor\t: 4\nBogoMIPS\t: 78.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4e\nCPU revision\t: 0\n\n" +
+            "processor\t: 5\nBogoMIPS\t: 78.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4e\nCPU revision\t: 0\n\n" +
+            "processor\t: 6\nBogoMIPS\t: 78.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd4f\nCPU revision\t: 0\n\n" +
+            "processor\t: 7\nBogoMIPS\t: 78.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd4f\nCPU revision\t: 0\n\n" +
+            "processor\t: 8\nBogoMIPS\t: 78.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd46\nCPU revision\t: 0\n\n" +
+            "processor\t: 9\nBogoMIPS\t: 78.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd46\nCPU revision\t: 0\n\n" +
+            "Hardware\t: Xiaomi Xring O1\n"
+        });
+
+        // Xiaomi Xring O3
+        CPU_PRESETS.put("xuanjie_o3", new String[]{
+            "Xiaomi Xring O3",
+            "Xring O3",
+            "Xiaomi",
+            "xring_o3",
+            "Processor\t: AArch64 Processor rev 0 (aarch64)\n" +
+            "Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma lrcpc dcpop sha3 sm3 sm4 asimddp sha512 sve sve2 flagm ssbs sb bti\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4d\nCPU revision\t: 0\n\n" +
+            "processor\t: 0\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4d\nCPU revision\t: 0\n\n" +
+            "processor\t: 1\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4e\nCPU revision\t: 0\n\n" +
+            "processor\t: 2\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4e\nCPU revision\t: 0\n\n" +
+            "processor\t: 3\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x0\nCPU part\t: 0xd4e\nCPU revision\t: 0\n\n" +
+            "processor\t: 4\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd46\nCPU revision\t: 1\n\n" +
+            "processor\t: 5\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd46\nCPU revision\t: 1\n\n" +
+            "processor\t: 6\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd46\nCPU revision\t: 1\n\n" +
+            "processor\t: 7\nBogoMIPS\t: 52.00\n" +
+            "CPU implementer\t: 0x41\nCPU architecture: 8\n" +
+            "CPU variant\t: 0x1\nCPU part\t: 0xd46\nCPU revision\t: 1\n\n" +
+            "Hardware\t: Xiaomi Xring O3\n"
+        });
     }
 
     public static void setProps(Context context) {
@@ -391,30 +797,47 @@ public final class AdvancedAppSpoofUtils {
     /** GPU preset keys mapped to display names. */
     public static Map<String, String> getGpuPresetNames() {
         final Map<String, String> m = new HashMap<>();
-        m.put("adreno830",    "Adreno 830 · Snapdragon 8 Elite");
         m.put("adreno840",    "Adreno 840 · Snapdragon 8 Elite Gen 5");
+        m.put("adreno830",    "Adreno 830 · Snapdragon 8 Elite");
         m.put("adreno750",    "Adreno 750 · Snapdragon 8 Gen 3");
         m.put("adreno740",    "Adreno 740 · Snapdragon 8 Gen 2");
+        m.put("adreno735",    "Adreno 735 · Snapdragon 8s Gen 3");
         m.put("adreno730",    "Adreno 730 · Snapdragon 8 Gen 1");
         m.put("adreno720",    "Adreno 720 · Snapdragon 7s Gen 3");
         m.put("mali_g925",    "Mali-G925 Immortalis · Dimensity 9400");
         m.put("mali_g920",    "Mali-G920 Immortalis · Dimensity 9400+");
         m.put("mali_g720",    "Mali-G720 Immortalis · Dimensity 9300");
         m.put("mali_g715",    "Mali-G715 Immortalis · Dimensity 9200+");
+        m.put("mali_g615",    "Mali-G615 · Dimensity 8300 / 8350");
+        m.put("mali_g78",     "Mali-G78 MP24 · Kirin 9000");
+        m.put("maleoon930",   "Maleoon 930 · Kirin 9030 Pro / 9030S");
         m.put("maleoon920",   "Maleoon 920 · Kirin 9020");
         m.put("maleoon910",   "Maleoon 910 · Kirin 9010");
+        m.put("xclipse940",   "Samsung Xclipse 940 · Exynos 2400");
+        m.put("xclipse920",   "Samsung Xclipse 920 · Exynos 2200");
         m.put("apple_a18pro", "Apple A18 Pro GPU");
+        m.put("apple_a17pro", "Apple A17 Pro GPU");
         return Collections.unmodifiableMap(m);
     }
 
     /** CPU preset keys mapped to display names. */
     public static Map<String, String> getCpuPresetNames() {
         final Map<String, String> m = new HashMap<>();
-        m.put("sd8elite",      "Snapdragon 8 Elite (SM8750)");
-        m.put("sd8gen3",       "Snapdragon 8 Gen 3 (SM8650)");
-        m.put("dimensity9400", "Dimensity 9400 (MT6989)");
-        m.put("kirin9020",     "Kirin 9020");
-        m.put("kirin9030pro",  "Kirin 9030 Pro");
+        m.put("sd8elitegen5",      "Snapdragon 8 Elite Gen 5 (SM8850)");
+        m.put("sd8elite",          "Snapdragon 8 Elite (SM8750)");
+        m.put("sd8gen3",           "Snapdragon 8 Gen 3 (SM8650)");
+        m.put("sd8gen2",           "Snapdragon 8 Gen 2 (SM8550)");
+        m.put("dimensity9400plus", "Dimensity 9400+ (MT6991)");
+        m.put("dimensity9400",     "Dimensity 9400 (MT6989)");
+        m.put("dimensity8350",     "Dimensity 8350 (MT6897)");
+        m.put("kirin9030pro",      "Kirin 9030 Pro");
+        m.put("kirin9030s",        "Kirin 9030S");
+        m.put("kirin9020",         "Kirin 9020");
+        m.put("kirin9020a",        "Kirin 9020A");
+        m.put("kirin9000s",        "Kirin 9000S");
+        m.put("kirin9000",         "Kirin 9000");
+        m.put("xuanjie_o1",        "Xiaomi Xring O1");
+        m.put("xuanjie_o3",        "Xiaomi Xring O3");
         return Collections.unmodifiableMap(m);
     }
 
