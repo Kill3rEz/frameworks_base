@@ -45,6 +45,7 @@ class ScrimUtils private constructor(context: Context?) {
         fun onUserChanged() {}
         fun setPulsing(pulsing: Boolean) {}
         fun onNotificationPosted(sbn: StatusBarNotification) {}
+        fun onNotificationRemoved(sbn: StatusBarNotification) {}
     }
 
     private val listeners = WeakListenerManager<ScrimEventListener>()
@@ -245,6 +246,10 @@ class ScrimUtils private constructor(context: Context?) {
 
     fun onNotificationPosted(sbn: StatusBarNotification) {
         listeners.notifyOnMain { it.onNotificationPosted(sbn) }
+    }
+
+    fun onNotificationRemoved(sbn: StatusBarNotification) {
+        listeners.notifyOnMain { it.onNotificationRemoved(sbn) }
     }
 
     fun isDozing(): Boolean = mIsDozing == true

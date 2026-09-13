@@ -35,6 +35,8 @@ import com.android.systemui.statusbar.quickactions.popups.ui.model.PopupChipMode
 import com.android.systemui.statusbar.quickactions.popups.ui.model.PopupContentModel
 import com.android.systemui.statusbar.quickactions.popups.ui.viewmodel.DynamicIslandChipViewModel
 import com.android.systemui.statusbar.policy.FlashlightController
+import com.android.systemui.flashlight.domain.interactor.FlashlightInteractor
+import com.android.systemui.flashlight.shared.model.FlashlightModel
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.channels.awaitClose
@@ -48,6 +50,7 @@ class FlashlightPopupChipViewModel
 constructor(
     @Application private val context: Context,
     private val flashlightController: FlashlightController,
+    private val flashlightInteractor: FlashlightInteractor,
 ) : DynamicIslandChipViewModel, ExclusiveActivatable() {
     private val hydrator = Hydrator("FlashlightPopupChipViewModel.hydrator")
 
@@ -74,6 +77,10 @@ constructor(
                                 override fun onFlashlightAvailabilityChanged(available: Boolean) {
                                     trySend(readFlashlightState())
                                 }
+
+                                override fun onFlashlightStrengthChanged(level: Int) {
+                                    trySend(readFlashlightState())
+                                }
                             }
 
                         flashlightController.addCallback(callback)
@@ -97,10 +104,15 @@ constructor(
             return PopupChipModel.Hidden(PopupChipId.Flashlight)
         }
 
+        val levelState = flashlightInteractor.state.value as? FlashlightModel.Available.Level
         val model =
             FlashlightPopupModel(
-                levelPercent = null,
-                turnOff = { flashlightController.setFlashlight(false) },
+                levelPercent = levelState?.let { (it.level * 100 / it.max).coerceIn(0, 100) },
+                level = levelState?.level,
+                maxLevel = levelState?.max,
+                turnOff = { flashlightInteractor.setEnabled(false) },
+                setLevelTemporary = { flashlightInteractor.setTemporaryLevel(it) },
+                setLevel = { flashlightInteractor.setLevel(it) },
             )
 
         val contentDescription =

@@ -178,6 +178,7 @@ public class NotificationListener extends NotificationListenerWithPlugins implem
                 for (NotificationHandler handler : mNotificationHandlers) {
                     handler.onNotificationRemoved(sbn, rankingMap, reason);
                 }
+                ScrimUtils.get().onNotificationRemoved(sbn);
             });
         } else if (!isKeyInRankingMap(key, rankingMap)) {
             Log.wtf(TAG, "Plugin prevented removal but removed ranking " + key
