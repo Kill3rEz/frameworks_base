@@ -22,6 +22,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.view.flags.Flags as ViewFlags
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -270,6 +271,10 @@ fun StatusBarRoot(
                 val phoneStatusBarView =
                     inflater.inflate(R.layout.status_bar, parent, false) as PhoneStatusBarView
 
+                val islandBoundsState = mutableStateOf(android.graphics.Rect())
+                var statusIconContainerRef: StatusIconContainer? = null
+                var overlapDotParentRef: ViewGroup? = null
+
                 addStartSideComposable(
                     phoneStatusBarView = phoneStatusBarView,
                     clockViewModelFactory = clockViewModelFactory,
@@ -277,6 +282,7 @@ fun StatusBarRoot(
                     iconViewStore = iconViewStore,
                     appHandlesViewModel = appHandlesViewModel,
                     context = context,
+                    islandBoundsState = islandBoundsState,
                 )
 
                 touchableExclusionRegionDisposableHandle =
@@ -299,7 +305,7 @@ fun StatusBarRoot(
                 // gets its own centred host over the status bar contents.
                 val centeredArea =
                     phoneStatusBarView.requireViewById<ViewGroup>(R.id.centered_area)
-                centeredArea.addView(
+                val composeView =
                     ComposeView(phoneStatusBarView.context).apply {
                         layoutParams =
                             LinearLayout.LayoutParams(
@@ -316,10 +322,36 @@ fun StatusBarRoot(
                                 StatusBarDynamicIslandContainer(
                                     chips = islandViewModel.shownPopupChips,
                                     onMediaControlPopupVisibilityChanged = {},
+                                    onIslandBoundsChanged = { bounds ->
+                                        islandBoundsState.value = bounds
+                                        collapseOverlappingStatusIcons(
+                                            statusIconContainerRef,
+                                            overlapDotParentRef,
+                                            bounds,
+                                        )
+                                    },
                                 )
                             }
                         }
                     }
+                centeredArea.addView(composeView)
+
+                val islandVisibilityResetListener =
+                    ViewTreeObserver.OnGlobalLayoutListener {
+                        if (
+                            centeredArea.visibility != View.VISIBLE ||
+                                composeView.visibility != View.VISIBLE
+                        ) {
+                            islandBoundsState.value = android.graphics.Rect()
+                            collapseOverlappingStatusIcons(
+                                statusIconContainerRef,
+                                overlapDotParentRef,
+                                android.graphics.Rect(),
+                            )
+                        }
+                    }
+                centeredArea.viewTreeObserver.addOnGlobalLayoutListener(
+                    islandVisibilityResetListener
                 )
 
                 // If the flag is enabled, create and add a compose section to the end
@@ -331,6 +363,30 @@ fun StatusBarRoot(
                 } else {
                     val statusIconContainer =
                         phoneStatusBarView.requireViewById<StatusIconContainer>(R.id.statusIcons)
+                    statusIconContainerRef = statusIconContainer
+                    overlapDotParentRef =
+                        phoneStatusBarView.requireViewById(R.id.status_bar_end_side_content)
+
+                    val statusIconsGlobalLayoutListener =
+                        ViewTreeObserver.OnGlobalLayoutListener {
+                            overlapDotParentRef?.let { dotParent ->
+                                applyOverlapState(statusIconContainer, dotParent, lastIslandBounds)
+                            }
+                        }
+                    statusIconContainer.viewTreeObserver.addOnGlobalLayoutListener(
+                        statusIconsGlobalLayoutListener
+                    )
+                    statusIconContainer.addOnAttachStateChangeListener(
+                        object : View.OnAttachStateChangeListener {
+                            override fun onViewAttachedToWindow(v: View) {}
+
+                            override fun onViewDetachedFromWindow(v: View) {
+                                statusIconContainer.viewTreeObserver.removeOnGlobalLayoutListener(
+                                    statusIconsGlobalLayoutListener
+                                )
+                            }
+                        }
+                    )
                     val darkIconManager =
                         darkIconManagerFactory.create(
                             statusIconContainer,
@@ -432,6 +488,7 @@ private fun addStartSideComposable(
     iconViewStore: NotificationIconContainerViewBinder.IconViewStore?,
     appHandlesViewModel: AppHandlesViewModel,
     context: Context,
+    islandBoundsState: androidx.compose.runtime.MutableState<android.graphics.Rect>,
 ) {
     val startSideExceptHeadsUp =
         phoneStatusBarView.requireViewById<LinearLayout>(R.id.status_bar_start_side_except_heads_up)
@@ -548,6 +605,7 @@ private fun addStartSideComposable(
 
                 val chipsVisibilityModel = statusBarViewModel.ongoingActivityChips
                 if (chipsVisibilityModel.areChipsAllowed) {
+                    var overlapsIsland by remember { mutableStateOf(false) }
                     OngoingActivityChips(
                         chips = chipsVisibilityModel.chips,
                         iconViewStore = iconViewStore,
@@ -555,7 +613,25 @@ private fun addStartSideComposable(
                         // TODO(b/393581408): Now that we always enforce a max width on the chips,
                         //  we should be able to convert the chips to a LazyRow and get some
                         //  animations for free.
-                        modifier = Modifier.sysUiResTagContainer().widthIn(max = chipsMaxWidth),
+                        modifier =
+                            Modifier.sysUiResTagContainer()
+                                .widthIn(max = chipsMaxWidth)
+                                .alpha(if (overlapsIsland) 0f else 1f)
+                                .onGloballyPositioned { coordinates ->
+                                    val b = coordinates.boundsInWindow()
+                                    val chipRect =
+                                        android.graphics.Rect(
+                                            b.left.toInt(),
+                                            b.top.toInt(),
+                                            b.right.toInt(),
+                                            b.bottom.toInt(),
+                                        )
+                                    overlapsIsland =
+                                        android.graphics.Rect.intersects(
+                                            chipRect,
+                                            islandBoundsState.value,
+                                        )
+                                },
                     )
                 }
             }
@@ -847,4 +923,63 @@ private fun dispatchAndConsume(event: PointerEvent, legacyView: View) {
         }
     }
     event.changes.forEach { it.consume() }
+}
+
+private var overlapDotView: View? = null
+private var pendingOverlapCheck: Runnable? = null
+
+private var lastIslandBounds = android.graphics.Rect()
+
+private fun collapseOverlappingStatusIcons(
+    statusIconContainer: StatusIconContainer?,
+    dotParent: ViewGroup?,
+    islandBounds: android.graphics.Rect,
+) {
+    if (statusIconContainer == null || dotParent == null) return
+    lastIslandBounds = islandBounds
+    pendingOverlapCheck?.let { statusIconContainer.removeCallbacks(it) }
+    val runnable = Runnable { applyOverlapState(statusIconContainer, dotParent, islandBounds) }
+    pendingOverlapCheck = runnable
+    statusIconContainer.postDelayed(runnable, 300L)
+}
+
+private fun applyOverlapState(
+    statusIconContainer: StatusIconContainer,
+    dotParent: ViewGroup,
+    islandBounds: android.graphics.Rect,
+) {
+    val childRect = android.graphics.Rect()
+    val loc = IntArray(2)
+    var anyOverlap = false
+
+    for (i in 0 until statusIconContainer.childCount) {
+        val child = statusIconContainer.getChildAt(i)
+        if (child.width == 0) continue
+        child.getLocationInWindow(loc)
+        childRect.set(loc[0], loc[1], loc[0] + child.width, loc[1] + child.height)
+        val overlaps = android.graphics.Rect.intersects(childRect, islandBounds)
+        val newVisibility = if (overlaps) View.INVISIBLE else View.VISIBLE
+        if (child.visibility != newVisibility) {
+            child.visibility = newVisibility
+        }
+        if (overlaps) anyOverlap = true
+    }
+
+    // Added as a sibling of StatusIconContainer, not a child of it -- StatusIconContainer
+    // expects its children to be status-icon views and can crash if a plain View is added.
+    val dot =
+        overlapDotView
+            ?: android.widget.TextView(dotParent.context)
+                .apply {
+                    text = "\u2022"
+                    textSize = 10f
+                    setTextColor(android.graphics.Color.WHITE)
+                    gravity = Gravity.CENTER
+                    dotParent.addView(this, 0)
+                }
+                .also { overlapDotView = it }
+    val dotVisibility = if (anyOverlap) View.VISIBLE else View.GONE
+    if (dot.visibility != dotVisibility) {
+        dot.visibility = dotVisibility
+    }
 }
