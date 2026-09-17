@@ -252,7 +252,7 @@ class PulseAudioProcessor(
             val avgAmplitude = if (end > start) sum / (end - start) else 0
 
             val smoothed = averages[i].average(avgAmplitude)
-            output[i] = smoothed * fudgeFactor * heightMultiplier
+            output[i] = smoothed * fudgeFactor * (heightMultiplier * 0.6f)
         }
 
         mainHandler.post {
