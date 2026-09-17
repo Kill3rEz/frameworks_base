@@ -49,6 +49,8 @@ import com.android.systemui.util.kotlin.pairwiseBy
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -369,6 +371,7 @@ constructor(
         closeUi()
 
         backgroundScope.launch {
+            val skipTimer = toolbarViewModel.recordParametersViewModel.skipTimer
             screenRecordingServiceInteractor.startRecordingDelayed(
                 // TODO(b/437971334): Get options from the UI.
                 ScreenRecordingParameters(
@@ -379,7 +382,8 @@ constructor(
                     lowQuality = toolbarViewModel.recordParametersViewModel.lowQuality,
                     longerDuration = toolbarViewModel.recordParametersViewModel.longerDuration,
                     hevc = toolbarViewModel.recordParametersViewModel.hevc,
-                )
+                ),
+                delay = if (skipTimer) Duration.ZERO else 3.seconds,
             )
         }
     }

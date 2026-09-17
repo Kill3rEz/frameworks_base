@@ -149,6 +149,64 @@ fun CaptureSettingsMenu(viewModel: PreCaptureToolbarViewModel, screenRecordingSe
                 )
             }
 
+            val lowQualityIcon by
+                loadIcon(
+                    viewModel = viewModel,
+                    resId = R.drawable.ic_sr_quality,
+                    contentDescription = null,
+                )
+            SettingsMenuItem(
+                text = stringResource(R.string.screenrecord_lowquality_label),
+                leadingIcon = lowQualityIcon,
+                checked = recordParameters.lowQuality,
+                onCheckedChange = { recordParameters.lowQuality = it },
+                enabled = screenRecordingSelected,
+            )
+
+            val longerDurationIcon by
+                loadIcon(
+                    viewModel = viewModel,
+                    resId = R.drawable.ic_storage,
+                    contentDescription = null,
+                )
+            SettingsMenuItem(
+                text = stringResource(R.string.screenrecord_longer_timeout_switch_label),
+                leadingIcon = longerDurationIcon,
+                checked = recordParameters.longerDuration,
+                onCheckedChange = { recordParameters.longerDuration = it },
+                enabled = screenRecordingSelected,
+            )
+
+            if (recordParameters.isHevcSupported) {
+                val hevcIcon by
+                    loadIcon(
+                        viewModel = viewModel,
+                        resId = R.drawable.ic_hevc,
+                        contentDescription = null,
+                    )
+                SettingsMenuItem(
+                    text = stringResource(R.string.screenrecord_hevc_switch_label),
+                    leadingIcon = hevcIcon,
+                    checked = recordParameters.hevc,
+                    onCheckedChange = { recordParameters.hevc = it },
+                    enabled = screenRecordingSelected,
+                )
+            }
+
+            val skipTimerIcon by
+                loadIcon(
+                    viewModel = viewModel,
+                    resId = R.drawable.ic_sr_clock,
+                    contentDescription = null,
+                )
+            SettingsMenuItem(
+                text = stringResource(R.string.screenrecord_skip_time_label),
+                leadingIcon = skipTimerIcon,
+                checked = recordParameters.skipTimer,
+                onCheckedChange = { recordParameters.skipTimer = it },
+                enabled = screenRecordingSelected,
+            )
+
             if (viewModel.customSaveLocationSupported) {
                 SaveLocationDropdown(
                     viewModel = viewModel,

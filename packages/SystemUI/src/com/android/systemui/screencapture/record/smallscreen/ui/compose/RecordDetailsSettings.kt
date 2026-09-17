@@ -172,7 +172,7 @@ fun RecordDetailsSettings(
                 icon =
                     loadIcon(
                         viewModel = drawableLoaderViewModel,
-                        resId = R.drawable.ic_screenrecord,
+                        resId = R.drawable.ic_sr_quality,
                         contentDescription = null,
                     ),
                 label = stringResource(R.string.screenrecord_lowquality_label),
@@ -185,7 +185,7 @@ fun RecordDetailsSettings(
                 icon =
                     loadIcon(
                         viewModel = drawableLoaderViewModel,
-                        resId = R.drawable.ic_screenrecord,
+                        resId = R.drawable.ic_storage,
                         contentDescription = null,
                     ),
                 label = stringResource(R.string.screenrecord_longer_timeout_switch_label),
@@ -198,7 +198,7 @@ fun RecordDetailsSettings(
                 icon =
                     loadIcon(
                         viewModel = drawableLoaderViewModel,
-                        resId = R.drawable.ic_screenrecord,
+                        resId = R.drawable.ic_hevc,
                         contentDescription = null,
                     ),
                 label = stringResource(R.string.screenrecord_hevc_switch_label),
@@ -211,7 +211,7 @@ fun RecordDetailsSettings(
                 icon =
                     loadIcon(
                         viewModel = drawableLoaderViewModel,
-                        resId = R.drawable.ic_screenrecord,
+                        resId = R.drawable.ic_sr_clock,
                         contentDescription = null,
                     ),
                 label = stringResource(R.string.screenrecord_skip_time_label),
