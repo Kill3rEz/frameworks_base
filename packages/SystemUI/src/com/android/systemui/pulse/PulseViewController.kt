@@ -87,6 +87,7 @@ class PulseViewController @Inject constructor(
 
     private fun onSettingsChanged() {
         val enabled = pulseEnabled
+        audioProcessor.captureMode = settingsRepository.getCaptureMode()
         if (enabled && !listenersRegistered) {
             ScrimUtils.get().addListener(this)
             mediaSessionManager.addListener(this)

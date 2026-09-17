@@ -23,6 +23,31 @@ class PulseAudioProcessor(
         private const val TAG = "PulseAudioProcessor"
     }
 
+    enum class CaptureMode(val value: Int) {
+        FFT(0),
+        WAVEFORM(1);
+
+        companion object {
+            fun fromInt(value: Int): CaptureMode =
+                entries.firstOrNull { it.value == value } ?: FFT
+        }
+    }
+
+    @Volatile
+    var captureMode: CaptureMode = CaptureMode.FFT
+        set(value) {
+            if (field == value) return
+            field = value
+            if (isProcessing) {
+                val session = attachedSessionId
+                releaseVisualizer()
+                if (!attachVisualizer(session) && session != 0) {
+                    attachVisualizer(0)
+                }
+                isProcessing = (visualizer != null)
+            }
+        }
+
     private var visualizer: Visualizer? = null
     private var dataListener: AudioDataListener? = null
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -33,6 +58,7 @@ class PulseAudioProcessor(
     private var lastKnownRefreshRateHz: Float = 60f
 
     private var fftAverage: Array<FFTAverage>? = null
+    private var waveformAverage: Array<FFTAverage>? = null
     private val fudgeFactor = 20f
 
     private var audioManager: AudioManager? = null
@@ -156,6 +182,9 @@ class PulseAudioProcessor(
 
     private fun attachVisualizer(sessionId: Int): Boolean {
         return try {
+            val wantWaveform = captureMode == CaptureMode.WAVEFORM
+            val wantFft = captureMode == CaptureMode.FFT
+
             val v = Visualizer(sessionId).apply {
                 captureSize = Visualizer.getCaptureSizeRange()[1]
                 setDataCaptureListener(object : Visualizer.OnDataCaptureListener {
@@ -164,6 +193,9 @@ class PulseAudioProcessor(
                         waveform: ByteArray?,
                         samplingRate: Int
                     ) {
+                        if (waveform != null && waveform.isNotEmpty()) {
+                            processWaveform(waveform)
+                        }
                     }
 
                     override fun onFftDataCapture(
@@ -175,7 +207,7 @@ class PulseAudioProcessor(
                             processFFT(fft)
                         }
                     }
-                }, Visualizer.getMaxCaptureRate() / 2, false, true)
+                }, Visualizer.getMaxCaptureRate() / 2, wantWaveform, wantFft)
 
                 enabled = true
             }
@@ -185,6 +217,46 @@ class PulseAudioProcessor(
         } catch (e: Exception) {
             Log.w(TAG, "Visualizer attach failed session=$sessionId", e)
             false
+        }
+    }
+
+    private fun processWaveform(data: ByteArray) {
+        val currentTime = System.currentTimeMillis()
+        updateThrottle()
+        if (currentTime - lastUpdateTime < updateThrottle) {
+            return
+        }
+        lastUpdateTime = currentTime
+
+        val barCount = settingsRepo.getBarCount()
+        var averages = waveformAverage
+        if (averages == null || averages.size != barCount) {
+            averages = Array(barCount) { FFTAverage() }
+            waveformAverage = averages
+        }
+
+        val output = FloatArray(barCount)
+        val samplesPerBar = (data.size / barCount).coerceAtLeast(1)
+        val heightMultiplier = settingsRepo.getHeightMultiplier()
+
+        for (i in 0 until barCount) {
+            val start = i * samplesPerBar
+            val end = (start + samplesPerBar).coerceAtMost(data.size)
+            if (start >= data.size) continue
+
+            var sum = 0
+            for (j in start until end) {
+                val centered = (data[j].toInt() and 0xFF) - 128
+                sum += kotlin.math.abs(centered)
+            }
+            val avgAmplitude = if (end > start) sum / (end - start) else 0
+
+            val smoothed = averages[i].average(avgAmplitude)
+            output[i] = smoothed * fudgeFactor * heightMultiplier
+        }
+
+        mainHandler.post {
+            dataListener?.onAudioData(output)
         }
     }
 
