@@ -34,7 +34,8 @@ class PulseView @JvmOverloads constructor(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
         )
-        alpha = 1f
+        alpha = 0f
+        visibility = GONE
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         isClickable = false
         isFocusable = false
@@ -60,7 +61,7 @@ class PulseView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (isAttached && isVisible) {
+        if (isAttached && isVisible && alpha > 0f) {
             renderer?.onDraw(canvas, width, height)
             postInvalidateOnAnimation()
         }
@@ -77,59 +78,97 @@ class PulseView @JvmOverloads constructor(
         post { renderer?.onMediaColorsChanged(color) }
     }
 
-    fun setVisibility(visible: Boolean) {
+    @JvmOverloads
+    fun setVisibility(visible: Boolean, animate: Boolean = true, durationMs: Long = 300L) {
+        if (isVisible == visible && ((visible && visibility == VISIBLE) || (!visible && visibility == GONE))) {
+            return
+        }
         isVisible = visible
-        visibility = if (visible) VISIBLE else GONE
+        fadeAnimator?.cancel()
+        fadeAnimator = null
+
+        if (!animate) {
+            visibility = if (visible) VISIBLE else GONE
+            alpha = if (visible) 1f else 0f
+            if (visible) {
+                postInvalidateOnAnimation()
+            }
+            return
+        }
+
         if (visible) {
-            alpha = 1f
-            postInvalidateOnAnimation()
+            visibility = VISIBLE
+            fadeAnimator = ValueAnimator.ofFloat(alpha, 1f).apply {
+                duration = durationMs
+                interpolator = fadeInterpolator
+                addUpdateListener { animation ->
+                    alpha = animation.animatedValue as Float
+                    postInvalidateOnAnimation()
+                }
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        alpha = 1f
+                        fadeAnimator = null
+                    }
+
+                    override fun onAnimationCancel(animation: Animator) {
+                        fadeAnimator = null
+                    }
+                })
+                start()
+            }
+        } else {
+            fadeAnimator = ValueAnimator.ofFloat(alpha, 0f).apply {
+                duration = durationMs
+                interpolator = fadeInterpolator
+                addUpdateListener { animation ->
+                    alpha = animation.animatedValue as Float
+                    postInvalidateOnAnimation()
+                }
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        alpha = 0f
+                        visibility = GONE
+                        fadeAnimator = null
+                    }
+
+                    override fun onAnimationCancel(animation: Animator) {
+                        alpha = 0f
+                        visibility = GONE
+                        fadeAnimator = null
+                    }
+                })
+                start()
+            }
         }
     }
 
     fun fadeIn(durationMs: Long) {
-        fadeAnimator?.cancel()
-        setVisibility(true)
-        fadeAnimator = ValueAnimator.ofFloat(alpha, 1f).apply {
-            duration = durationMs
-            interpolator = fadeInterpolator
-            addUpdateListener { animation ->
-                alpha = animation.animatedValue as Float
-                invalidate()
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    alpha = 1f
-                    fadeAnimator = null
-                }
-
-                override fun onAnimationCancel(animation: Animator) {
-                    fadeAnimator = null
-                }
-            })
-            start()
-        }
+        setVisibility(true, animate = true, durationMs = durationMs)
     }
 
     fun fadeOut(durationMs: Long, onComplete: (() -> Unit)? = null) {
         fadeAnimator?.cancel()
+        isVisible = false
 
         fadeAnimator = ValueAnimator.ofFloat(alpha, 0f).apply {
             duration = durationMs
             interpolator = fadeInterpolator
             addUpdateListener { animation ->
                 alpha = animation.animatedValue as Float
-                invalidate()
+                postInvalidateOnAnimation()
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     alpha = 0f
-                    setVisibility(false)
+                    visibility = GONE
                     fadeAnimator = null
                     onComplete?.invoke()
                 }
 
                 override fun onAnimationCancel(animation: Animator) {
-                    setVisibility(false)
+                    alpha = 0f
+                    visibility = GONE
                     fadeAnimator = null
                     onComplete?.invoke()
                 }
@@ -138,3 +177,4 @@ class PulseView @JvmOverloads constructor(
         }
     }
 }
+
