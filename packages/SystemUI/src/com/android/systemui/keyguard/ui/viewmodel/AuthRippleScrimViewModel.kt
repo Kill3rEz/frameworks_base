@@ -19,6 +19,8 @@ package com.android.systemui.keyguard.ui.viewmodel
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PointF
+import android.os.UserHandle
+import android.provider.Settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -64,6 +66,10 @@ constructor(
         }
 
     private val unlockRippleOrigin = authRippleInteractor.sensorOrigin
+
+    private val isRippleEnabled: Boolean
+        get() = Settings.System.getIntForUser(sysuiContext.contentResolver,
+            Settings.System.ENABLE_RIPPLE_EFFECT, 1, UserHandle.USER_CURRENT) == 1
 
     /**
      * Whether to show an unlock ripple animation.
@@ -136,7 +142,13 @@ constructor(
 
     override suspend fun onActivated() {
         super.onActivated()
-        authRippleInteractor.showUnlockRipple.collect { showUnlockRipple = true }
+        authRippleInteractor.showUnlockRipple.collect {
+            if (isRippleEnabled) {
+                showUnlockRipple = true
+            } else {
+                finishShowingUnlockRipple()
+            }
+        }
     }
 
     override suspend fun onDeactivated() {
