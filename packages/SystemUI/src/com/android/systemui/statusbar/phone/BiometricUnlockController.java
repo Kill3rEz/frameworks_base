@@ -401,7 +401,46 @@ public class BiometricUnlockController extends KeyguardUpdateMonitorCallback imp
                 authController, statusBarStateController, sessionTracker, latencyTracker,
                 screenOffAnimationController, vibrator, systemClock, selectedUserInteractor,
                 biometricUnlockInteractor, javaAdapter, keyguardTransitionInteractor,
-                secureLockDeviceInteractor, () -> null);
+                secureLockDeviceInteractor, () -> null, () -> null);
+    }
+
+    @VisibleForTesting
+    public BiometricUnlockController(
+            DozeScrimController dozeScrimController,
+            KeyguardViewMediator keyguardViewMediator,
+            NotificationShadeWindowController notificationShadeWindowController,
+            KeyguardStateController keyguardStateController,
+            @Main Handler handler,
+            KeyguardUpdateMonitor keyguardUpdateMonitor,
+            @Main Resources resources,
+            KeyguardBypassController keyguardBypassController,
+            MetricsLogger metricsLogger, DumpManager dumpManager,
+            PowerManager powerManager,
+            BiometricUnlockLogger biometricUnlockLogger,
+            NotificationMediaManager notificationMediaManager,
+            WakefulnessLifecycle wakefulnessLifecycle,
+            AuthController authController,
+            StatusBarStateController statusBarStateController,
+            SessionTracker sessionTracker,
+            LatencyTracker latencyTracker,
+            ScreenOffAnimationController screenOffAnimationController,
+            VibratorHelper vibrator,
+            SystemClock systemClock,
+            Lazy<SelectedUserInteractor> selectedUserInteractor,
+            BiometricUnlockInteractor biometricUnlockInteractor,
+            JavaAdapter javaAdapter,
+            KeyguardTransitionInteractor keyguardTransitionInteractor,
+            Lazy<SecureLockDeviceInteractor> secureLockDeviceInteractor,
+            Lazy<SceneInteractor> sceneInteractorLazy
+    ) {
+        this(dozeScrimController, keyguardViewMediator, notificationShadeWindowController,
+                keyguardStateController, handler, keyguardUpdateMonitor, resources,
+                keyguardBypassController, metricsLogger, dumpManager, powerManager,
+                biometricUnlockLogger, notificationMediaManager, wakefulnessLifecycle,
+                authController, statusBarStateController, sessionTracker, latencyTracker,
+                screenOffAnimationController, vibrator, systemClock, selectedUserInteractor,
+                biometricUnlockInteractor, javaAdapter, keyguardTransitionInteractor,
+                secureLockDeviceInteractor, sceneInteractorLazy, () -> null);
     }
 
     @VisibleForTesting
