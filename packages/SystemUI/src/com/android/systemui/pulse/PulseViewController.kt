@@ -111,6 +111,7 @@ class PulseViewController @Inject constructor(
             mainScope.launch {
                 view.setVisibility(false)
                 audioProcessor.stopCapture()
+                bassHaptics.reset()
             }
         }
         updateState()
@@ -119,12 +120,21 @@ class PulseViewController @Inject constructor(
 
     private fun updatePulse(show: Boolean) {
         mainScope.launch {
-            view.setVisibility(show)
-            if (pulseEnabled && (show || isHapticsEnabled)) {
+            if (show) {
+                view.setVisibility(true)
                 audioProcessor.startCapture()
+                view.fadeIn(PULSE_FADE_IN_DURATION_MS)
+            } else if (pulseEnabled && isHapticsEnabled) {
+                audioProcessor.startCapture()
+                view.fadeOut(PULSE_FADE_OUT_DURATION_MS) {
+                    view.setVisibility(false)
+                }
             } else {
-                audioProcessor.stopCapture()
-                bassHaptics.reset()
+                view.fadeOut(PULSE_FADE_OUT_DURATION_MS) {
+                    view.setVisibility(false)
+                    audioProcessor.stopCapture()
+                    bassHaptics.reset()
+                }
             }
         }
     }
@@ -213,6 +223,8 @@ class PulseViewController @Inject constructor(
 
     companion object {
         private const val TAG = "PulseViewController"
+        private const val PULSE_FADE_IN_DURATION_MS = 300L
+        private const val PULSE_FADE_OUT_DURATION_MS = 250L
 
         @Volatile
         private var INSTANCE: PulseViewController? = null
