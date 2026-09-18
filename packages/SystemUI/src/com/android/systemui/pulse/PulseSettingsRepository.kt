@@ -128,11 +128,13 @@ class PulseSettingsRepository(private val context: Context) {
     }
 
     fun getStyleMode(): String {
-        // Valid values: "solid", "fading", "neon", "retro", "minimal", "sparkle", "matrix", "dotwave"
+        // Valid values: "solid", "fading", "neon", "retro", "minimal",
+        //               "sparkle", "matrix", "dotwave", "particle", "waveform"
         if (cachedRenderer == null) {
             val raw = getSecureStringSetting(PULSE_RENDERER, DEFAULT_RENDERER)
             cachedRenderer = when (raw) {
-                "solid", "fading", "neon", "retro", "minimal", "sparkle", "matrix", "dotwave" -> raw
+                "solid", "fading", "neon", "retro", "minimal",
+                "sparkle", "matrix", "dotwave", "particle", "waveform" -> raw
                 else -> DEFAULT_RENDERER
             }
         }
@@ -207,4 +209,7 @@ class PulseSettingsRepository(private val context: Context) {
     fun getBlockStrokePx(): Float = 4f * getDensitySafe()
     fun getFilledBlockSizePx(): Float = 4f * getDensitySafe()
     fun getEmptyBlockSizePx(): Float = 1f * getDensitySafe()
+
+    /** Raw screen density. Used by renderers that need DP-scaled physics or strokes. */
+    fun displayDensity(): Float = getDensitySafe()
 }

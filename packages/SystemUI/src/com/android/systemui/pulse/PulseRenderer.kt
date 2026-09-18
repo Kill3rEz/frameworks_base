@@ -71,6 +71,8 @@ class PulseRenderer(
             "sparkle" -> style !is SparkleStyleRenderer
             "matrix" -> style !is MatrixStyleRenderer
             "dotwave" -> style !is DotWaveStyleRenderer
+            "particle" -> style !is ParticleStyleRenderer
+            "waveform" -> style !is WaveformStyleRenderer
             else -> false
         }
 
@@ -94,6 +96,8 @@ class PulseRenderer(
             "sparkle" -> SparkleStyleRenderer(settingsRepo)
             "matrix" -> MatrixStyleRenderer(settingsRepo)
             "dotwave" -> DotWaveStyleRenderer(settingsRepo)
+            "particle" -> ParticleStyleRenderer(settingsRepo)
+            "waveform" -> WaveformStyleRenderer(settingsRepo)
             else -> SolidLineStyleRenderer(settingsRepo)
         }
     }
