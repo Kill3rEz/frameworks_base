@@ -171,10 +171,11 @@ internal class ParticleStyleRenderer(
             }
         }
 
-        val it = particles.iterator()
-        while (it.hasNext()) {
-            val p = it.next()
-            if (p.life <= 0f || p.alpha <= 0) it.remove()
+        for (idx in particles.indices.reversed()) {
+            val p = particles[idx]
+            if (p.life <= 0f || p.alpha <= 0) {
+                particles.removeAt(idx)
+            }
         }
 
         if (showTrails) {

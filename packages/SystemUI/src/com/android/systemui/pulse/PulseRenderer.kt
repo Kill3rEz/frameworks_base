@@ -35,6 +35,8 @@ class PulseRenderer(
     private var lastBarCount = -1
     private var lastDataSize = -1
 
+    private val lavaHsv = floatArrayOf(0f, 1f, 1f)
+
     fun updateHeights(newHeights: FloatArray) {
         ensureStyleUpToDate()
         val currentBarCount = settingsRepo.getBarCount()
@@ -50,6 +52,7 @@ class PulseRenderer(
 
     fun onDraw(canvas: Canvas, viewWidth: Int, viewHeight: Int) {
         if (!settingsRepo.isPulseEnabled()) return
+        ensureStyleUpToDate()
         if (lastViewW != viewWidth || lastViewH != viewHeight) {
             style.onSizeChanged(viewWidth, viewHeight)
             lastViewW = viewWidth
@@ -110,8 +113,8 @@ class PulseRenderer(
             "custom" -> settingsRepo.getCustomColor()
             "lavalamp" -> {
                 val time = System.currentTimeMillis()
-                val hue = (time / 50) % 360
-                Color.HSVToColor(alpha, floatArrayOf(hue.toFloat(), 1f, 1f))
+                lavaHsv[0] = ((time / 50) % 360).toFloat()
+                Color.HSVToColor(alpha, lavaHsv)
             }
             "accent" -> accentColor
             else -> Color.WHITE

@@ -61,6 +61,7 @@ internal class MatrixStyleRenderer(
     
     private var changeCounter = 0
     private val changeInterval = 3
+    private val lavaHsv = floatArrayOf(0f, 1f, 1f)
 
     override fun onSizeChanged(viewWidth: Int, viewHeight: Int) {
         viewW = viewWidth
@@ -146,8 +147,8 @@ internal class MatrixStyleRenderer(
 
         if (currentColorMode == "lavalamp") {
             val time = System.currentTimeMillis()
-            val hue = (time / 50) % 360
-            val lavaColor = Color.HSVToColor(255, floatArrayOf(hue.toFloat(), 1f, 1f))
+            lavaHsv[0] = ((time / 50) % 360).toFloat()
+            val lavaColor = Color.HSVToColor(255, lavaHsv)
             updatePaintColors(lavaColor)
         }
 

@@ -126,16 +126,19 @@ class PulseView @JvmOverloads constructor(
                     postInvalidateOnAnimation()
                 }
                 addListener(object : AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: Animator) {
-                        alpha = 0f
-                        visibility = GONE
+                    private var isCancelled = false
+
+                    override fun onAnimationCancel(animation: Animator) {
+                        isCancelled = true
                         fadeAnimator = null
                     }
 
-                    override fun onAnimationCancel(animation: Animator) {
-                        alpha = 0f
-                        visibility = GONE
+                    override fun onAnimationEnd(animation: Animator) {
                         fadeAnimator = null
+                        if (!isCancelled) {
+                            alpha = 0f
+                            visibility = GONE
+                        }
                     }
                 })
                 start()
@@ -148,7 +151,13 @@ class PulseView @JvmOverloads constructor(
     }
 
     fun fadeOut(durationMs: Long, onComplete: (() -> Unit)? = null) {
+        if (!isVisible && visibility == GONE && alpha == 0f) {
+            onComplete?.invoke()
+            return
+        }
+
         fadeAnimator?.cancel()
+        fadeAnimator = null
         isVisible = false
 
         fadeAnimator = ValueAnimator.ofFloat(alpha, 0f).apply {
@@ -159,18 +168,20 @@ class PulseView @JvmOverloads constructor(
                 postInvalidateOnAnimation()
             }
             addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    alpha = 0f
-                    visibility = GONE
-                    fadeAnimator = null
-                    onComplete?.invoke()
-                }
+                private var isCancelled = false
 
                 override fun onAnimationCancel(animation: Animator) {
-                    alpha = 0f
-                    visibility = GONE
+                    isCancelled = true
                     fadeAnimator = null
-                    onComplete?.invoke()
+                }
+
+                override fun onAnimationEnd(animation: Animator) {
+                    fadeAnimator = null
+                    if (!isCancelled) {
+                        alpha = 0f
+                        visibility = GONE
+                        onComplete?.invoke()
+                    }
                 }
             })
             start()

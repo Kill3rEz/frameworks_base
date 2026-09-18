@@ -113,6 +113,7 @@ class PulseAudioProcessor(
 
     fun stopCapture() {
         isCapturingRequested = false
+        mainHandler.removeCallbacksAndMessages(null)
         unregisterPlaybackCallback()
 
         if (!isProcessing && visualizer == null) {
@@ -127,6 +128,7 @@ class PulseAudioProcessor(
 
     fun cleanup() {
         stopCapture()
+        mainHandler.removeCallbacksAndMessages(null)
         dataListener = null
         fftListener = null
     }
@@ -363,8 +365,12 @@ class PulseAudioProcessor(
             output[i] = smoothed * fudgeFactor * (heightMultiplier * 0.6f)
         }
 
-        mainHandler.post {
-            dataListener?.onAudioData(output)
+        if (isCapturingRequested) {
+            mainHandler.post {
+                if (isCapturingRequested) {
+                    dataListener?.onAudioData(output)
+                }
+            }
         }
     }
 
@@ -400,8 +406,12 @@ class PulseAudioProcessor(
 
         fftListener?.onFftData(data)
 
-        mainHandler.post {
-            dataListener?.onAudioData(output)
+        if (isCapturingRequested) {
+            mainHandler.post {
+                if (isCapturingRequested) {
+                    dataListener?.onAudioData(output)
+                }
+            }
         }
     }
 

@@ -67,11 +67,7 @@ class PulseViewController @Inject constructor(
         get() = settingsRepository.isPulseHapticsEnabled()
 
     var pulseRunning: Boolean = false
-        set(value) {
-            if (value == field) return
-            field = value
-            updatePulse(value)
-        }
+        private set
 
     init {
         INSTANCE = this
@@ -84,16 +80,26 @@ class PulseViewController @Inject constructor(
 
     fun getPulseView(): PulseView = view
 
+    private var lastShow: Boolean? = null
+    private var lastHaptics: Boolean? = null
+
     private fun updateState() {
         if (!pulseEnabled) {
             pulseRunning = false
+            updatePulse(show = false, allowHaptics = false)
             return
         }
-        pulseRunning = isMediaPlaying
+        val shouldShow = isMediaPlaying
                 && !bouncerShowingOrKeyguardDismissing
                 && isCollapsed
                 && ((keyguardShowing && !isDozing && !isScreenOff)
                 || (isDozing && ambientEnabled))
+        val shouldHaptics = isHapticsEnabled
+                && isMediaPlaying
+                && (!isScreenOff || isDozing)
+
+        pulseRunning = shouldShow
+        updatePulse(show = shouldShow, allowHaptics = shouldHaptics)
     }
 
     private fun onSettingsChanged() {
@@ -108,6 +114,8 @@ class PulseViewController @Inject constructor(
             mediaSessionManager.removeListener(this)
             listenersRegistered = false
             pulseRunning = false
+            lastShow = null
+            lastHaptics = null
             mainScope.launch {
                 view.setVisibility(false)
                 audioProcessor.stopCapture()
@@ -115,16 +123,19 @@ class PulseViewController @Inject constructor(
             }
         }
         updateState()
-        updatePulse(pulseRunning)
     }
 
-    private fun updatePulse(show: Boolean) {
+    private fun updatePulse(show: Boolean, allowHaptics: Boolean) {
+        if (show == lastShow && allowHaptics == lastHaptics) return
+        lastShow = show
+        lastHaptics = allowHaptics
+
         mainScope.launch {
             if (show) {
                 view.setVisibility(true)
                 audioProcessor.startCapture()
                 view.fadeIn(PULSE_FADE_IN_DURATION_MS)
-            } else if (pulseEnabled && isHapticsEnabled) {
+            } else if (allowHaptics) {
                 audioProcessor.startCapture()
                 view.fadeOut(PULSE_FADE_OUT_DURATION_MS) {
                     view.setVisibility(false)
@@ -207,6 +218,8 @@ class PulseViewController @Inject constructor(
 
     fun destroy() {
         pulseRunning = false
+        lastShow = null
+        lastHaptics = null
         settingsRepository.stopObserving()
         if (listenersRegistered) {
             ScrimUtils.get().removeListener(this)
