@@ -14963,6 +14963,12 @@ public final class Settings {
         public static final String LOCK_SCREEN_CUSTOM_CLOCK_GRADIENT_RADIUS = "lock_screen_custom_clock_gradient_radius";
 
         /**
+         * Custom clock weather
+         * @hide
+         */
+        public static final String CUSTOM_CLOCK_WEATHER = "custom_clock_weather";
+
+        /**
          * Control whether the process CPU info meter should be shown.
          * @hide
          */

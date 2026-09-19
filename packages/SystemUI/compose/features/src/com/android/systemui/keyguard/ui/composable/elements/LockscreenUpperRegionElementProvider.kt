@@ -260,17 +260,17 @@ constructor(
             ) {
                 scene(NarrowScenes.LargeClock) {
                     when {
-                        !clockHidden -> LockscreenElement(Region.Clock.Large)
                         customStyle != 0 -> CustomClockView()
-                        else -> { /* no clock */ }
+                        clockHidden -> { /* no clock */ }
+                        else -> LockscreenElement(Region.Clock.Large)
                     }
                 }
                 scene(NarrowScenes.SmallClock) {
                     Column {
                         when {
-                            !clockHidden -> LockscreenElement(Region.Clock.Small)
                             customStyle != 0 -> CustomClockView()
-                            else -> { /* no clock */ }
+                            clockHidden -> { /* no clock */ }
+                            else -> LockscreenElement(Region.Clock.Small)
                         }
                         MediaCarousel(Modifier.align(Alignment.Start))
                         Notifications(aodAlignment = Alignment.TopStart)
@@ -430,9 +430,9 @@ constructor(
                 contentAlignment = Alignment.Center,
             ) {
                 when {
-                    !clockHidden -> LockscreenElement(Region.Clock.Large)
                     customStyle != 0 -> CustomClockView()
-                    else -> { /* no clock */ }
+                    clockHidden -> { /* no clock */ }
+                    else -> LockscreenElement(Region.Clock.Large)
                 }
                 AODNotifications(Modifier.align(notifAlignment))
             }
@@ -540,11 +540,11 @@ constructor(
             isLarge: Boolean
         ) {
             when {
-                !clockHidden -> LockscreenElement(
+                customStyle != 0 -> CustomClockView()
+                clockHidden -> { /* no clock */ }
+                else -> LockscreenElement(
                     if (isLarge) Region.Clock.Large else Region.Clock.Small
                 )
-                customStyle != 0 -> CustomClockView()
-                else -> { /* no clock */ }
             }
         }
 

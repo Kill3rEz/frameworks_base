@@ -19,6 +19,7 @@ import android.graphics.Color.HSVToColor
 import android.graphics.LinearGradient
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
 import android.os.UserHandle
@@ -70,6 +71,7 @@ class ClockStyle @JvmOverloads constructor(
     private var clockFrameMarginTop = DEFAULT_MARGIN_TOP
     private var clockSizeScale = DEFAULT_CLOCK_SIZE
     private var clockFrameMarginStart = DEFAULT_MARGIN_START
+
     private var gradientEnabled = false
     private var gradientColorStart = DEFAULT_GRADIENT_COLOR_START
     private var gradientColorEnd = DEFAULT_GRADIENT_COLOR_END
@@ -150,6 +152,10 @@ class ClockStyle @JvmOverloads constructor(
 
     private val mediaDataListener = object : MediaSessionManager.MediaDataListener {
         override fun onPlaybackStateChanged(state: Int) {
+            if (state != PlaybackState.STATE_PLAYING) {
+                currentAlbumColor = null
+                if (albumArtColorEnabled) applyClockColors()
+            }
         }
 
         override fun onMediaColorsChanged(color: Int) {
@@ -256,7 +262,7 @@ class ClockStyle @JvmOverloads constructor(
             }
             CLOCK_FRAME_MARGIN_TOP_KEY -> {
                 clockFrameMarginTop = TunerService.parseInteger(newValue, DEFAULT_MARGIN_TOP)
-                    .coerceIn(0, 100)
+                    .coerceIn(0, 200)
                 updateClockFrameMargin()
             }
             CLOCK_SIZE_KEY -> {
@@ -458,18 +464,16 @@ class ClockStyle @JvmOverloads constructor(
     private fun cacheClockViews(root: View) {
         when (root) {
             is TextClock -> {
-                root.typeface?.let {
-                    root.setTag(R.id.original_typeface, it)
-                    root.typeface = it
-                }
+                root.setTag(R.id.original_typeface, root.typeface)
+                root.setTag(R.id.original_text_color, root.currentTextColor)
+                root.setTag(R.id.original_alpha, root.alpha)
                 textClocks.add(root)
                 styledTextViews.add(root)
             }
             is TextView -> {
-                root.typeface?.let {
-                    root.setTag(R.id.original_typeface, it)
-                    root.typeface = it
-                }
+                root.setTag(R.id.original_typeface, root.typeface)
+                root.setTag(R.id.original_text_color, root.currentTextColor)
+                root.setTag(R.id.original_alpha, root.alpha)
                 styledTextViews.add(root)
             }
         }
@@ -508,7 +512,9 @@ class ClockStyle @JvmOverloads constructor(
 
     private fun resolveClockColor(): Int {
         if (albumArtColorEnabled) {
-            currentAlbumColor?.let { return it }
+            currentAlbumColor?.let {
+                return boostSaturation(it)
+            }
         }
         return when (colorMode) {
             COLOR_MODE_ACCENT -> context.getColor(
@@ -598,15 +604,8 @@ class ClockStyle @JvmOverloads constructor(
         val useGradient = gradientEnabled && !isDozing
         for (i in textClocks.indices) {
             val tc = textClocks[i]
-            if (tc.getTag(R.id.original_typeface) == null && tc.typeface != null) {
-                tc.setTag(R.id.original_typeface, tc.typeface)
-            }
-            if (tc.getTag(R.id.original_text_color) == null) {
-                tc.setTag(R.id.original_text_color, tc.currentTextColor)
-            }
             (tc.getTag(R.id.original_typeface) as? Typeface)?.let { tc.typeface = it }
-
-            val originalColor = tc.getTag(R.id.original_text_color) as Int
+            val originalColor = tc.getTag(R.id.original_text_color) as? Int ?: tc.currentTextColor
             val isWhiteOriginal = (originalColor and 0x00FFFFFF) == (whiteColor and 0x00FFFFFF)
             when {
                 isDozing -> {
@@ -631,10 +630,7 @@ class ClockStyle @JvmOverloads constructor(
         for (i in styledTextViews.indices) {
             val tv = styledTextViews[i]
             if (tv is TextClock) continue
-            if (tv.getTag(R.id.original_text_color) == null) {
-                tv.setTag(R.id.original_text_color, tv.currentTextColor)
-            }
-            val originalColor = tv.getTag(R.id.original_text_color) as Int
+            val originalColor = tv.getTag(R.id.original_text_color) as? Int ?: tv.currentTextColor
             val isWhiteOriginal = (originalColor and 0x00FFFFFF) == (whiteColor and 0x00FFFFFF)
             when {
                 isDozing -> {
@@ -739,6 +735,7 @@ class ClockStyle @JvmOverloads constructor(
     }
 
     private fun isNoColorClock(style: Int): Boolean = NO_COLOR_CLOCKS.contains(style)
+    private fun isNoHorizontalMarginClock(style: Int): Boolean = NO_HORIZONTAL_MARGIN_CLOCKS.contains(style)
 
     private fun startWobbleAnimation() {
         val view = currentClockView ?: return
@@ -837,13 +834,16 @@ class ClockStyle @JvmOverloads constructor(
                 )
 
                 for (i in textClocks.indices) {
-                    textClocks[i].alpha = flashAlpha
-                    textClocks[i].setShadowLayer(radius, 0f, dy, currentGlowColor)
+                    val tc = textClocks[i]
+                    val origAlpha = tc.getTag(R.id.original_alpha) as? Float ?: 1f
+                    tc.alpha = flashAlpha * origAlpha
+                    tc.setShadowLayer(radius, 0f, dy, currentGlowColor)
                 }
                 for (i in styledTextViews.indices) {
                     val tv = styledTextViews[i]
                     if (tv !is android.widget.TextClock) {
-                        tv.alpha = flashAlpha
+                        val origAlpha = tv.getTag(R.id.original_alpha) as? Float ?: 1f
+                        tv.alpha = flashAlpha * origAlpha
                         tv.setShadowLayer(radius, 0f, dy, currentGlowColor)
                     }
                 }
@@ -862,13 +862,16 @@ class ClockStyle @JvmOverloads constructor(
 
     private fun clearWobbleGlow() {
         for (i in textClocks.indices) {
-            textClocks[i].alpha = clockOpacity / 100f
-            textClocks[i].setShadowLayer(0f, 0f, 0f, 0)
+            val tc = textClocks[i]
+            val origAlpha = tc.getTag(R.id.original_alpha) as? Float ?: 1f
+            tc.alpha = (clockOpacity / 100f) * origAlpha
+            tc.setShadowLayer(0f, 0f, 0f, 0)
         }
         for (i in styledTextViews.indices) {
             val tv = styledTextViews[i]
             if (tv !is android.widget.TextClock) {
-                tv.alpha = clockOpacity / 100f
+                val origAlpha = tv.getTag(R.id.original_alpha) as? Float ?: 1f
+                tv.alpha = (clockOpacity / 100f) * origAlpha
                 tv.setShadowLayer(0f, 0f, 0f, 0)
             }
         }
@@ -971,7 +974,7 @@ class ClockStyle @JvmOverloads constructor(
             R.layout.keyguard_clock_oppo,           // 92
         )
 
-        private val NO_COLOR_CLOCKS = hashSetOf(1, 2, 25, 26, 45)
+        private val NO_COLOR_CLOCKS = hashSetOf(1, 2, 25, 26)
         private val NO_HORIZONTAL_MARGIN_CLOCKS = hashSetOf(45, 73, 74)
 
         @JvmField val CLOCK_STYLE_KEY: String = Settings.Secure.LOCK_SCREEN_CUSTOM_CLOCK_STYLE
