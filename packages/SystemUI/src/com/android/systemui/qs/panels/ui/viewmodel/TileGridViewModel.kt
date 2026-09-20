@@ -18,6 +18,7 @@ package com.android.systemui.qs.panels.ui.viewmodel
 
 import com.android.systemui.lifecycle.HydratedActivatable
 import com.android.systemui.qs.panels.domain.interactor.GridLayoutTypeInteractor
+import com.android.systemui.qs.panels.domain.interactor.IconTilesInteractor
 import com.android.systemui.qs.panels.shared.model.GridLayoutType
 import com.android.systemui.qs.panels.ui.compose.GridLayout
 import com.android.systemui.qs.pipeline.domain.interactor.CurrentTilesInteractor
@@ -32,6 +33,7 @@ constructor(
     gridLayoutTypeInteractor: GridLayoutTypeInteractor,
     gridLayoutMap: Map<GridLayoutType, @JvmSuppressWildcards GridLayout>,
     tilesInteractor: CurrentTilesInteractor,
+    iconTilesInteractor: IconTilesInteractor,
     @Named("Default") defaultGridLayout: GridLayout,
 ) : HydratedActivatable() {
 
@@ -39,6 +41,8 @@ constructor(
         gridLayoutTypeInteractor.layout
             .map { gridLayoutMap[it] ?: defaultGridLayout }
             .hydratedStateOf(initialValue = defaultGridLayout)
+
+    val largeTiles by iconTilesInteractor.largeTilesSpecs.hydratedStateOf()
 
     private val tileModels by tilesInteractor.currentTiles.hydratedStateOf()
 

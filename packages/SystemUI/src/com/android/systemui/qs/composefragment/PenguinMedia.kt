@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -59,6 +60,7 @@ import com.android.compose.ui.graphics.painter.rememberDrawablePainter
 import com.android.compose.modifiers.thenIf
 import com.android.systemui.common.shared.model.Icon as CommonIcon
 import com.android.systemui.common.ui.compose.Icon
+import androidx.compose.material3.Icon as M3Icon
 import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.media.remedia.ui.compose.MediaUiBehavior
 import com.android.systemui.media.remedia.ui.viewmodel.MediaCardViewModel
@@ -88,6 +90,8 @@ import com.android.compose.animation.Expandable
 import com.android.compose.animation.rememberExpandableController
 import com.android.systemui.animation.Expandable
 import com.android.systemui.media.remedia.shared.model.MediaCardActionButtonLayout
+import com.android.systemui.media.remedia.shared.model.MediaSessionState
+import com.android.systemui.res.R
 import com.android.systemui.media.remedia.ui.viewmodel.MediaDeviceChipViewModel
 import kotlin.math.PI
 import kotlin.math.sin
@@ -158,6 +162,7 @@ private fun SquareMediaCard(
 ) {
     val moduleHeight = qsModuleHeight(2)
 
+    MediaCardContainer(card, RoundedCornerShape(ArtworkCorner)) {
     Column(
         modifier =
             Modifier.fillMaxWidth()
@@ -204,18 +209,28 @@ private fun SquareMediaCard(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MediaControl(navigation.left, ControlSize)
+            MediaControl(
+                navigation.left,
+                ControlSize,
+                iconRes = R.drawable.ic_penguin_media_previous,
+            )
             card.playPauseAction?.let { play ->
                 play.icon?.let { icon ->
                     MediaControl(
                         MediaSecondaryActionViewModel.Action(icon, play.onClick),
                         ControlSize + 6.dp,
+                        iconRes = playPauseIcon(play.state),
                     )
                 }
             }
-            MediaControl(navigation.right, ControlSize)
+            MediaControl(
+                navigation.right,
+                ControlSize,
+                iconRes = R.drawable.ic_penguin_media_next,
+            )
         }
     }
+}
 }
 
 @Composable
@@ -227,7 +242,14 @@ private fun WideMediaCard(
 ) {
     val progress =
         (navigation as? MediaNavigationViewModel.Showing)?.progress?.coerceIn(0f, 1f) ?: 0f
-    Box(modifier = modifier.fillMaxWidth().height(WideHeight).clip(RoundedCornerShape(ArtworkCorner))) {
+    MediaCardContainer(card, RoundedCornerShape(ArtworkCorner)) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(WideHeight)
+                .clip(RoundedCornerShape(ArtworkCorner))
+    ) {
         Artwork(card.background, Modifier.fillMaxSize())
         Box(
             Modifier.fillMaxSize()
@@ -277,16 +299,23 @@ private fun WideMediaCard(
                             MediaSecondaryActionViewModel.Action(it, play.onClick),
                             ControlSize,
                             Color.White,
+                            playPauseIcon(play.state),
                         )
                     }
                 }
-                MediaControl(navigation.right, ControlSize, Color.White)
+                MediaControl(
+                    navigation.right,
+                    ControlSize,
+                    Color.White,
+                    R.drawable.ic_penguin_media_next,
+                )
             }
         }
         Box(Modifier.align(Alignment.TopEnd).padding(horizontal = 16.dp, vertical = 12.dp)) {
             dots()
         }
     }
+}
 }
 
 @Composable
@@ -370,10 +399,33 @@ private fun AppLogoWithProgress(icon: CommonIcon, progress: Float) {
 }
 
 @Composable
+private fun MediaCardContainer(
+    card: MediaCardViewModel,
+    shape: Shape,
+    content: @Composable () -> Unit,
+) {
+    if (!LocalMediaCardInteractive.current) {
+        content()
+        return
+    }
+    val expandable = remember { Expandable() }
+    Expandable(
+        expandable = expandable,
+        controller = rememberExpandableController(color = Color.Transparent, shape = shape),
+        useModifierBasedImplementation = true,
+        defaultMinSize = false,
+        onClick = { card.onClick(it) },
+    ) {
+        content()
+    }
+}
+
+@Composable
 private fun MediaControl(
     action: MediaSecondaryActionViewModel,
     size: Dp = ControlSize,
     tint: Color? = null,
+    iconRes: Int? = null,
 ) {
     val model = action as? MediaSecondaryActionViewModel.Action ?: return
     val interactive = LocalMediaCardInteractive.current
@@ -388,23 +440,51 @@ private fun MediaControl(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            icon = model.icon,
-            tint = tint ?: MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(size * 0.6f),
-        )
+        if (iconRes == null) {
+            Icon(
+                icon = model.icon,
+                tint = tint ?: MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(size * 0.6f),
+            )
+        } else {
+            M3Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                tint = tint ?: MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.size(size * 0.6f),
+            )
+        }
     }
 }
 
+private fun playPauseIcon(state: MediaSessionState) =
+    if (state == MediaSessionState.Playing) {
+        R.drawable.ic_penguin_media_pause
+    } else {
+        R.drawable.ic_penguin_media_play
+    }
+
 private val MyUiMediaCorner = 32.dp
 private val MyUiControlSize = 36.dp
-private val MyUiMinHeight = 100.dp
+internal val MyUiMinHeight = 100.dp
 
 @Composable
 fun MyUiMediaCard(
     viewModelFactory: MediaViewModel.Factory,
     behavior: MediaUiBehavior,
     modifier: Modifier = Modifier,
+    interactive: Boolean = true,
+) {
+    CompositionLocalProvider(LocalMediaCardInteractive provides interactive) {
+        MyUiMediaCardContent(viewModelFactory, behavior, modifier)
+    }
+}
+
+@Composable
+private fun MyUiMediaCardContent(
+    viewModelFactory: MediaViewModel.Factory,
+    behavior: MediaUiBehavior,
+    modifier: Modifier,
 ) {
     val context = LocalContext.current
     val viewModel =
@@ -431,6 +511,7 @@ fun MyUiMediaCard(
 
 @Composable
 private fun MyUiMediaPage(card: MediaCardViewModel, height: Dp) {
+    MediaCardContainer(card, RoundedCornerShape(MyUiMediaCorner)) {
     Box(
         modifier =
             Modifier.fillMaxWidth()
@@ -474,34 +555,44 @@ private fun MyUiMediaPage(card: MediaCardViewModel, height: Dp) {
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                MyUiSeekBar(card.navigation, Modifier.weight(1.6f))
-                myUiControls(card).forEach { action ->
-                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        MediaControl(action, MyUiControlSize, Color.White)
-                    }
+                MyUiSeekBar(card.navigation, Modifier.weight(1f))
+                myUiControls(card).forEach { (action, iconRes) ->
+                    MediaControl(action, MyUiControlSize, Color.White, iconRes)
                 }
             }
         }
     }
 }
+}
 
-private fun myUiControls(card: MediaCardViewModel): List<MediaSecondaryActionViewModel> {
-    val extras = card.additionalActions
-    if (card.actionButtonLayout != MediaCardActionButtonLayout.WithPlayPause) return extras
+private fun myUiControls(
+    card: MediaCardViewModel
+): List<Pair<MediaSecondaryActionViewModel.Action, Int?>> {
+    val extras = card.additionalActions.filterIsInstance<MediaSecondaryActionViewModel.Action>()
+    if (card.actionButtonLayout != MediaCardActionButtonLayout.WithPlayPause) {
+        return extras.map { it to null }
+    }
     val play =
         card.playPauseAction?.let { action ->
-            action.icon?.let { MediaSecondaryActionViewModel.Action(it, action.onClick) }
+            action.icon?.let {
+                MediaSecondaryActionViewModel.Action(it, action.onClick) to
+                    playPauseIcon(action.state)
+            }
         }
     return listOfNotNull(
-            extras.getOrNull(0),
-            card.navigation.left,
-            play,
-            card.navigation.right,
-            extras.getOrNull(1),
-        )
-        .filterIsInstance<MediaSecondaryActionViewModel.Action>()
+        extras.getOrNull(0)?.let { it to null },
+        (card.navigation.left as? MediaSecondaryActionViewModel.Action)?.let {
+            it to R.drawable.ic_penguin_media_previous
+        },
+        play,
+        (card.navigation.right as? MediaSecondaryActionViewModel.Action)?.let {
+            it to R.drawable.ic_penguin_media_next
+        },
+        extras.getOrNull(1)?.let { it to null },
+    )
 }
 
 @Composable

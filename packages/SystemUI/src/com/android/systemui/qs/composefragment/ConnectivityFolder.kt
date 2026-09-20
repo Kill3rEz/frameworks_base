@@ -20,6 +20,7 @@ import android.content.Context
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
+import android.content.ContentResolver
 import android.provider.Settings
 import android.service.quicksettings.Tile
 import androidx.compose.foundation.background
@@ -78,9 +79,48 @@ import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.res.R
 
 object ConnectivityFolderSpecs {
-    val Large = listOf("airplane", "cast", "wifi")
-    val Small = listOf("cell", "bt", "hotspot", "dnd")
+    val Large = listOf("airplane", "cell", "wifi")
+    val Small = listOf("cast", "bt", "hotspot", "dnd")
     val ExpandedCards = listOf("wifi", "bt", "cell", "cast")
+}
+
+const val SETTING_QS_FOLDER_USAGE = "qs_connectivity_folder_usage"
+
+private fun parseUsage(raw: String?): Map<String, Int> =
+    raw
+        ?.split(',')
+        ?.mapNotNull {
+            val parts = it.split(':')
+            if (parts.size == 2 && parts[0].isNotEmpty()) {
+                parts[0] to (parts[1].toIntOrNull() ?: 0)
+            } else {
+                null
+            }
+        }
+        ?.toMap() ?: emptyMap()
+
+private fun ContentResolver.recordFolderUse(spec: String) {
+    val usage = parseUsage(Settings.Secure.getString(this, SETTING_QS_FOLDER_USAGE)).toMutableMap()
+    usage[spec] = (usage[spec] ?: 0) + 1
+    Settings.Secure.putString(
+        this,
+        SETTING_QS_FOLDER_USAGE,
+        usage.entries.joinToString(",") { "${it.key}:${it.value}" },
+    )
+}
+
+private fun promoteByUsage(
+    large: List<String>,
+    small: List<String>,
+    usage: Map<String, Int>,
+): Pair<List<String>, List<String>> {
+    if (usage.isEmpty() || large.isEmpty() || small.isEmpty()) return large to small
+    val all = large + small
+    val promoted =
+        all.sortedByDescending { (usage[it] ?: 0) + if (it in large) 1 else 0 }
+            .take(large.size)
+            .toSet()
+    return all.filter { it in promoted } to all.filterNot { it in promoted }
 }
 
 const val SETTING_QS_FOLDER_LARGE = "qs_connectivity_folder_large"
@@ -134,30 +174,37 @@ fun connectivityFolderSpecs(): List<String> {
     return large + small
 }
 
+private fun readSpecs(
+    resolver: ContentResolver,
+    key: String,
+    fallback: List<String>,
+): List<String> {
+    val raw = Settings.Secure.getString(resolver, key) ?: return fallback
+    val parsed = raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    return parsed.ifEmpty { fallback }
+}
+
+private fun current(resolver: ContentResolver): Pair<List<String>, List<String>> =
+    promoteByUsage(
+        readSpecs(resolver, SETTING_QS_FOLDER_LARGE, ConnectivityFolderSpecs.Large),
+        readSpecs(resolver, SETTING_QS_FOLDER_SMALL, ConnectivityFolderSpecs.Small),
+        parseUsage(Settings.Secure.getString(resolver, SETTING_QS_FOLDER_USAGE)),
+    )
+
 @Composable
 private fun folderSpecs(): Pair<List<String>, List<String>> {
     val resolver = LocalContext.current.contentResolver
-    fun read(key: String, fallback: List<String>): List<String> {
-        val raw = Settings.Secure.getString(resolver, key) ?: return fallback
-        val parsed = raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }
-        return parsed.ifEmpty { fallback }
-    }
     var specs by remember {
-        mutableStateOf(
-            read(SETTING_QS_FOLDER_LARGE, ConnectivityFolderSpecs.Large) to
-                read(SETTING_QS_FOLDER_SMALL, ConnectivityFolderSpecs.Small)
-        )
+        mutableStateOf(current(resolver))
     }
     DisposableEffect(resolver) {
         val observer =
             object : ContentObserver(Handler(Looper.getMainLooper())) {
                 override fun onChange(selfChange: Boolean) {
-                    specs =
-                        read(SETTING_QS_FOLDER_LARGE, ConnectivityFolderSpecs.Large) to
-                            read(SETTING_QS_FOLDER_SMALL, ConnectivityFolderSpecs.Small)
+                    specs = current(resolver)
                 }
             }
-        listOf(SETTING_QS_FOLDER_LARGE, SETTING_QS_FOLDER_SMALL).forEach {
+        listOf(SETTING_QS_FOLDER_LARGE, SETTING_QS_FOLDER_SMALL, SETTING_QS_FOLDER_USAGE).forEach {
             resolver.registerContentObserver(Settings.Secure.getUriFor(it), false, observer)
         }
         onDispose { resolver.unregisterContentObserver(observer) }
@@ -186,6 +233,18 @@ private fun Modifier.folderClickable(
     } else {
         this
     }
+
+@Composable
+private fun Modifier.folderTileClickable(tile: TileViewModel, uiState: TileUiState): Modifier {
+    val resolver = LocalContext.current.contentResolver
+    return folderClickable(
+        onClick = {
+            resolver.recordFolderUse(tile.spec.spec)
+            tile.primaryAction(uiState)
+        },
+        onLongClick = { tile.settingsClick(null) },
+    )
+}
 
 @Composable
 fun ConnectivityFolder(
@@ -335,10 +394,7 @@ private fun FolderBigCard(tile: TileViewModel) {
                 .height(BigCardHeight)
                 .clip(RoundedCornerShape(26.dp))
                 .background(glassSurface())
-                .folderClickable(
-                    onClick = { tile.primaryAction(uiState) },
-                    onLongClick = { tile.settingsClick(null) },
-                )
+                .folderTileClickable(tile, uiState)
                 .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -388,10 +444,7 @@ private fun FolderCircle(tile: TileViewModel, diameter: Dp) {
             Modifier.size(diameter)
                 .clip(CircleShape)
                 .background(folderBackground(active))
-                .folderClickable(
-                    onClick = { tile.primaryAction(uiState) },
-                    onLongClick = { tile.settingsClick(null) },
-                ),
+                .folderTileClickable(tile, uiState),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon = icon, tint = folderForeground(active), modifier = Modifier.size(diameter / 2))
@@ -443,10 +496,7 @@ private fun FolderRow(tile: TileViewModel) {
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(26.dp))
                 .background(glassSurface())
-                .folderClickable(
-                    onClick = { tile.primaryAction(uiState) },
-                    onLongClick = { tile.settingsClick(null) },
-                )
+                .folderTileClickable(tile, uiState)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,

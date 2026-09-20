@@ -193,6 +193,7 @@ import com.android.systemui.qs.panels.ui.compose.infinitegrid.EditModeTileDefaul
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.EditModeTileDefaults.GridBackgroundCornerRadius
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.EditModeTileDefaults.TilePlacementSpec
 import com.android.systemui.qs.panels.ui.compose.selection.InteractiveTileContainer
+import com.android.systemui.qs.shared.style.isStockQsStyle
 import com.android.systemui.qs.panels.ui.compose.selection.MutableSelectionState
 import com.android.systemui.qs.panels.ui.compose.selection.QSDragAnchorsData
 import com.android.systemui.qs.panels.ui.compose.selection.ResizingState
@@ -621,7 +622,7 @@ private fun CurrentTilesGrid(
     val panelRowsExtra =
         listState.tiles
             .filterIsInstance<TileGridCell>()
-            .filter { it.tile.tileSpec in PANEL_ELEMENT_SPECS }
+            .filter { it.tile.tileSpec in PANEL_ELEMENT_SPECS && it.rows <= 1 }
             .groupBy { it.row }
             .values
             .fold(0.dp) { acc, cells ->
@@ -866,6 +867,24 @@ private fun gridHeight(rows: Int, tileHeight: Dp, tilePadding: Dp, gridPadding: 
     return ((tileHeight + tilePadding) * rows) + gridPadding * 2
 }
 
+@Composable
+private fun cellHeightOf(cell: TileGridCell): Dp {
+    val rowHeight = tileHeight()
+    return if (cell.tile.tileSpec !in PANEL_ELEMENT_SPECS) {
+        rowHeight
+    } else if (cell.rows > 1) {
+        rowHeight * cell.rows + TileArrangementPadding * (cell.rows - 1)
+    } else {
+        LocalPanelElementHeight.current[cell.tile.tileSpec]
+            ?: (rowHeight * 2 + TileArrangementPadding)
+    }
+}
+
+private fun Modifier.occupyRow(height: Dp) = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    layout(placeable.width, height.roundToPx()) { placeable.place(0, 0) }
+}
+
 private fun GridCell.key(index: Int): Any {
     return if (this is TileGridCell) key else index
 }
@@ -898,14 +917,19 @@ fun LazyGridScope.EditTiles(
             is TileGridCell ->
                 if (listState.isMoving(cell.tile.tileSpec)) {
                     // If the tile is being moved, replace it with a visible spacer
-                    SpacerGridCell(
-                        Modifier.background(
-                            color =
-                                MaterialTheme.colorScheme.secondary.copy(
-                                    alpha = EditModeTileDefaults.PLACEHOLDER_ALPHA
-                                ),
-                            shape = RoundedCornerShape(InactiveTileCornerRadius),
-                        )
+                    Box(
+                        Modifier.then(
+                                if (cell.rows > 1) Modifier.occupyRow(tileHeight()) else Modifier
+                            )
+                            .height(cellHeightOf(cell))
+                            .fillMaxWidth()
+                            .background(
+                                color =
+                                    MaterialTheme.colorScheme.secondary.copy(
+                                        alpha = EditModeTileDefaults.PLACEHOLDER_ALPHA
+                                    ),
+                                shape = RoundedCornerShape(InactiveTileCornerRadius),
+                            )
                     )
                 } else {
                     TileGridCell(
@@ -1032,21 +1056,17 @@ private fun LazyGridItemScope.TileGridCell(
         selectionState.unSelect()
         onRemoveTile(cell.tile.tileSpec)
     }
-    val cellHeight =
-        if (isPanelElement) {
-            LocalPanelElementHeight.current[cell.tile.tileSpec]
-                ?: (TileHeight * 2 + TileArrangementPadding)
-        } else {
-            TileHeight
-        }
+    val rowHeight = tileHeight()
+    val cellHeight = cellHeightOf(cell)
     InteractiveTileContainer(
         tileState = tileState,
         resizingState = resizingState,
         modifier =
             modifier
+                .animateItem(placementSpec = placementSpec)
+                .then(if (cell.rows > 1) Modifier.occupyRow(rowHeight) else Modifier)
                 .height(cellHeight)
                 .fillMaxWidth()
-                .animateItem(placementSpec = placementSpec)
                 .tileTestTag(cell.isIcon),
         onClick = {
             if (tileState == TileState.Removable) {
@@ -1328,7 +1348,7 @@ fun EditTile(
     }
     val defaultStartPadding = CommonTileDefaults.StartPadding
     val iconSizeDiff = CommonTileDefaults.SmallTileIconSize - CommonTileDefaults.LargeTileIconSize
-    val toggleTargetSize = ToggleTargetSize
+    val toggleTargetSize = ToggleTargetSize + if (isStockQsStyle) 0.dp else 16.dp
     Row(
         horizontalArrangement = spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1375,17 +1395,21 @@ fun EditTile(
     ) {
         // Icon
         Box(
-            Modifier.size(ToggleTargetSize).thenIf(tile.isDualTarget) {
-                Modifier.drawBehind { drawCircle(colors.iconBackground, alpha = progress()) }
-            }
+            Modifier.thenIf(!isStockQsStyle) { Modifier.padding(8.dp) }
+                .thenIf(tile.isDualTarget) {
+                    Modifier.drawBehind { drawCircle(colors.iconBackground, alpha = progress()) }
+                },
+            contentAlignment = Alignment.Center,
         ) {
-            SmallTileContent(
-                iconProvider = { tile.icon },
-                color = colors.icon,
-                animateToEnd = true,
-                size = { CommonTileDefaults.SmallTileIconSize - iconSizeDiff * progress() },
-                modifier = Modifier.align(Alignment.Center),
-            )
+            Box(Modifier.size(ToggleTargetSize)) {
+                SmallTileContent(
+                    iconProvider = { tile.icon },
+                    color = colors.icon,
+                    animateToEnd = true,
+                    size = { CommonTileDefaults.SmallTileIconSize - iconSizeDiff * progress() },
+                    modifier = Modifier.align(Alignment.Center),
+                )
+            }
         }
 
         // Labels, positioned after the icon

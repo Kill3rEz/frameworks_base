@@ -40,6 +40,8 @@ data class TileGridCell(
     override val width: Int,
     override val span: GridItemSpan = GridItemSpan(width),
     val column: Int,
+    val rows: Int = 1,
+    val hoistedBefore: Boolean = false,
 ) : GridCell, SizedTile<EditTileViewModel>, CategoryAndName by tile {
     val key: String = "${tile.tileSpec.spec}-$row"
 
@@ -47,7 +49,16 @@ data class TileGridCell(
         sizedTile: SizedTile<EditTileViewModel>,
         row: Int,
         column: Int,
-    ) : this(tile = sizedTile.tile, row = row, column = column, width = sizedTile.width)
+        rows: Int = 1,
+        hoistedBefore: Boolean = false,
+    ) : this(
+        tile = sizedTile.tile,
+        row = row,
+        column = column,
+        width = sizedTile.width,
+        rows = rows,
+        hoistedBefore = hoistedBefore,
+    )
 }
 
 /** Represents an empty space used to fill incomplete rows. Will always display as a 1x1 tile */
