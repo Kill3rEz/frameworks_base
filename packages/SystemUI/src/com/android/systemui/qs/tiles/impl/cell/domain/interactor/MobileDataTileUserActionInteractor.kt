@@ -80,14 +80,20 @@ constructor(
 
     suspend fun handleSecondaryClick(expandable: Expandable?) {
         val activeRepo = getDataRepo() ?: return
-        // If mobile data is disabled, show a confirmation dialog to turn it on.
         if (!activeRepo.dataEnabled.value) {
-            withContext(mainDispatcher) { showEnableConfirmationDialog(expandable) }
+            if (enableConfirmed()) {
+                activeRepo.setDataEnabled(true)
+            } else {
+                withContext(mainDispatcher) { showEnableConfirmationDialog(expandable) }
+            }
         } else {
             // Otherwise, just turn it off without a dialog.
             activeRepo.setDataEnabled(false)
         }
     }
+
+    private fun enableConfirmed(): Boolean =
+        Settings.Secure.getInt(context.contentResolver, SETTING_ENABLE_CONFIRMED, 0) != 0
 
     private fun showEnableConfirmationDialog(expandable: Expandable?) {
         val dialog: SystemUIDialog = systemUIDialogFactory.create()
@@ -95,6 +101,7 @@ constructor(
         dialog.setMessage(context.getString(R.string.mobile_data_enable_message))
 
         dialog.setPositiveButton(R.string.mobile_data_enable_turn_on) { _, _ ->
+            Settings.Secure.putInt(context.contentResolver, SETTING_ENABLE_CONFIRMED, 1)
             getDataRepo()?.setDataEnabled(true)
         }
 
@@ -122,5 +129,9 @@ constructor(
         return mobileConnectionsRepository.defaultDataSubId.value?.let {
             mobileConnectionsRepository.getRepoForSubId(it)
         }
+    }
+
+    private companion object {
+        const val SETTING_ENABLE_CONFIRMED = "qs_mobile_data_enable_confirmed"
     }
 }
