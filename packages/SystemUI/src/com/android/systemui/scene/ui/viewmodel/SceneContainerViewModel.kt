@@ -504,7 +504,6 @@ constructor(
     private fun isFalsingAllowingContentChange(from: ContentKey?, to: ContentKey): Boolean {
         // Only false if the falsing check was for this transition
         if (falsingCheckRejectsTransitionToContent == to) {
-            showDebuggingToast("${to.debugName} rejected: false touch")
             logger.logContentChangeRejection(
                 from = from,
                 to = to,
@@ -546,14 +545,6 @@ constructor(
 
             !fromLockscreenScene || !isFalseTouch
         } ?: true
-    }
-
-    private fun showDebuggingToast(text: String) {
-        if (!Build.IS_ENG && !Build.IS_USERDEBUG) {
-            return
-        }
-
-        toastDisplayer.get().displayToast(text)
     }
 
     /** Defines interface for classes that can handle externally-reported [MotionEvent]s. */
