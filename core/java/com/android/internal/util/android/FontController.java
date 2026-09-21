@@ -202,22 +202,33 @@ public class FontController {
         // First try to resolve the currently active custom font directly
         String currentFont = getCurrentFont();
         if (currentFont != null && !currentFont.isEmpty()) {
-            Typeface tf = Typeface.getSystemDefaultTypeface(currentFont);
-            if (tf != null && tf != Typeface.DEFAULT) {
+            Typeface tf = lookupFamily(currentFont);
+            if (tf != null) {
                 logger("resolveDefaultTypeface: resolved current font '" + currentFont + "'");
                 return tf;
             }
         }
         // Fall back through known default font aliases
         for (String family : DEFAULT_FONT_FALLBACKS) {
-            Typeface tf = Typeface.getSystemDefaultTypeface(family);
-            if (tf != null && tf != Typeface.DEFAULT) {
+            Typeface tf = lookupFamily(family);
+            if (tf != null) {
                 logger("resolveDefaultTypeface: resolved via fallback '" + family + "'");
                 return tf;
             }
         }
-        logger("resolveDefaultTypeface: all fallbacks failed, using DEFAULT");
-        return Typeface.DEFAULT;
+        // No custom or Google Sans family is installed (e.g. vanilla builds): use the real
+        // system default. Typeface.DEFAULT is a placeholder and must not be returned here.
+        logger("resolveDefaultTypeface: all fallbacks failed, using original default");
+        return Typeface.getOriginalDefaultTypeface();
+    }
+
+    private static Typeface lookupFamily(String family) {
+        // The "sans-serif" map entry is either the DEFAULT placeholder or, after a font change,
+        // the previously applied font, so it never identifies the stock default. The original
+        // default is used as the final fallback instead.
+        if (Typeface.DEFAULT_FAMILY.equals(family)) return null;
+        Typeface tf = Typeface.getSystemDefaultTypeface(family);
+        return (tf != null && tf != Typeface.DEFAULT) ? tf : null;
     }
 
     private void handleOnConfiguration(Resources res) {

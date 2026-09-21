@@ -269,6 +269,25 @@ public class Typeface {
         }
     }
 
+    // Upper bound on placeholder hops (e.g. SERIF -> SANS_SERIF -> real) before giving up.
+    private static final int MAX_PLACEHOLDER_DEPTH = 8;
+
+    // Follows placeholder links to the Typeface that actually owns a native instance. Returns
+    // null if the chain is not initialized yet or loops back on itself.
+    private @Nullable Typeface resolvePlaceholder() {
+        Typeface typeface = this;
+        for (int i = 0; i < MAX_PLACEHOLDER_DEPTH; i++) {
+            if (typeface.mPendingTypeface == null) {
+                return typeface;
+            }
+            typeface = typeface.mPendingTypeface.get();
+            if (typeface == null) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     // Runtime re-point of an initialized placeholder (e.g. DEFAULT): the static final field
     // can't be reassigned, so swap what the placeholder resolves to instead.
     private void updatePendingTypeface(@NonNull Typeface resolvedTypeface) {
@@ -276,7 +295,16 @@ public class Typeface {
             throw new IllegalStateException(
                     "Do not call this method other than placeholder Typeface.");
         }
-        mPendingTypeface.set(resolvedTypeface);
+        // Only ever point at a real Typeface. Storing a placeholder here (e.g. DEFAULT itself
+        // when no custom font resolves) makes getNativeInstance() recurse until the stack
+        // overflows.
+        final Typeface target = resolvedTypeface.resolvePlaceholder();
+        if (target == null) {
+            Log.w(TAG, "Ignoring unresolved Typeface for placeholder ("
+                    + mSystemFontFamilyName + ")");
+            return;
+        }
+        mPendingTypeface.set(target);
     }
 
     /** @hide */
@@ -307,6 +335,10 @@ public class Typeface {
     public static final String DEFAULT_FAMILY = "sans-serif";
 
     private static volatile String sFontName = DEFAULT_FAMILY;
+
+    // The real (non-placeholder) system default Typeface, captured before any runtime font
+    // change so FontController can always fall back to it.
+    private static volatile Typeface sOriginalDefault;
 
     static {
         DEFAULT_BOLD = new Typeface(Typeface.BOLD, 700, null);
@@ -1613,8 +1645,16 @@ public class Typeface {
         // Use FontController's fallback resolver to handle family-list
         // entries (e.g. google-sans-flex) that may not register in
         // sSystemFontMap by their list name, falling back through known
-        // aliases to Typeface.DEFAULT.
+        // aliases to the original system default.
         Typeface tf = FontController.resolveBaseTypeface();
+        // Never hand a placeholder (e.g. DEFAULT) to the calls below: DEFAULT would end up
+        // pointing at itself and every getNativeInstance() would overflow the stack.
+        tf = tf != null ? tf.resolvePlaceholder() : null;
+        if (tf == null) {
+            Log.w(TAG, "changeFont: no resolvable typeface for " + fontFamily
+                    + ", keeping current default");
+            return;
+        }
 
         Typeface tfBold = create(tf, BOLD);
         Typeface tfItalic = create(tf, ITALIC);
@@ -1635,6 +1675,16 @@ public class Typeface {
         return sFontName;
     }
 
+    /**
+     * Returns the real system default Typeface as loaded from the system font map, ignoring any
+     * runtime font change. Never returns a placeholder once the font map is initialized.
+     * @hide
+     */
+    public static @NonNull Typeface getOriginalDefaultTypeface() {
+        final Typeface original = sOriginalDefault;
+        return original != null ? original : DEFAULT;
+    }
+
     /** @hide */
     @VisibleForTesting
     public static void setSystemFontMap(Map<String, Typeface> systemFontMap) {
@@ -1644,6 +1694,14 @@ public class Typeface {
 
             // We can't assume DEFAULT_FAMILY available on Roboletric.
             if (sSystemFontMap.containsKey(DEFAULT_FAMILY)) {
+                // Capture the real default before its map entry is replaced by the
+                // SANS_SERIF placeholder below.
+                final Typeface originalDefault =
+                        sSystemFontMap.get(DEFAULT_FAMILY).resolvePlaceholder();
+                if (originalDefault != null) {
+                    sOriginalDefault = originalDefault;
+                }
+
                 initializePendingTypefaceLocked(SANS_SERIF, "sans-serif", sSystemFontMap);
                 initializePendingTypefaceLocked(SERIF, "serif", sSystemFontMap);
                 initializePendingTypefaceLocked(MONOSPACE, "monospace", sSystemFontMap);
@@ -1672,6 +1730,7 @@ public class Typeface {
                 nativeForceSetStaticFinalField("SERIF", create("serif", Typeface.NORMAL));
                 nativeForceSetStaticFinalField("MONOSPACE",
                         create("monospace", Typeface.NORMAL));
+                sOriginalDefault = DEFAULT;
             }
 
             sDefaults = new Typeface[]{
