@@ -143,6 +143,12 @@ public class InstallStart extends Activity {
             // the original owner App is not installed on the device now.
             originatingUid = getIntent().getIntExtra(Intent.EXTRA_ORIGINATING_UID,
                     Process.INVALID_UID);
+            // A trusted forwarder naming its own uid (e.g. an APK copied over MTP is owned by
+            // com.android.mtp, which shares the downloads provider uid) does not identify a
+            // requesting app; treat it as an unknown source, as raw documents already are.
+            if (originatingUid == callingUid) {
+                originatingUid = Process.INVALID_UID;
+            }
         }
 
         boolean isPrivilegedAndKnown = (sourceInfo != null && sourceInfo.isPrivilegedApp()) &&

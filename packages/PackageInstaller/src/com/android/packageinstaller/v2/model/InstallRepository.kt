@@ -207,6 +207,12 @@ class InstallRepository(private val context: Context) : EventResultPersister.Eve
             // the document manager app or the downloads provider. It may be Process.INVALID_UID if
             // the original owner App is not installed on the device now.
             originatingUid = intent.getIntExtra(Intent.EXTRA_ORIGINATING_UID, Process.INVALID_UID)
+            // A trusted forwarder naming its own uid (e.g. an APK copied over MTP is owned by
+            // com.android.mtp, which shares the downloads provider uid) does not identify a
+            // requesting app; treat it as an unknown source, as raw documents already are.
+            if (originatingUid == callingUid) {
+                originatingUid = Process.INVALID_UID
+            }
         }
 
         val sessionInfo: SessionInfo? =
