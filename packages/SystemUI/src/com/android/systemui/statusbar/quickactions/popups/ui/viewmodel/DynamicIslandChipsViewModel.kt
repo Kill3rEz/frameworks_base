@@ -29,12 +29,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.lifecycle.ExclusiveActivatable
+import com.android.systemui.settings.UserTracker
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.quickactions.alarm.ui.viewmodel.AlarmPopupChipViewModel
 import com.android.systemui.statusbar.quickactions.flashlight.ui.viewmodel.FlashlightPopupChipViewModel
 import com.android.systemui.statusbar.quickactions.livescore.ui.viewmodel.LiveScorePopupChipViewModel
 import com.android.systemui.statusbar.quickactions.dynamicisland.media.ui.viewmodel.MediaControlChipViewModel
 import com.android.systemui.statusbar.quickactions.popups.StatusBarPopupChips
+import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.LOCKSCREEN
+import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.readDynamicIslandFeatureEnabled
 import com.android.systemui.statusbar.quickactions.popups.ui.model.PopupChipId
 import com.android.systemui.statusbar.quickactions.popups.ui.model.PopupChipModel
 import com.android.systemui.statusbar.quickactions.screenrecord.ui.viewmodel.ScreenRecordPopupChipViewModel
@@ -63,6 +66,7 @@ constructor(
     @Application private val context: Context,
     private val keyguardTransitionInteractor: KeyguardTransitionInteractor,
     private val shadeInteractor: ShadeInteractor,
+    private val userTracker: UserTracker,
     systemEventChipsFactory: SystemEventPopupChipsViewModel.Factory,
     mediaControlChipFactory: MediaControlChipViewModel.Factory,
     screenRecordChipFactory: ScreenRecordPopupChipViewModel.Factory,
@@ -80,19 +84,39 @@ constructor(
     private val stopwatchChip by lazy { stopwatchChipFactory.create() }
     private val alarmChip by lazy { alarmChipFactory.create() }
     private var isDynamicIslandEnabled by mutableStateOf(readDynamicIslandEnabled())
+    private var isLockscreenEnabled by
+        mutableStateOf(
+            context.contentResolver.readDynamicIslandFeatureEnabled(LOCKSCREEN, defaultValue = false)
+        )
     private val dynamicIslandObserver =
         object : ContentObserver(Handler(Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
                 isDynamicIslandEnabled = readDynamicIslandEnabled()
-                if (!isDynamicIslandEnabled || isOnLockscreen) {
-                    currentShownPopupChipId = null
+                isLockscreenEnabled =
+                    context.contentResolver.readDynamicIslandFeatureEnabled(
+                        LOCKSCREEN,
+                        defaultValue = false,
+                    )
+                if (!isDynamicIslandEnabled || (isOnLockscreen && !isLockscreenEnabled)) {
+                    showPopup(null)
                 }
             }
         }
+    private val userChangedCallback =
+        object : UserTracker.Callback {
+            override fun onUserChanged(newUser: Int, userContext: Context) {
+                showPopup(null)
+                dynamicIslandObserver.onChange(false)
+            }
+        }
 
+    private var isOnLockscreen by
+        mutableStateOf(
+            keyguardTransitionInteractor.currentKeyguardState.value == KeyguardState.LOCKSCREEN
+        )
     private var isShadeVisible by
         mutableStateOf(
-            shadeInteractor.isAnyExpanded.value ||
+            (shadeInteractor.isAnyExpanded.value && !isOnLockscreen) ||
                 shadeInteractor.anyExpansion.value > 0f ||
                 shadeInteractor.isUserInteracting.value
         )
@@ -100,7 +124,13 @@ constructor(
     private var autoPopupJob: Job? = null
 
     private fun showPopup(id: PopupChipId?) {
-        if (id != null && isShadeVisible) return
+        if (
+            id != null &&
+                (!isDynamicIslandEnabled || isShadeVisible ||
+                    (isOnLockscreen && !isLockscreenEnabled))
+        ) {
+            return
+        }
         autoPopupJob?.cancel()
         autoPopupJob = null
         if (currentShownPopupChipId != id) {
@@ -111,7 +141,6 @@ constructor(
     }
     /** The ID of the current chip that is showing its popup, or `null` if no chip is shown. */
     private var currentShownPopupChipId by mutableStateOf<PopupChipId?>(null)
-    private var isOnLockscreen by mutableStateOf(false)
 
     private val incomingPopupChipBundle: PopupChipBundle by derivedStateOf {
         PopupChipBundle(
@@ -124,8 +153,14 @@ constructor(
         )
     }
 
-    val shownPopupChips: List<PopupChipModel.Shown> by derivedStateOf {
-        if (!isDynamicIslandEnabled || isOnLockscreen || isShadeVisible) {
+    val shownPopupChips: List<PopupChipModel.Shown>
+        get() = if (isOnLockscreen) emptyList() else visiblePopupChips
+
+    val lockscreenPopupChips: List<PopupChipModel.Shown>
+        get() = if (isOnLockscreen) visiblePopupChips else emptyList()
+
+    private val visiblePopupChips: List<PopupChipModel.Shown> by derivedStateOf {
+        if (!isDynamicIslandEnabled || (isOnLockscreen && !isLockscreenEnabled) || isShadeVisible) {
             return@derivedStateOf emptyList()
         }
 
@@ -164,11 +199,12 @@ constructor(
 
     override suspend fun onActivated(): Nothing {
         coroutineScope {
-            launch {
-                keyguardTransitionInteractor.isFinishedIn(KeyguardState.LOCKSCREEN).collectLatest {
-                    isOnLockscreen = it
-                }
-            }
+            context.contentResolver.registerContentObserver(
+                Settings.System.getUriFor(LOCKSCREEN),
+                false,
+                dynamicIslandObserver,
+                UserHandle.USER_ALL,
+            )
             context.contentResolver.registerContentObserver(
                 Settings.System.getUriFor(
                     Settings.System.STATUS_BAR_SHOW_DYNAMIC_ISLAND
@@ -177,19 +213,28 @@ constructor(
                 dynamicIslandObserver,
                 UserHandle.USER_ALL,
             )
+            userTracker.addCallback(userChangedCallback, context.mainExecutor)
             dynamicIslandObserver.onChange(false)
             launch {
                 combine(
                         shadeInteractor.isAnyExpanded,
                         shadeInteractor.anyExpansion,
                         shadeInteractor.isUserInteracting,
-                    ) { expanded, expansion, interacting ->
-                        expanded || expansion > 0f || interacting
+                        keyguardTransitionInteractor.isFinishedIn(KeyguardState.LOCKSCREEN),
+                    ) { expanded, expansion, interacting, onLockscreen ->
+                        (expanded && !onLockscreen) || expansion > 0f || interacting
                     }
                     .distinctUntilChanged()
                     .collect { visible ->
                         isShadeVisible = visible
                         if (visible) showPopup(null)
+                    }
+            }
+            launch {
+                keyguardTransitionInteractor.isFinishedIn(KeyguardState.LOCKSCREEN)
+                    .collectLatest {
+                        if (isOnLockscreen != it) showPopup(null)
+                        isOnLockscreen = it
                     }
             }
             launch {
@@ -203,7 +248,8 @@ constructor(
                     Triple(
                         systemEventChips.chips,
                         isDynamicIslandEnabled,
-                        isReadyForAutoPopup && !isShadeVisible,
+                        (isReadyForAutoPopup || (isOnLockscreen && isLockscreenEnabled)) &&
+                            !isShadeVisible,
                     )
                 }.collect { (chips, enabled, canAutoPopup) ->
                     val ids = chips.map { it.chipId }.toSet()
@@ -244,6 +290,7 @@ constructor(
                 awaitCancellation()
             } finally {
                 showPopup(null)
+                userTracker.removeCallback(userChangedCallback)
                 context.contentResolver.unregisterContentObserver(dynamicIslandObserver)
             }
         }

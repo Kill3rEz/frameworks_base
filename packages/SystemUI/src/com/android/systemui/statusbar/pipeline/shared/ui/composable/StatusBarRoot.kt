@@ -106,7 +106,7 @@ import android.os.UserHandle
 import android.provider.Settings
 import android.view.Gravity
 import com.android.systemui.statusbar.quickactions.popups.ui.compose.StatusBarDynamicIslandContainer
-import com.android.systemui.statusbar.quickactions.popups.ui.viewmodel.DynamicIslandChipsViewModel
+import com.android.systemui.statusbar.quickactions.popups.ui.viewmodel.DynamicIslandChipsViewModelStore
 import com.android.systemui.statusbar.events.domain.interactor.SystemStatusEventAnimationInteractor
 import com.android.systemui.statusbar.layout.ui.viewmodel.AppHandlesViewModel
 import com.android.systemui.statusbar.notification.icon.ui.viewbinder.ConnectedDisplaysStatusBarNotificationIconViewStore
@@ -159,7 +159,7 @@ constructor(
     @DisplayAware private val homeStatusBarViewModelFactory: HomeStatusBarViewModelFactory,
     @DisplayAware private val headlineViewModelFactory: HeadlineViewModel.Factory,
     private val statusBarRegionSamplingViewModelFactory: StatusBarRegionSamplingViewModel.Factory,
-    private val dynamicIslandChipsViewModelFactory: DynamicIslandChipsViewModel.Factory,
+    private val dynamicIslandChipsViewModelStore: DynamicIslandChipsViewModelStore,
     private val shadeWindowRootView: WindowRootView,
 ) {
     fun create(root: ViewGroup, andThen: (ViewGroup) -> Unit): ComposeView {
@@ -184,7 +184,7 @@ constructor(
                         eventAnimationInteractor = eventAnimationInteractor,
                         statusBarRegionSamplingViewModelFactory =
                             statusBarRegionSamplingViewModelFactory,
-                        dynamicIslandChipsViewModelFactory = dynamicIslandChipsViewModelFactory,
+                        dynamicIslandChipsViewModelStore = dynamicIslandChipsViewModelStore,
                         onViewCreated = andThen,
                         modifier = Modifier.sysUiResTagContainer(),
                     )
@@ -223,7 +223,7 @@ fun StatusBarRoot(
     darkIconDispatcher: DarkIconDispatcher,
     eventAnimationInteractor: SystemStatusEventAnimationInteractor,
     statusBarRegionSamplingViewModelFactory: StatusBarRegionSamplingViewModel.Factory,
-    dynamicIslandChipsViewModelFactory: DynamicIslandChipsViewModel.Factory,
+    dynamicIslandChipsViewModelStore: DynamicIslandChipsViewModelStore,
     onViewCreated: (ViewGroup) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -350,9 +350,13 @@ fun StatusBarRoot(
                                 .apply { gravity = Gravity.CENTER }
                         setContent {
                             PlatformTheme {
+                                // Shared with the lock screen's island, which the store keeps
+                                // active for the display.
                                 val islandViewModel =
-                                    rememberViewModel(traceName = "DynamicIsland") {
-                                        dynamicIslandChipsViewModelFactory.create()
+                                    remember(context.displayId) {
+                                        dynamicIslandChipsViewModelStore.forDisplay(
+                                            context.displayId
+                                        )
                                     }
                                 StatusBarDynamicIslandContainer(
                                     chips = islandViewModel.shownPopupChips,

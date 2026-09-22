@@ -91,6 +91,7 @@ import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.statusbar.policy.UserInfoController;
 import com.android.systemui.statusbar.systemstatusicons.SystemStatusIconsInCompose;
+import com.android.systemui.statusbar.quickactions.popups.ui.binder.KeyguardDynamicIslandViewBinder;
 import com.android.systemui.tuner.TunerService;
 import com.android.systemui.user.ui.viewmodel.StatusBarUserChipViewModel;
 import com.android.systemui.util.ViewController;
@@ -160,6 +161,7 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
     private final OccludedToLockscreenTransitionViewModel mOccludedToLockscreenTransitionViewModel;
     private final DreamViewModel mDreamViewModel;
     private final KeyguardInteractor mKeyguardInteractor;
+    private final KeyguardDynamicIslandViewBinder mDynamicIslandViewBinder;
     private final TunerService mTunerService;
 
     @Nullable private ComposeView mBatteryComposeView;
@@ -381,9 +383,11 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
             OccludedToLockscreenTransitionViewModel occludedToLockscreenTransitionViewModel,
             DreamViewModel dreamViewModel,
             KeyguardInteractor keyguardInteractor,
-            TunerService tunerService) {
+            TunerService tunerService,
+            KeyguardDynamicIslandViewBinder dynamicIslandViewBinder) {
         super(view);
         mTunerService = tunerService;
+        mDynamicIslandViewBinder = dynamicIslandViewBinder;
         mCoroutineDispatcher = dispatcher;
         mContext = context;
         mCarrierTextController = carrierTextController;
@@ -460,6 +464,7 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
 
     @Override
     protected void onViewAttached() {
+        mDynamicIslandViewBinder.bind(mView);
         if (SceneContainerFlag.isEnabled()) {
             mKeyguardStateControllerCallback.onKeyguardFadingAwayChanged();
             mKeyguardStateController.addCallback(mKeyguardStateControllerCallback);
