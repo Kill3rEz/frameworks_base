@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.lifecycle.ExclusiveActivatable
+import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.quickactions.alarm.ui.viewmodel.AlarmPopupChipViewModel
 import com.android.systemui.statusbar.quickactions.flashlight.ui.viewmodel.FlashlightPopupChipViewModel
 import com.android.systemui.statusbar.quickactions.livescore.ui.viewmodel.LiveScorePopupChipViewModel
@@ -48,6 +49,8 @@ import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.scene.shared.model.Scenes
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 /**
@@ -59,6 +62,7 @@ class DynamicIslandChipsViewModel
 constructor(
     @Application private val context: Context,
     private val keyguardTransitionInteractor: KeyguardTransitionInteractor,
+    private val shadeInteractor: ShadeInteractor,
     systemEventChipsFactory: SystemEventPopupChipsViewModel.Factory,
     mediaControlChipFactory: MediaControlChipViewModel.Factory,
     screenRecordChipFactory: ScreenRecordPopupChipViewModel.Factory,
@@ -86,10 +90,17 @@ constructor(
             }
         }
 
+    private var isShadeVisible by
+        mutableStateOf(
+            shadeInteractor.isAnyExpanded.value ||
+                shadeInteractor.anyExpansion.value > 0f ||
+                shadeInteractor.isUserInteracting.value
+        )
     private var isReadyForAutoPopup by mutableStateOf(false)
     private var autoPopupJob: Job? = null
 
     private fun showPopup(id: PopupChipId?) {
+        if (id != null && isShadeVisible) return
         autoPopupJob?.cancel()
         autoPopupJob = null
         if (currentShownPopupChipId != id) {
@@ -114,7 +125,7 @@ constructor(
     }
 
     val shownPopupChips: List<PopupChipModel.Shown> by derivedStateOf {
-        if (!isDynamicIslandEnabled) {
+        if (!isDynamicIslandEnabled || isOnLockscreen || isShadeVisible) {
             return@derivedStateOf emptyList()
         }
 
@@ -168,6 +179,20 @@ constructor(
             )
             dynamicIslandObserver.onChange(false)
             launch {
+                combine(
+                        shadeInteractor.isAnyExpanded,
+                        shadeInteractor.anyExpansion,
+                        shadeInteractor.isUserInteracting,
+                    ) { expanded, expansion, interacting ->
+                        expanded || expansion > 0f || interacting
+                    }
+                    .distinctUntilChanged()
+                    .collect { visible ->
+                        isShadeVisible = visible
+                        if (visible) showPopup(null)
+                    }
+            }
+            launch {
                 // GONE is not a keyguard state with the scene container; Gone is a scene.
                 keyguardTransitionInteractor.isFinishedIn(Scenes.Gone, KeyguardState.GONE)
                     .collectLatest { isReadyForAutoPopup = it }
@@ -175,11 +200,15 @@ constructor(
             launch {
                 val consumedRequests = mutableMapOf<PopupChipId, Long>()
                 snapshotFlow {
-                    Triple(systemEventChips.chips, isDynamicIslandEnabled, isReadyForAutoPopup)
-                }.collect { (chips, enabled, unlocked) ->
+                    Triple(
+                        systemEventChips.chips,
+                        isDynamicIslandEnabled,
+                        isReadyForAutoPopup && !isShadeVisible,
+                    )
+                }.collect { (chips, enabled, canAutoPopup) ->
                     val ids = chips.map { it.chipId }.toSet()
                     consumedRequests.keys.retainAll(ids)
-                    if (!enabled || !unlocked) {
+                    if (!enabled || !canAutoPopup) {
                         showPopup(null)
                         return@collect
                     }
