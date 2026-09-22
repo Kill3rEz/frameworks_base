@@ -278,4 +278,9 @@
     <string name="dynamic_island_bluetooth_left_earbud">Left earbud</string>
     <string name="dynamic_island_bluetooth_right_earbud">Right earbud</string>
     <string name="dynamic_island_bluetooth_case">Case</string>
+
+    <string name="dynamic_island_charging_current">Current</string>
+    <string name="dynamic_island_charging_power">Power</string>
+    <string name="dynamic_island_charging_voltage">Voltage</string>
+    <string name="dynamic_island_charging_temperature">Temperature</string>
 </resources>
