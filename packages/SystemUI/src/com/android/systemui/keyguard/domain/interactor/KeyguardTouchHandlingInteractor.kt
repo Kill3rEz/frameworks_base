@@ -237,7 +237,8 @@ constructor(
             return
         }
 
-        showMenu()
+        logger.log(LogEvents.LOCK_SCREEN_LONG_PRESS_POPUP_CLICKED)
+        showSettings()
     }
 
     /** Notifies that the user has touched outside of the pop-up. */

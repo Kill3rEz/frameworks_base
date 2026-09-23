@@ -24,6 +24,17 @@ import com.android.systemui.res.R
 object WallpaperPickerIntentUtils {
 
     fun getIntent(context: Context, launchSource: String): Intent {
+        if (launchSource == LAUNCH_SOURCE_KEYGUARD) {
+            val lockScreens =
+                Intent(ACTION_LOCK_SCREENS).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    context
+                        .getString(R.string.config_wallpaperPickerPackage)
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { packageName -> setPackage(packageName) }
+                }
+            if (lockScreens.resolveActivity(context.packageManager) != null) return lockScreens
+        }
         return Intent(Intent.ACTION_SET_WALLPAPER).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
             context
@@ -35,5 +46,6 @@ object WallpaperPickerIntentUtils {
     }
 
     private const val WALLPAPER_LAUNCH_SOURCE = "com.android.wallpaper.LAUNCH_SOURCE"
+    private const val ACTION_LOCK_SCREENS = "com.android.wallpaper.action.LOCK_SCREENS"
     const val LAUNCH_SOURCE_KEYGUARD = "app_launched_keyguard"
 }
