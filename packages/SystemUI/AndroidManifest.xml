@@ -646,6 +646,14 @@
         <service android:name=".recordissue.IssueRecordingServiceLegacy"
                 android:foregroundServiceType="systemExempted"/>
 
+        <receiver android:name=".LockScreenClockRestartReceiver"
+            android:permission="android.permission.CUSTOMIZE_SYSTEM_UI"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.android.systemui.action.RESTART_FOR_CLOCK_STYLE" />
+            </intent-filter>
+        </receiver>
+
         <receiver android:name=".SysuiRestartReceiver"
             android:exported="false">
             <intent-filter>
