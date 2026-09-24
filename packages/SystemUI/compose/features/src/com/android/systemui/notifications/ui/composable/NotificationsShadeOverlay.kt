@@ -45,6 +45,7 @@ import com.android.compose.animation.scene.UserActionResult
 import com.android.compose.lifecycle.DisposableEffectWithLifecycle
 import com.android.compose.lifecycle.LaunchedEffectWithLifecycle
 import com.android.internal.jank.InteractionJankMonitor
+import com.android.systemui.clocks.ClockStyle
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.ui.composable.elements.LockscreenElements
 import com.android.systemui.lifecycle.rememberViewModel
@@ -55,6 +56,7 @@ import com.android.systemui.notifications.intelligence.rules.ui.viewmodel.Notifi
 import com.android.systemui.notifications.ui.viewmodel.NotificationsShadeOverlayActionsViewModel
 import com.android.systemui.notifications.ui.viewmodel.NotificationsShadeOverlayContentViewModel
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementKeys
+import com.android.systemui.qs.composefragment.secureIntSetting
 import com.android.systemui.res.R
 import com.android.systemui.scene.session.ui.composable.SaveableSession
 import com.android.systemui.scene.shared.model.Overlays
@@ -123,6 +125,7 @@ constructor(
         }
 
         val isFullWidth = LocalSceneContainerPreloadedResources.current.isFullWidthShade
+        val customClock = secureIntSetting(ClockStyle.CLOCK_STYLE_KEY, 0) != 0
 
         val targetBlurRadiusPx: Float by
             remember(layoutState) {
@@ -149,7 +152,7 @@ constructor(
                         viewModel = headerViewModel,
                         notificationsHighlight = ChipHighlightModel.Strong,
                         quickSettingsHighlight = headerViewModel.inactiveChipHighlight,
-                        showClock = !isFullWidth,
+                        showClock = !isFullWidth || customClock,
                         modifier = Modifier.element(NotificationsShade.Elements.StatusBar),
                     )
                 }
@@ -172,7 +175,7 @@ constructor(
                         paneTitle = accessibilityTitle
                     }
             ) {
-                if (isFullWidth) {
+                if (isFullWidth && !customClock) {
                     Box(
                         Modifier.padding(
                             start = notificationStackPadding,
