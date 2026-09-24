@@ -59,6 +59,8 @@ import com.android.systemui.Flags.blackScreenOnSceneContainerStartFix
 import com.android.systemui.keyguard.ui.composable.modifier.burnInAware
 import com.android.systemui.lifecycle.rememberActivated
 import com.android.systemui.lifecycle.rememberViewModel
+import com.android.systemui.qs.composefragment.secureIntSetting
+import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.ribbon.ui.composable.BottomRightCornerRibbon
 import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.scene.shared.model.SceneDataSourceDelegator
@@ -156,6 +158,9 @@ private fun InternalSceneContainer(
         }
 
     val resources = LocalResources.current
+    val defaultQsStyle =
+        secureIntSetting(QsPanelStyle.SETTING_NAME, QsPanelStyle.Penguin.value) ==
+            QsPanelStyle.Default.value
     val sceneTransitions =
         remember(
             hapticFeedback,
@@ -163,6 +168,7 @@ private fun InternalSceneContainer(
             animateQsTilesViewModel,
             resources,
             viewModel.toBouncerTransitionViewModel,
+            defaultQsStyle,
         ) {
             transitionsBuilder.build(
                 shadeExpansionMotion,
@@ -170,6 +176,7 @@ private fun InternalSceneContainer(
                 animateQsTilesViewModel,
                 viewModel.toBouncerTransitionViewModel,
                 resources,
+                defaultQsStyle,
             )
         }
 

@@ -37,6 +37,7 @@ interface SceneContainerTransitionsBuilder {
         animateQsTilesViewModel: AnimateQsTilesViewModel,
         toBouncerTransitionViewModel: ToBouncerTransitionViewModel,
         resources: Resources,
+        defaultQsStyle: Boolean = false,
     ): SceneTransitions
 }
 
@@ -53,5 +54,6 @@ class ConstantSceneContainerTransitionsBuilder(
         animateQsTilesViewModel: AnimateQsTilesViewModel,
         toBouncerTransitionViewModel: ToBouncerTransitionViewModel,
         resources: Resources,
+        defaultQsStyle: Boolean,
     ): SceneTransitions = transitions
 }

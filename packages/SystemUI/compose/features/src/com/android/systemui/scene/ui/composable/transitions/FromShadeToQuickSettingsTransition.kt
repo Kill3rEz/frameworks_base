@@ -13,6 +13,7 @@ import com.android.compose.animation.scene.transformation.offsetSharedElementWit
 import com.android.systemui.media.remedia.ui.compose.Media.Elements.MediaCarousel
 import com.android.systemui.notifications.ui.composable.Notifications
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements
+import com.android.systemui.qs.shared.ui.QuickSettings.SHARED_TILE_PICKER_THRESHOLD
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.ui.composable.ShadeHeader
 import kotlin.time.Duration.Companion.milliseconds
@@ -20,6 +21,7 @@ import kotlin.time.Duration.Companion.milliseconds
 fun TransitionBuilder.shadeToQuickSettingsTransition(
     durationScale: Double = 1.0,
     animateQsTilesAsShared: () -> Boolean = { true },
+    defaultQsStyle: Boolean = false,
 ) {
     spec = tween(durationMillis = (DefaultDuration * durationScale).inWholeMilliseconds.toInt())
     distance = UserActionDistance { fromContent, _, _ ->
@@ -33,12 +35,19 @@ fun TransitionBuilder.shadeToQuickSettingsTransition(
     translate(Notifications.Elements.NotificationScrim, Edge.Bottom)
     timestampRange(endMillis = 83) { fade(Elements.FooterActions) }
 
-    fractionRange(start = 0.55f, end = 0.9f) { fade(Elements.QuickSettingsContent) }
+    if (defaultQsStyle) {
+        fractionRange(start = 0.43f, end = 1f - SHARED_TILE_PICKER_THRESHOLD) {
+            fade(Elements.QuickSettingsContent)
+        }
+    } else {
+        fractionRange(start = 0.55f, end = 0.9f) { fade(Elements.QuickSettingsContent) }
+    }
 
     anchoredTranslate(Elements.QuickSettingsContent, Elements.GridAnchor)
 
     sharedElement(Elements.TileElementMatcher, enabled = animateQsTilesAsShared())
 
+    if (defaultQsStyle) fractionRange(end = 0.5f) { fade(QqsTileElementMatcher) }
     anchoredTranslate(QqsTileElementMatcher, Elements.GridAnchor)
     fade(MediaCarousel)
 
@@ -65,11 +74,13 @@ fun TransitionBuilder.shadeToQuickSettingsTransition(
 fun TransitionBuilder.quickSettingsToShadeTransition(
     durationScale: Double = 1.0,
     animateQsTilesAsShared: () -> Boolean = { true },
+    defaultQsStyle: Boolean = false,
 ) {
     reversed {
         shadeToQuickSettingsTransition(
             durationScale = durationScale,
             animateQsTilesAsShared = animateQsTilesAsShared,
+            defaultQsStyle = defaultQsStyle,
         )
     }
     // Translate the HeadsUpNotificationPlaceholder from the StackPlaceholder's start position to

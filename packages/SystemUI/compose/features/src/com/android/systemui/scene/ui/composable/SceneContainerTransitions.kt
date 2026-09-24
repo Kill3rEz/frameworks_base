@@ -82,6 +82,7 @@ class SceneContainerTransitions : SceneContainerTransitionsBuilder {
         animateQsTilesViewModel: AnimateQsTilesViewModel,
         toBouncerTransitionViewModel: ToBouncerTransitionViewModel,
         resources: Resources,
+        defaultQsStyle: Boolean,
     ): SceneTransitions {
         return transitions {
             interruptionHandler = DefaultInterruptionHandler
@@ -275,7 +276,8 @@ class SceneContainerTransitions : SceneContainerTransitionsBuilder {
                 cujTag = TAG_COLLAPSE,
             ) {
                 quickSettingsToShadeTransition(
-                    animateQsTilesAsShared = { animateQsTilesViewModel.animateQsTiles }
+                    animateQsTilesAsShared = { animateQsTilesViewModel.animateQsTiles },
+                    defaultQsStyle = defaultQsStyle,
                 )
             }
             from(
@@ -367,7 +369,8 @@ class SceneContainerTransitions : SceneContainerTransitionsBuilder {
                 cujTag = TAG_EXPAND,
             ) {
                 shadeToQuickSettingsTransition(
-                    animateQsTilesAsShared = { animateQsTilesViewModel.animateQsTiles }
+                    animateQsTilesAsShared = { animateQsTilesViewModel.animateQsTiles },
+                    defaultQsStyle = defaultQsStyle,
                 )
             }
             from(
