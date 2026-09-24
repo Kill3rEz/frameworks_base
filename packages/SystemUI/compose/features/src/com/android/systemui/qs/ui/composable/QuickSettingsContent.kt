@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,7 +47,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.snap
 import com.android.compose.animation.scene.content.state.TransitionState
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
@@ -110,6 +114,21 @@ import com.android.systemui.qs.shared.ui.QuickSettings.Elements
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.res.R
 import kotlinx.coroutines.flow.filterNotNull
+
+internal class QsHostTransition(val idle: Boolean, val leaving: Boolean)
+
+internal val LocalQsHostTransition = compositionLocalOf<QsHostTransition?> { null }
+
+internal fun ContentScope.qsHostTransition(): QsHostTransition {
+    val transition = layoutState.transitionState as? TransitionState.Transition
+    return QsHostTransition(
+        idle = transition == null,
+        leaving =
+            transition != null &&
+                transition.fromContent == contentKey &&
+                transition.toContent != contentKey,
+    )
+}
 
 @Composable
 fun ContentScope.QuickSettingsContent(
@@ -268,6 +287,10 @@ private fun ContentScope.PenguinQuickSettingsContent(
     LaunchedEffect(panelVisible) {
         if (!panelVisible) ConnectivityFolderExpansion.expanded = false
     }
+    val host = LocalQsHostTransition.current ?: qsHostTransition()
+    LaunchedEffect(host.leaving) {
+        if (host.leaving) ConnectivityFolderExpansion.expanded = false
+    }
     val folderSpan = secureIntSetting(SETTING_QS_FOLDER_SPAN, 1)
     val mediaSpan = secureIntSetting(SETTING_QS_MEDIA_SPAN, 1)
     val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
@@ -278,11 +301,17 @@ private fun ContentScope.PenguinQuickSettingsContent(
     val folderPosition = secureIntSetting(SETTING_QS_FOLDER_POSITION, POSITION_HEADER)
     val mediaPosition = secureIntSetting(SETTING_QS_MEDIA_POSITION, POSITION_HEADER)
 
-    val sheetSettled =
-        folderEnabled && folderExpanded && layoutState.transitionState is TransitionState.Idle
+    val idle = host.idle && layoutState.transitionState is TransitionState.Idle
+    val sheetSettled = folderEnabled && folderExpanded && idle
     val sheetAlpha by
-        animateFloatAsState(if (sheetSettled) 1f else 0f, label = "ConnectivityFolderSheet")
+        animateFloatAsState(
+            if (sheetSettled) 1f else 0f,
+            animationSpec = if (idle) spring() else snap(),
+            label = "ConnectivityFolderSheet",
+        )
     val sheetShowing = sheetAlpha > 0.01f
+    val panelFade = (1f - sheetAlpha * 2f).coerceIn(0f, 1f)
+    val sheetFade = (sheetAlpha * 2f - 1f).coerceIn(0f, 1f)
 
     Box(
         modifier =
@@ -295,7 +324,7 @@ private fun ContentScope.PenguinQuickSettingsContent(
             verticalArrangement = spacedBy(dimensionResource(id = R.dimen.qs_tile_margin_vertical)),
             modifier =
                 Modifier.thenIf(sheetShowing) {
-                    Modifier.alpha(1f - sheetAlpha).gesturesDisabled()
+                    Modifier.alpha(panelFade).gesturesDisabled()
                 },
         ) {
             var listening by remember { mutableStateOf(false) }
@@ -419,7 +448,14 @@ private fun ContentScope.PenguinQuickSettingsContent(
         }
 
         if (sheetShowing) {
-            Box(Modifier.alpha(sheetAlpha)) {
+            Box(
+                Modifier.graphicsLayer {
+                    alpha = sheetFade
+                    val scale = 0.94f + 0.06f * sheetFade
+                    scaleX = scale
+                    scaleY = scale
+                }
+            ) {
                 ConnectivityFolder(
                     tiles = viewModel.tileGridViewModel.tileViewModels,
                     expanded = true,

@@ -17,6 +17,7 @@
 package com.android.systemui.qs.ui.composable
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.OverscrollEffect
 import androidx.compose.foundation.clipScrollableContainer
@@ -264,43 +265,45 @@ private fun ContentScope.QuickSettingsScene(
             }
         }
 
-        NestedSceneTransitionLayout(
-            state = sceneState,
-            debugName = "QuickSettingsScene",
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            scene(QS) {
-                Element(QS.rootElementKey, Modifier) {
-                    QuickSettingsContent(
-                        Modifier,
-                        viewModel,
-                        headerViewModel,
-                        this@QuickSettingsScene.verticalOverscrollEffect,
-                    )
+        CompositionLocalProvider(LocalQsHostTransition provides qsHostTransition()) {
+            NestedSceneTransitionLayout(
+                state = sceneState,
+                debugName = "QuickSettingsScene",
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                scene(QS) {
+                    Element(QS.rootElementKey, Modifier) {
+                        QuickSettingsContent(
+                            Modifier,
+                            viewModel,
+                            headerViewModel,
+                            this@QuickSettingsScene.verticalOverscrollEffect,
+                        )
+                    }
                 }
-            }
 
-            scene(Edit) {
-                Element(Edit.rootElementKey, Modifier) {
-                    GridAnchor()
-                    EditMode(
-                        viewModel.qsContainerViewModel.editModeViewModel,
-                        modifier =
-                            Modifier.testTag("edit_mode_scene")
-                                .padding(
-                                    horizontal = QuickSettingsShade.Dimensions.HorizontalPadding
-                                )
-                                .padding(
-                                    top =
-                                        headerViewModel.statusBarHeightPx
-                                            .toDp(LocalContext.current)
-                                            .dp
-                                ),
-                        previews = panelElementPreviews(viewModel.qsContainerViewModel),
-                        previewHeights = panelElementPreviewHeights(),
-                        headerPreview =
-                            qsHeaderPreview(viewModel.qsContainerViewModel),
-                    )
+                scene(Edit) {
+                    Element(Edit.rootElementKey, Modifier) {
+                        GridAnchor()
+                        EditMode(
+                            viewModel.qsContainerViewModel.editModeViewModel,
+                            modifier =
+                                Modifier.testTag("edit_mode_scene")
+                                    .padding(
+                                        horizontal = QuickSettingsShade.Dimensions.HorizontalPadding
+                                    )
+                                    .padding(
+                                        top =
+                                            headerViewModel.statusBarHeightPx
+                                                .toDp(LocalContext.current)
+                                                .dp
+                                    ),
+                            previews = panelElementPreviews(viewModel.qsContainerViewModel),
+                            previewHeights = panelElementPreviewHeights(),
+                            headerPreview =
+                                qsHeaderPreview(viewModel.qsContainerViewModel),
+                        )
+                    }
                 }
             }
         }

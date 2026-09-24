@@ -17,6 +17,8 @@
 package com.android.systemui.shade.ui.composable
 
 import com.android.systemui.qs.composefragment.BrightnessLayout
+import com.android.systemui.qs.ui.composable.qsHostTransition
+import com.android.systemui.qs.ui.composable.LocalQsHostTransition
 import com.android.systemui.qs.composefragment.ConnectivityFolder
 import com.android.systemui.qs.composefragment.MyUiGridGap
 import com.android.systemui.qs.composefragment.MyUiMediaCard
@@ -925,72 +927,74 @@ private fun ContentScope.SplitShade(
                             }
                         }
 
-                        NestedSceneTransitionLayout(
-                            state = sceneState,
-                            debugName = "SplitShade",
-                            modifier = Modifier.fillMaxSize(),
-                        ) {
-                            scene(QS) {
-                                val tileSquishiness by
-                                    with(this@SplitShade) {
-                                        animateContentFloatAsState(
-                                            value = 1f,
-                                            key = QuickSettings.SharedValues.TilesSquishiness,
-                                            canOverflow = false,
-                                        )
-                                    }
-
-                                LaunchedEffectWithLifecycle(Unit) {
-                                    snapshotFlow { tileSquishiness }
-                                        .collect { viewModel.setTileSquishiness(it) }
-                                }
-
-                                Element(QS.rootElementKey, Modifier) {
-                                    Column {
-                                        Box(
-                                            Modifier.weight(1f)
-                                                .sysuiResTag("expanded_qs_scroll_view")
-                                                .verticalScroll(rememberScrollState())
-                                                .wrapContentHeight(
-                                                    align = Alignment.Top,
-                                                    unbounded = true,
-                                                )
-                                        ) {
-                                            QuickSettingsContent(
-                                                qsContainerViewModel,
-                                                mediaInRow = false,
-                                                mediaSquishiness = { tileSquishiness },
+                        CompositionLocalProvider(LocalQsHostTransition provides qsHostTransition()) {
+                            NestedSceneTransitionLayout(
+                                state = sceneState,
+                                debugName = "SplitShade",
+                                modifier = Modifier.fillMaxSize(),
+                            ) {
+                                scene(QS) {
+                                    val tileSquishiness by
+                                        with(this@SplitShade) {
+                                            animateContentFloatAsState(
+                                                value = 1f,
+                                                key = QuickSettings.SharedValues.TilesSquishiness,
+                                                canOverflow = false,
                                             )
                                         }
-                                        FooterActionsWithAnimatedVisibility(
-                                            viewModel = footerActionsViewModel,
-                                            isCustomizing = false,
-                                            customizingAnimationDuration = 0,
-                                            modifier =
-                                                Modifier.align(Alignment.CenterHorizontally)
-                                                    .sysuiResTag("qs_footer_actions"),
-                                        )
+
+                                    LaunchedEffectWithLifecycle(Unit) {
+                                        snapshotFlow { tileSquishiness }
+                                            .collect { viewModel.setTileSquishiness(it) }
+                                    }
+
+                                    Element(QS.rootElementKey, Modifier) {
+                                        Column {
+                                            Box(
+                                                Modifier.weight(1f)
+                                                    .sysuiResTag("expanded_qs_scroll_view")
+                                                    .verticalScroll(rememberScrollState())
+                                                    .wrapContentHeight(
+                                                        align = Alignment.Top,
+                                                        unbounded = true,
+                                                    )
+                                            ) {
+                                                QuickSettingsContent(
+                                                    qsContainerViewModel,
+                                                    mediaInRow = false,
+                                                    mediaSquishiness = { tileSquishiness },
+                                                )
+                                            }
+                                            FooterActionsWithAnimatedVisibility(
+                                                viewModel = footerActionsViewModel,
+                                                isCustomizing = false,
+                                                customizingAnimationDuration = 0,
+                                                modifier =
+                                                    Modifier.align(Alignment.CenterHorizontally)
+                                                        .sysuiResTag("qs_footer_actions"),
+                                            )
+                                        }
                                     }
                                 }
-                            }
 
-                            scene(Edit) {
-                                Element(Edit.rootElementKey, Modifier) {
-                                    GridAnchor()
-                                    EditMode(
-                                        qsContainerViewModel.editModeViewModel,
-                                        Modifier.testTag("edit_mode_scene")
-                                            .padding(
-                                                horizontal =
-                                                    QuickSettingsShade.Dimensions.HorizontalPadding
-                                            ),
-                                        previews =
-                                            panelElementPreviews(qsContainerViewModel),
-                                        previewHeights =
-                                            panelElementPreviewHeights(),
-                                        headerPreview =
-                                            qsHeaderPreview(qsContainerViewModel),
-                                    )
+                                scene(Edit) {
+                                    Element(Edit.rootElementKey, Modifier) {
+                                        GridAnchor()
+                                        EditMode(
+                                            qsContainerViewModel.editModeViewModel,
+                                            Modifier.testTag("edit_mode_scene")
+                                                .padding(
+                                                    horizontal =
+                                                        QuickSettingsShade.Dimensions.HorizontalPadding
+                                                ),
+                                            previews =
+                                                panelElementPreviews(qsContainerViewModel),
+                                            previewHeights =
+                                                panelElementPreviewHeights(),
+                                            headerPreview =
+                                                qsHeaderPreview(qsContainerViewModel),
+                                        )
+                                    }
                                 }
                             }
                         }
