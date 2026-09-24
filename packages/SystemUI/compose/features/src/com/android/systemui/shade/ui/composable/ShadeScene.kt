@@ -600,8 +600,9 @@ private fun ContentScope.SingleShade(
                             if (viewModel.isQsEnabled && (viewModel.showMedia || qqsShowsMedia)) {
                                 Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
                                     if (
-                                        secureIntSetting(SETTING_QS_MEDIA_SPAN, 1) < 2 ||
-                                            secureIntSetting(SETTING_QS_MEDIA_STYLE, 0) != 0
+                                        !isDefaultStyle &&
+                                            (secureIntSetting(SETTING_QS_MEDIA_SPAN, 1) < 2 ||
+                                                secureIntSetting(SETTING_QS_MEDIA_STYLE, 0) != 0)
                                     ) {
                                         PenguinMediaCard(
                                             viewModelFactory = viewModel.mediaViewModelFactory,
