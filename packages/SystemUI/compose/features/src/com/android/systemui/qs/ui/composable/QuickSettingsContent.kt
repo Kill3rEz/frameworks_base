@@ -675,8 +675,26 @@ internal class PanelElement(
     val span: Int,
     val order: Int,
     val alignEnd: Boolean = false,
+    val rows: Int = 2,
     val content: @Composable () -> Unit,
 )
+
+internal fun panelRowsUsed(elements: List<PanelElement>): Int {
+    var rows = 0
+    var index = 0
+    while (index < elements.size) {
+        val element = elements[index]
+        if (element.span >= 2) {
+            rows += element.rows
+            index++
+            continue
+        }
+        val partner = elements.getOrNull(index + 1)?.takeIf { it.span < 2 }
+        rows += maxOf(element.rows, partner?.rows ?: element.rows)
+        index += if (partner != null) 2 else 1
+    }
+    return rows
+}
 
 internal fun panelFillerSlots(elements: List<PanelElement>): Int {
     var slots = 0

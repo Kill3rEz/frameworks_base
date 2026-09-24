@@ -38,6 +38,9 @@ import com.android.systemui.qs.composefragment.SETTING_QS_SLIDERS_SPAN
 import com.android.systemui.qs.composefragment.secureIntSetting
 import com.android.systemui.qs.composefragment.VolumeLayout
 import com.android.systemui.qs.panels.ui.compose.TileGrid
+import com.android.systemui.qs.pipeline.shared.TileSpec
+import com.android.systemui.qs.panels.ui.compose.PANEL_FILLER_COLUMNS
+import com.android.systemui.qs.panels.ui.compose.panelFillerTiles
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
@@ -133,6 +136,8 @@ import com.android.systemui.qs.shared.ui.QuickSettings.Elements.SplitShadeQuickS
 import com.android.systemui.qs.ui.composable.QuickSettingsContent
 import com.android.systemui.qs.ui.composable.PanelElement
 import com.android.systemui.qs.ui.composable.PanelElementRows
+import com.android.systemui.qs.ui.composable.panelFillerSlots
+import com.android.systemui.qs.ui.composable.panelRowsUsed
 import com.android.systemui.qs.ui.composable.panelElementPreviewHeights
 import com.android.systemui.qs.ui.composable.panelElementPreviews
 import com.android.systemui.qs.ui.composable.qsHeaderPreview
@@ -542,25 +547,68 @@ private fun ContentScope.SingleShade(
                         val fillerFolderSpecs =
                             if (connectivityFolderEnabled()) connectivityFolderSpecs()
                             else emptyList()
+                        val grid = viewModel.qsContainerViewModel.tileGridViewModel
                         val fillerSpecs =
-                            remember(
-                                viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels,
-                                fillerFolderSpecs,
-                                slot,
-                            ) {
-                                viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels
-                                    .filterNot { it.spec.spec in fillerFolderSpecs }
-                                    .drop(slot * 2)
-                                    .take(2)
-                                    .map { it.spec }
+                            remember(grid.tileViewModels, grid.largeTiles, fillerFolderSpecs, slot) {
+                                qqsFillerSpecs(
+                                    grid.tileViewModels.map { it.spec },
+                                    grid.largeTiles,
+                                    fillerFolderSpecs,
+                                )
+                                    .getOrElse(slot) { emptyList() }
                             }
                         TileGrid(
-                            viewModel = viewModel.qsContainerViewModel.tileGridViewModel,
+                            viewModel = grid,
                             includeSpecs = fillerSpecs,
-                            columnsOverride = 1,
-                            forceLargeTiles = true,
+                            columnsOverride = PANEL_FILLER_COLUMNS,
                             listening = { fillerListening },
                         )
+                    },
+                    topUpTiles = { rows, fillerSlots ->
+                        var topUpListening by remember { mutableStateOf(false) }
+                        LifecycleStartEffect(Unit) {
+                            topUpListening = true
+                            onStopOrDispose { topUpListening = false }
+                        }
+                        val topUpFolderSpecs =
+                            if (connectivityFolderEnabled()) connectivityFolderSpecs()
+                            else emptyList()
+                        val topUpGrid = viewModel.qsContainerViewModel.tileGridViewModel
+                        val topUpSpecs =
+                            remember(
+                                topUpGrid.tileViewModels,
+                                topUpGrid.largeTiles,
+                                topUpFolderSpecs,
+                                rows,
+                                fillerSlots,
+                            ) {
+                                val all = topUpGrid.tileViewModels.map { it.spec }
+                                val skip =
+                                    qqsFillerSpecs(all, topUpGrid.largeTiles, topUpFolderSpecs)
+                                        .take(fillerSlots)
+                                        .sumOf { it.size }
+                                tilesForRows(
+                                    all.filterNot { it.spec in topUpFolderSpecs }.drop(skip),
+                                    topUpGrid.largeTiles,
+                                    rows,
+                                    QQS_TOP_UP_COLUMNS,
+                                )
+                            }
+                        if (topUpSpecs.isNotEmpty()) {
+                            Element(
+                                key = QuickSettings.Elements.HeaderTiles,
+                                modifier = Modifier,
+                            ) {
+                                TileGrid(
+                                    viewModel =
+                                        viewModel.qsContainerViewModel.tileGridViewModel,
+                                    includeSpecs = topUpSpecs,
+                                    columnsOverride = QQS_TOP_UP_COLUMNS,
+                                    listening = { topUpListening },
+                                    modifier = Modifier.sysuiResTag("quick_qs_panel"),
+                                )
+                            }
+                        }
                     },
                     secondaryTiles = {
                         if (
@@ -697,6 +745,43 @@ private fun ContentScope.SingleShade(
     }
 }
 
+private const val QqsRows = 2
+private const val QQS_TOP_UP_COLUMNS = 4
+private const val QQS_MAX_FILLER_SLOTS = 4
+
+private fun qqsFillerSpecs(
+    tiles: List<TileSpec>,
+    largeTiles: Set<TileSpec>,
+    folderSpecs: List<String>,
+): List<List<TileSpec>> {
+    var pool = tiles.filterNot { it.spec in folderSpecs }
+    return List(QQS_MAX_FILLER_SLOTS) {
+        panelFillerTiles(pool, largeTiles).also { taken -> pool = pool.drop(taken.size) }
+    }
+}
+
+private fun tilesForRows(
+    pool: List<TileSpec>,
+    largeTiles: Set<TileSpec>,
+    rows: Int,
+    columns: Int,
+): List<TileSpec> {
+    val taken = mutableListOf<TileSpec>()
+    var row = 0
+    var used = 0
+    for (spec in pool) {
+        val width = if (spec in largeTiles) 2 else 1
+        if (used + width > columns) {
+            row++
+            used = 0
+        }
+        if (row >= rows) break
+        taken += spec
+        used += width
+    }
+    return taken
+}
+
 private val QqsHeaderHeight = 160.dp
 private val QqsLyingSliderHeight = 56.dp
 
@@ -706,6 +791,7 @@ private fun ContentScope.MediaAndQqsLayout(
     tiles: @Composable () -> Unit,
     secondaryTiles: @Composable () -> Unit,
     fillerTiles: @Composable (Int) -> Unit,
+    topUpTiles: @Composable (rows: Int, fillerSlots: Int) -> Unit,
     qqsFolder: @Composable () -> Unit,
     qqsShowsFolder: Boolean,
     media: @Composable () -> Unit,
@@ -767,14 +853,27 @@ private fun ContentScope.MediaAndQqsLayout(
         val slidersOrder = secureIntSetting("qs_sliders_edit_index", 2)
         val elements = buildList {
             if (qqsShowsFolder) {
-                add(PanelElement(folderSpan, folderOrder) { qqsFolder() })
+                add(
+                    PanelElement(
+                        folderSpan,
+                        folderOrder,
+                        rows = if (folderSpan < 2) 2 else 1,
+                    ) {
+                        qqsFolder()
+                    }
+                )
             }
             if (showMedia) {
-                add(PanelElement(mediaSpan, mediaOrder) { media() })
+                add(PanelElement(mediaSpan, mediaOrder, rows = 2) { media() })
             }
             if (slidersAtTop) {
                 add(
-                    PanelElement(slidersSpan, slidersOrder, alignEnd = slidersStanding) {
+                    PanelElement(
+                        slidersSpan,
+                        slidersOrder,
+                        alignEnd = slidersStanding,
+                        rows = if (slidersStanding) 2 else 1,
+                    ) {
                         Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -811,6 +910,10 @@ private fun ContentScope.MediaAndQqsLayout(
         }.sortedBy { it.order }
         PanelElementRows(elements, gap) { slot ->
             fillerTiles(slot)
+        }
+        val rowsUsed = panelRowsUsed(elements)
+        if (rowsUsed < QqsRows) {
+            topUpTiles(QqsRows - rowsUsed, panelFillerSlots(elements))
         }
         GridAnchor()
     }
