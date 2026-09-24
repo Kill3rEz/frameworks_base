@@ -125,20 +125,29 @@ private fun EditModeContent(viewModel: EditModeViewModel, modifier: Modifier = M
 
     DisposableEffect(Unit) { onDispose { viewModel.stopEditing() } }
 
-    val panelElementsEditable =
+    val panelStyle =
         QsPanelStyle.fromValue(
             secureIntSetting(QsPanelStyle.SETTING_NAME, QsPanelStyle.Penguin.value)
-        ) != QsPanelStyle.MyUi
+        )
+    val panelElementsEditable = panelStyle == QsPanelStyle.Penguin
 
     val folderMemberSpecs =
-        if (connectivityFolderEnabled()) connectivityFolderSpecs() else emptyList()
+        if (panelStyle != QsPanelStyle.Default && connectivityFolderEnabled()) {
+            connectivityFolderSpecs()
+        } else {
+            emptyList()
+        }
     val gridTiles =
         remember(tiles, folderMemberSpecs) {
             tiles.filterNot { it.isCurrent && it.tileSpec.spec in folderMemberSpecs }
         }
     Column(modifier) {
         gridLayout.EditTileGrid(
-            if (panelElementsEditable) gridTiles.withPanelElements(resolver) else gridTiles,
+            if (panelElementsEditable) {
+                gridTiles.withPanelElements(resolver, connectivityFolderEnabled())
+            } else {
+                gridTiles
+            },
             Modifier,
             viewModel::addTile,
             { spec -> if (spec.isPanelElement()) resolver.park(spec) else viewModel.removeTile(spec) },
@@ -196,11 +205,13 @@ private fun ContentResolver.park(spec: TileSpec) {
 }
 
 private fun List<EditTileViewModel>.withPanelElements(
-    resolver: ContentResolver
+    resolver: ContentResolver,
+    folderEnabled: Boolean,
 ): List<EditTileViewModel> {
     val current = filter { it.isCurrent }.toMutableList()
     val rest = filterNot { it.isCurrent }
-    PANEL_ELEMENT_SPECS.sortedBy { resolver.editIndex(it) }
+    PANEL_ELEMENT_SPECS.filter { folderEnabled || it != FOLDER_SPEC }
+        .sortedBy { resolver.editIndex(it) }
         .forEach { spec ->
             val index = resolver.editIndex(spec).coerceIn(0, current.size)
             current.add(index, spec.toEditTileViewModel())
