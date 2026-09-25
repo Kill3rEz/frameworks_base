@@ -133,38 +133,35 @@ fun packPanel(
         run.clear()
         runRows = 0
     }
+    val placed = mutableSetOf<TileSpec>()
+
     fun filler(from: Int, start: List<TileSpec>): List<TileSpec> {
-        val taken = start.toMutableList()
-        var fillRow = 0
-        var fillUsed = start.sumOf { width(it) }
-        if (fillUsed >= half) {
-            fillRow = 1
-            fillUsed = 0
+        val rows = List(2) { mutableListOf<TileSpec>() }
+        fun space(r: Int) = half - rows[r].sumOf { width(it) }
+        fun fit(spec: TileSpec): Boolean {
+            val r = rows.indices.firstOrNull { space(it) >= width(spec) } ?: return false
+            rows[r] += spec
+            return true
         }
+        start.forEach { fit(it) }
         var index = from
-        while (index < order.size && fillRow < 2) {
+        while (index < order.size && rows.indices.any { space(it) > 0 }) {
             val spec = order[index]
-            if (spec.isPanelElement()) break
-            val w = width(spec)
-            if (fillUsed + w > half) {
-                fillRow++
-                fillUsed = 0
-                if (fillRow >= 2) break
-            }
-            taken += spec
-            fillUsed += w
-            if (fillUsed >= half) {
-                fillRow++
-                fillUsed = 0
-            }
+            if (!spec.isPanelElement() && spec !in placed && rows.none { spec in it }) fit(spec)
             index++
         }
+        val taken = rows.flatten()
+        placed += taken
         return taken
     }
 
     var index = 0
     while (index < order.size) {
         val spec = order[index]
+        if (spec in placed) {
+            index++
+            continue
+        }
         if (!spec.isPanelElement()) {
             if (used + width(spec) > PANEL_COLUMNS) closeRow()
             row += spec
@@ -182,24 +179,22 @@ fun packPanel(
         if (used > half) closeRow()
         if (row.isEmpty()) {
             closeRun()
-            val next = order.getOrNull(index + 1)
+            val next = order.drop(index + 1).firstOrNull { it !in placed }
             if (next != null && next.isPanelElement() && !isFullWidth(next)) {
                 bands += PanelBand.Pair(spec, next)
-                index += 2
+                placed += next
+                index++
                 continue
             }
-            val tiles = filler(index + 1, emptyList())
-            bands += PanelBand.Half(spec, tiles, elementAtEnd = false)
-            index += 1 + tiles.size
+            bands += PanelBand.Half(spec, filler(index + 1, emptyList()), elementAtEnd = false)
         } else {
             val start = row.toList()
             row.clear()
             used = 0
             closeRun()
-            val tiles = filler(index + 1, start)
-            bands += PanelBand.Half(spec, tiles, elementAtEnd = true)
-            index += 1 + tiles.size - start.size
+            bands += PanelBand.Half(spec, filler(index + 1, start), elementAtEnd = true)
         }
+        index++
     }
     closeRun()
     return bands

@@ -45,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +79,7 @@ import com.android.systemui.qs.panels.ui.viewmodel.EditTileViewModel
 import com.android.systemui.qs.pipeline.domain.interactor.CurrentTilesInteractor.Companion.POSITION_AT_END
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.res.R
+import kotlinx.coroutines.delay
 
 @Composable
 fun PenguinEditMode(
@@ -134,17 +136,44 @@ fun PenguinEditMode(
         }
         onCommitTiles(order.filterNot { it.isPanelElement() })
     }
+    fun moveTo(spec: TileSpec, target: TileSpec) {
+        val from = order.indexOf(spec)
+        val to = order.indexOf(target)
+        if (from >= 0 && to >= 0 && from != to) {
+            order = order.toMutableList().apply { add(to, removeAt(from)) }
+        }
+    }
+    LaunchedEffect(dragged, dropTarget) {
+        val spec = dragged ?: return@LaunchedEffect
+        val target = dropTarget ?: return@LaunchedEffect
+        delay(MAKE_ROOM_DELAY_MS)
+        moveTo(spec, target)
+        dropTarget = null
+    }
 
     val gap = dimensionResource(R.dimen.qs_tile_margin_horizontal)
     val rowGap = dimensionResource(R.dimen.qs_tile_margin_vertical)
     val tileHeight = dimensionResource(R.dimen.common_tile_default_tile_height)
 
     val dropColour = MaterialTheme.colorScheme.primary
+    val draggedRect by remember {
+        derivedStateOf {
+            val spec = dragged ?: return@derivedStateOf null
+            val size = bounds[spec]?.size ?: return@derivedStateOf null
+            Rect(pointer - grab, size)
+        }
+    }
+    fun isCovered(spec: TileSpec): Boolean {
+        if (spec == dragged) return false
+        if (spec == dropTarget) return true
+        val rect = draggedRect ?: return false
+        return bounds[spec]?.center?.let { rect.contains(it) } == true
+    }
 
     fun Modifier.movable(spec: TileSpec): Modifier =
         onGloballyPositioned { bounds[spec] = it.boundsInRoot() }
             .then(
-                if (spec == dropTarget) {
+                if (isCovered(spec)) {
                     Modifier.border(2.dp, dropColour, RoundedCornerShape(24.dp))
                 } else {
                     Modifier
@@ -160,15 +189,24 @@ fun PenguinEditMode(
                     scaleY = 1.04f
                 }
             }
-            .pointerInput(spec) {
+
+    var gridOrigin by remember { mutableStateOf(Offset.Zero) }
+    val dragGesture =
+        Modifier.onGloballyPositioned { gridOrigin = it.boundsInRoot().topLeft }
+            .pointerInput(Unit) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = { start ->
-                        dragged = spec
-                        grab = start
-                        pointer = (bounds[spec]?.topLeft ?: Offset.Zero) + start
+                        val at = gridOrigin + start
+                        val hit = bounds.entries.firstOrNull { (key, rect) ->
+                            key in order && rect.contains(at)
+                        } ?: return@detectDragGesturesAfterLongPress
+                        dragged = hit.key
+                        grab = at - hit.value.topLeft
+                        pointer = at
                         dropTarget = null
                     },
                     onDrag = { change, amount ->
+                        val spec = dragged ?: return@detectDragGesturesAfterLongPress
                         change.consume()
                         pointer += amount
                         val target =
@@ -177,18 +215,15 @@ fun PenguinEditMode(
                                     key != spec && key in order && rect.contains(pointer)
                                 }
                                 ?.key
-                        dropTarget = target
+                        if (target != null) dropTarget = target
                     },
                     onDragEnd = {
+                        val spec = dragged
                         val target = dropTarget
-                        val from = order.indexOf(spec)
-                        val to = target?.let { order.indexOf(it) } ?: -1
-                        if (from >= 0 && to >= 0 && from != to) {
-                            order = order.toMutableList().apply { add(to, removeAt(from)) }
-                        }
+                        if (spec != null && target != null) moveTo(spec, target)
                         dragged = null
                         dropTarget = null
-                        if (to >= 0) commit()
+                        if (spec != null) commit()
                     },
                     onDragCancel = {
                         dragged = null
@@ -226,7 +261,7 @@ fun PenguinEditMode(
             }
         }
 
-        Column(verticalArrangement = spacedBy(rowGap)) {
+        Column(modifier = dragGesture, verticalArrangement = spacedBy(rowGap)) {
             PanelBands(
                 bands = bands,
                 gap = gap,
@@ -294,6 +329,8 @@ fun PenguinEditMode(
         }
     }
 }
+
+private const val MAKE_ROOM_DELAY_MS = 350L
 
 @Composable
 private fun EditTileRows(
