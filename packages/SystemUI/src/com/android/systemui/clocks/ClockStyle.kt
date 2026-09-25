@@ -662,7 +662,7 @@ class ClockStyle @JvmOverloads constructor(
         view.scaleX = scale
         view.scaleY = scale
         view.pivotX = view.width / 2f
-        view.pivotY = view.height / 2f
+        view.pivotY = 0f
         disableClippingOnParents(view)
         if (naturalClockHeight == 0 && view.height > 0) {
             naturalClockHeight = view.height
