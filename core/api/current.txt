@@ -4540,12 +4540,14 @@ package android.app {
   @UiContext public class Activity extends android.view.ContextThemeWrapper implements android.content.ComponentCallbacks2 android.view.KeyEvent.Callback android.view.LayoutInflater.Factory2 android.view.View.OnCreateContextMenuListener android.view.Window.Callback {
     ctor public Activity();
     method public void addContentView(android.view.View, android.view.ViewGroup.LayoutParams);
+    method public boolean canStartActivityForResult();
     method public void clearOverrideActivityTransition(int);
     method public void closeContextMenu();
     method public void closeOptionsMenu();
     method public android.app.PendingIntent createPendingResult(int, @NonNull android.content.Intent, int);
     method @Deprecated public final void dismissDialog(int);
     method public final void dismissKeyboardShortcutsHelper();
+    method public void dispatchEnterAnimationComplete();
     method public boolean dispatchGenericMotionEvent(android.view.MotionEvent);
     method public boolean dispatchKeyEvent(android.view.KeyEvent);
     method public boolean dispatchKeyShortcutEvent(android.view.KeyEvent);
@@ -4583,6 +4585,7 @@ package android.app {
     method @NonNull public android.view.LayoutInflater getLayoutInflater();
     method @Deprecated public android.app.LoaderManager getLoaderManager();
     method @NonNull public String getLocalClassName();
+    method @Nullable public android.content.LocusId getLocusContextId();
     method public int getMaxNumPictureInPictureActions();
     method public final android.media.session.MediaController getMediaController();
     method @NonNull public android.view.MenuInflater getMenuInflater();
@@ -4614,7 +4617,9 @@ package android.app {
     method public boolean isInPictureInPictureMode();
     method public boolean isLaunchedFromBubble();
     method public boolean isLocalVoiceInteractionSupported();
+    method @FlaggedApi("android.nfc.enable_nfc_mainline") public final boolean isResumed();
     method public boolean isTaskRoot();
+    method public final boolean isVisibleForAutofill();
     method public boolean isVoiceInteraction();
     method public boolean isVoiceInteractionRoot();
     method @Deprecated public final android.database.Cursor managedQuery(android.net.Uri, String[], String, String[], String);
@@ -4747,6 +4752,7 @@ package android.app {
     method public void setContentView(android.view.View, android.view.ViewGroup.LayoutParams);
     method public void setContentView(@LayoutRes int);
     method public final void setDefaultKeyMode(int);
+    method public void setDisablePreviewScreenshots(boolean);
     method public void setEnterSharedElementCallback(android.app.SharedElementCallback);
     method public void setExitSharedElementCallback(android.app.SharedElementCallback);
     method public final void setFeatureDrawable(int, android.graphics.drawable.Drawable);
@@ -4793,6 +4799,7 @@ package android.app {
     method @Nullable public android.view.ActionMode startActionMode(android.view.ActionMode.Callback, int);
     method public void startActivityForResult(@RequiresPermission android.content.Intent, int);
     method public void startActivityForResult(@RequiresPermission android.content.Intent, int, @Nullable android.os.Bundle);
+    method public void startActivityForResult(String, android.content.Intent, int, @Nullable android.os.Bundle);
     method @Deprecated public void startActivityFromChild(@NonNull android.app.Activity, @RequiresPermission android.content.Intent, int);
     method @Deprecated public void startActivityFromChild(@NonNull android.app.Activity, @RequiresPermission android.content.Intent, int, @Nullable android.os.Bundle);
     method @Deprecated public void startActivityFromFragment(@NonNull android.app.Fragment, @RequiresPermission android.content.Intent, int);
@@ -4801,6 +4808,7 @@ package android.app {
     method public boolean startActivityIfNeeded(@NonNull @RequiresPermission android.content.Intent, int, @Nullable android.os.Bundle);
     method public void startIntentSenderForResult(android.content.IntentSender, int, @Nullable android.content.Intent, int, int, int) throws android.content.IntentSender.SendIntentException;
     method public void startIntentSenderForResult(android.content.IntentSender, int, @Nullable android.content.Intent, int, int, int, @Nullable android.os.Bundle) throws android.content.IntentSender.SendIntentException;
+    method public void startIntentSenderForResultInner(android.content.IntentSender, String, int, android.content.Intent, int, int, @Nullable android.os.Bundle) throws android.content.IntentSender.SendIntentException;
     method @Deprecated public void startIntentSenderFromChild(android.app.Activity, android.content.IntentSender, int, android.content.Intent, int, int, int) throws android.content.IntentSender.SendIntentException;
     method @Deprecated public void startIntentSenderFromChild(android.app.Activity, android.content.IntentSender, int, android.content.Intent, int, int, int, @Nullable android.os.Bundle) throws android.content.IntentSender.SendIntentException;
     method public void startLocalVoiceInteraction(android.os.Bundle);
@@ -26754,6 +26762,7 @@ package android.media {
     ctor public RingtoneManager(android.app.Activity);
     ctor public RingtoneManager(android.content.Context);
     method public static android.net.Uri getActualDefaultRingtoneUri(android.content.Context, int);
+    method public static android.net.Uri getCacheForTypeBySlot(int, int, int);
     method public android.database.Cursor getCursor();
     method public static int getDefaultType(android.net.Uri);
     method public static android.net.Uri getDefaultUri(int);
@@ -34883,9 +34892,12 @@ package android.os {
     field @FlaggedApi("android.os.battery_part_status_api") public static final String EXTRA_CAPACITY_LEVEL = "android.os.extra.CAPACITY_LEVEL";
     field public static final String EXTRA_CHARGING_STATUS = "android.os.extra.CHARGING_STATUS";
     field public static final String EXTRA_CYCLE_COUNT = "android.os.extra.CYCLE_COUNT";
+    field public static final String EXTRA_DESIGN_CAPACITY = "android.os.extra.DESIGN_CAPACITY";
     field public static final String EXTRA_HEALTH = "health";
     field public static final String EXTRA_ICON_SMALL = "icon-small";
     field public static final String EXTRA_LEVEL = "level";
+    field public static final String EXTRA_MAXIMUM_CAPACITY = "android.os.extra.MAXIMUM_CAPACITY";
+    field public static final String EXTRA_OEM_FAST_CHARGING = "oem_fast_charging";
     field public static final String EXTRA_PLUGGED = "plugged";
     field public static final String EXTRA_PRESENT = "present";
     field public static final String EXTRA_SCALE = "scale";
@@ -40158,10 +40170,12 @@ package android.provider {
     field public static final String MODE_RINGER = "mode_ringer";
     field public static final String NETWORK_PREFERENCE = "network_preference";
     field public static final String NTP_SERVER_2 = "ntp_server_2";
+    field public static final String PRIVATE_DNS_SPECIFIER = "private_dns_specifier";
     field public static final String RADIO_BLUETOOTH = "bluetooth";
     field public static final String RADIO_CELL = "cell";
     field public static final String RADIO_NFC = "nfc";
     field public static final String RADIO_WIFI = "wifi";
+    field public static final String RADIO_WIMAX = "wimax";
     field public static final String SECURE_FRP_MODE = "secure_frp_mode";
     field @Deprecated public static final String SHOW_PROCESSES = "show_processes";
     field public static final String STAY_ON_WHILE_PLUGGED_IN = "stay_on_while_plugged_in";
@@ -40193,6 +40207,7 @@ package android.provider {
   }
 
   public static final class Settings.Panel {
+    field public static final String ACTION_APP_VOLUME = "android.settings.panel.action.APP_VOLUME";
     field public static final String ACTION_INTERNET_CONNECTIVITY = "android.settings.panel.action.INTERNET_CONNECTIVITY";
     field public static final String ACTION_NFC = "android.settings.panel.action.NFC";
     field public static final String ACTION_VOLUME = "android.settings.panel.action.VOLUME";
@@ -40232,6 +40247,12 @@ package android.provider {
     field public static final String ENABLED_ACCESSIBILITY_SERVICES = "enabled_accessibility_services";
     field public static final String ENABLED_INPUT_METHODS = "enabled_input_methods";
     field @Deprecated public static final String HTTP_PROXY = "http_proxy";
+    field public static final String IDLE_MANAGER_APPS = "idle_manager_apps";
+    field public static final String IDLE_MANAGER_KILL_STATS = "idle_manager_kill_stats";
+    field public static final String IDLE_MANAGER_RESTORE_PENDING = "idle_manager_restore_pending";
+    field public static final String IDLE_MANAGER_SLEEP_MODE_TRIGGER = "idle_manager_sleep_mode_trigger";
+    field public static final String IDLE_MANAGER_TIMEOUT = "idle_manager_timeout";
+    field public static final String IMMERSIVE_MODE_CONFIRMATIONS = "immersive_mode_confirmations";
     field public static final String INPUT_METHOD_SELECTOR_VISIBILITY = "input_method_selector_visibility";
     field @Deprecated public static final String INSTALL_NON_MARKET_APPS = "install_non_market_apps";
     field @Deprecated public static final String LOCATION_MODE = "location_mode";
@@ -40248,11 +40269,31 @@ package android.provider {
     field public static final String PARENTAL_CONTROL_ENABLED = "parental_control_enabled";
     field public static final String PARENTAL_CONTROL_LAST_UPDATE = "parental_control_last_update";
     field public static final String PARENTAL_CONTROL_REDIRECT_URL = "parental_control_redirect_url";
+    field public static final String PER_APPS_DEVICE_SPOOF_CACHE = "per_apps_device_spoof_cache";
+    field public static final String PER_APPS_DEVICE_SPOOF_ENABLED = "per_apps_device_spoof_enabled";
+    field public static final String PULSE_BAR_COUNT = "pulse_bar_count";
+    field public static final String PULSE_COLOR = "pulse_color";
+    field public static final String PULSE_CUSTOM_COLOR = "pulse_custom_color";
+    field public static final String PULSE_HEIGHT_MULTIPLIER = "pulse_height_multiplier";
+    field public static final String PULSE_RENDERER = "pulse_renderer";
+    field public static final String PULSE_ROUNDED_BARS = "pulse_rounded_bars";
+    field public static final String PULSE_SHOW_ON_AMBIENT = "pulse_show_on_ambient";
     field public static final String RTT_CALLING_MODE = "rtt_calling_mode";
     field @Deprecated public static final String SECURE_FRP_MODE = "secure_frp_mode";
     field public static final String SELECTED_INPUT_METHOD_SUBTYPE = "selected_input_method_subtype";
     field public static final String SETTINGS_CLASSNAME = "settings_classname";
     field public static final String SKIP_FIRST_USE_HINTS = "skip_first_use_hints";
+    field public static final String SPOOF_GAMEPROPS_CONFIG = "spoof_gameprops_config";
+    field public static final String SPOOF_PIF_CONFIG = "spoof_pif_config";
+    field public static final String SPOOF_PIF_PHOTOS = "spoof_pif_photos";
+    field public static final String SPOOF_PIF_PROPS = "pif_spoof_props";
+    field public static final String SPOOF_PIF_PROVIDER = "pif_spoof_provider";
+    field public static final String SPOOF_PIF_SIGNATURE = "pif_spoof_signature";
+    field public static final String SPOOF_PIF_TARGETS = "spoof_pif_targets";
+    field public static final String SPOOF_PIF_VENDING_BUILD = "pif_spoof_vending_build";
+    field public static final String SPOOF_TRICKYSTORE_KEYBOX = "spoof_trickystore_keybox";
+    field public static final String SPOOF_TRICKYSTORE_PATCH = "spoof_trickystore_patch";
+    field public static final String SPOOF_TRICKYSTORE_TARGET = "spoof_trickystore_target";
     field public static final String TETHERING_ALLOW_VPN_UPSTREAMS = "tethering_allow_vpn_upstreams";
     field public static final String TOUCH_EXPLORATION_ENABLED = "touch_exploration_enabled";
     field @Deprecated public static final String TTS_DEFAULT_COUNTRY = "tts_default_country";
@@ -40321,12 +40362,14 @@ package android.provider {
     field public static final String BLUETOOTH_DISCOVERABILITY = "bluetooth_discoverability";
     field public static final String BLUETOOTH_DISCOVERABILITY_TIMEOUT = "bluetooth_discoverability_timeout";
     field @Deprecated public static final String BLUETOOTH_ON = "bluetooth_on";
+    field public static final String BT_WIRED_COPLAY_ENABLED = "bt_wired_coplay_enabled";
     field public static final android.net.Uri CONTENT_URI;
     field @Deprecated public static final String DATA_ROAMING = "data_roaming";
     field @Deprecated public static final String DATE_FORMAT = "date_format";
     field @Deprecated public static final String DEBUG_APP = "debug_app";
     field public static final android.net.Uri DEFAULT_ALARM_ALERT_URI;
     field public static final android.net.Uri DEFAULT_NOTIFICATION_URI;
+    field public static final android.net.Uri DEFAULT_RINGTONE2_URI;
     field public static final android.net.Uri DEFAULT_RINGTONE_URI;
     field @Deprecated public static final String DEVICE_PROVISIONED = "device_provisioned";
     field @Deprecated public static final String DIM_SCREEN = "dim_screen";
@@ -40338,10 +40381,22 @@ package android.provider {
     field @Deprecated public static final String HTTP_PROXY = "http_proxy";
     field @Deprecated public static final String INSTALL_NON_MARKET_APPS = "install_non_market_apps";
     field @Deprecated public static final String LOCATION_PROVIDERS_ALLOWED = "location_providers_allowed";
+    field public static final String LOCK_GLYMPS_CACHE_SIZE = "lock_glymps_cache_size";
+    field public static final String LOCK_GLYMPS_CHANGE_ON = "lock_glymps_change_on";
+    field public static final String LOCK_GLYMPS_CUSTOM_URLS = "lock_glymps_custom_urls";
+    field public static final String LOCK_GLYMPS_TIMER_INTERVAL = "lock_glymps_timer_interval";
+    field public static final String LOCK_GLYMPS_WALLPAPER_TARGET = "lock_glymps_wallpaper_target";
+    field public static final String LOCK_GLYMPS_WIFI_ONLY = "lock_glymps_wifi_only";
     field @Deprecated public static final String LOCK_PATTERN_ENABLED = "lock_pattern_autolock";
     field @Deprecated public static final String LOCK_PATTERN_TACTILE_FEEDBACK_ENABLED = "lock_pattern_tactile_feedback_enabled";
     field @Deprecated public static final String LOCK_PATTERN_VISIBLE = "lock_pattern_visible_pattern";
     field @Deprecated public static final String LOGGING_ID = "logging_id";
+    field public static final String LS_MEDIA_ART_AOD_DIM_LEVEL = "ls_media_art_aod_dim_level";
+    field public static final String LS_MEDIA_ART_AOD_ENABLED = "ls_media_art_aod_enabled";
+    field public static final String LS_MEDIA_ART_BLUR_LEVEL = "ls_media_art_blur_level";
+    field public static final String LS_MEDIA_ART_FADE_LEVEL = "ls_media_art_fade_level";
+    field public static final String LS_MEDIA_ART_FILTER = "ls_media_art_filter";
+    field public static final String LS_MEDIA_ART_PIXEL_SIZE = "ls_media_art_pixel_size";
     field @Deprecated public static final String MODE_RINGER = "mode_ringer";
     field public static final String MODE_RINGER_STREAMS_AFFECTED = "mode_ringer_streams_affected";
     field public static final String MUTE_STREAMS_AFFECTED = "mute_streams_affected";
@@ -40356,6 +40411,11 @@ package android.provider {
     field @Deprecated public static final String RADIO_NFC = "nfc";
     field @Deprecated public static final String RADIO_WIFI = "wifi";
     field public static final String RINGTONE = "ringtone";
+    field public static final String RINGTONE2 = "ringtone2";
+    field public static final String RINGTONE2_CACHE = "ringtone2_cache";
+    field public static final android.net.Uri RINGTONE2_CACHE_URI;
+    field public static final String SCREENSHOT_CLIPBOARD_ONLY = "screenshot_clipboard_only";
+    field public static final String SCREENSHOT_SHUTTER_SOUND = "screenshot_shutter_sound";
     field public static final String SCREEN_BRIGHTNESS = "screen_brightness";
     field public static final String SCREEN_BRIGHTNESS_MODE = "screen_brightness_mode";
     field public static final int SCREEN_BRIGHTNESS_MODE_AUTOMATIC = 1; // 0x1
@@ -49479,6 +49539,21 @@ package android.telephony.satellite {
 
   public interface SatelliteStateChangeListener {
     method public void onEnabledStateChanged(boolean);
+  }
+
+}
+
+package android.telephony.satellite.stub {
+
+  public class ProvisionSubscriberId implements android.os.Parcelable {
+    ctor public ProvisionSubscriberId();
+    method public int describeContents();
+    method public final void readFromParcel(android.os.Parcel);
+    method public final void writeToParcel(android.os.Parcel, int);
+    field public static final android.os.Parcelable.Creator<android.telephony.satellite.stub.ProvisionSubscriberId> CREATOR;
+    field public int mCarrierId;
+    field public String mNiddApn;
+    field public String subscriberId;
   }
 
 }

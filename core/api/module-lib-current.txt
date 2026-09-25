@@ -352,6 +352,20 @@ package android.net {
     method public default void onUidsAllowedTransportsChanged(@NonNull int[], @NonNull long[]);
   }
 
+  public static class NetworkPolicyManager.Listener extends android.os.Binder implements android.os.IInterface {
+    ctor public NetworkPolicyManager.Listener();
+    method public android.os.IBinder asBinder();
+    method public void onAllowedTransportsChanged(int[], long[]);
+    method public void onBlockedReasonChanged(int, int, int);
+    method public void onMeteredIfacesChanged(String[]);
+    method public void onRestrictBackgroundChanged(boolean);
+    method public void onSubscriptionOverride(int, int, int, int[]);
+    method public void onSubscriptionPlansChanged(int, android.telephony.SubscriptionPlan[]);
+    method public boolean onTransact(int, android.os.Parcel, android.os.Parcel, int) throws android.os.RemoteException;
+    method public void onUidPoliciesChanged(int, int);
+    method public void onUidRulesChanged(int, int);
+  }
+
   @Deprecated @FlaggedApi("android.net.platform.flags.deprecate_network_policy_callback") public static interface NetworkPolicyManager.NetworkPolicyCallback {
     method @Deprecated public default void onUidBlockedReasonChanged(int, int);
   }

@@ -38,6 +38,7 @@ import android.provider.Settings
 import android.service.dreams.IDreamManager
 import android.util.Log
 import com.android.axion.platform.AxPlatformClient
+import com.android.axion.platform.AxPlatformFeature
 import com.android.settingslib.bluetooth.CachedBluetoothDevice
 import com.android.settingslib.bluetooth.LocalBluetoothManager
 import com.android.systemui.dagger.SysUISingleton
@@ -107,65 +108,65 @@ class AxPlatformFeatureController @Inject constructor(
         buildList {
             addAll(BASE_FEATURES)
             if (nfcAdapter != null)
-                add(AxPlatformClient.FEATURE_NFC)
+                add(AxPlatformFeature.NFC)
             if (sensorPrivacyController.supportsSensorToggle(SensorPrivacyManager.Sensors.CAMERA))
-                add(AxPlatformClient.FEATURE_CAMERA_PRIVACY)
+                add(AxPlatformFeature.CAMERA_PRIVACY)
             if (sensorPrivacyController.supportsSensorToggle(SensorPrivacyManager.Sensors.MICROPHONE))
-                add(AxPlatformClient.FEATURE_MIC_PRIVACY)
-            add(AxPlatformClient.FEATURE_WORK_PROFILE)
+                add(AxPlatformFeature.MIC_PRIVACY)
+            add(AxPlatformFeature.WORK_PROFILE)
             if (tetheringManager?.isTetheringSupported == true)
-                add(AxPlatformClient.FEATURE_USB_TETHER)
+                add(AxPlatformFeature.USB_TETHER)
             if (dreamManager != null)
-                add(AxPlatformClient.FEATURE_DREAM)
+                add(AxPlatformFeature.DREAM)
 
             if (batteryController.isReverseSupported)
-                add(AxPlatformClient.FEATURE_POWER_SHARE)
-            add(AxPlatformClient.FEATURE_CAFFEINE)
-            add(AxPlatformClient.FEATURE_VPN)
-            add(AxPlatformClient.FEATURE_CAST)
-            add(AxPlatformClient.FEATURE_SMART_PIXELS)
-            add(AxPlatformClient.FEATURE_SCREEN_RECORD)
-            add(AxPlatformClient.FEATURE_SCREENSHOT)
+                add(AxPlatformFeature.POWER_SHARE)
+            add(AxPlatformFeature.CAFFEINE)
+            add(AxPlatformFeature.VPN)
+            add(AxPlatformFeature.CAST)
+            add(AxPlatformFeature.SMART_PIXELS)
+            add(AxPlatformFeature.SCREEN_RECORD)
+            add(AxPlatformFeature.SCREENSHOT)
         }.toTypedArray()
     }
 
     fun toggle(feature: String) {
         when (feature) {
-            AxPlatformClient.FEATURE_WIFI -> {
+            AxPlatformFeature.WIFI -> {
                 val current = stateManager.getState(feature).getBoolean("enabled", false)
                 networkController.setWifiEnabled(!current)
             }
-            AxPlatformClient.FEATURE_MOBILE_DATA -> {
+            AxPlatformFeature.MOBILE_DATA -> {
                 val ctrl = networkController.mobileDataController ?: return
                 ctrl.isMobileDataEnabled = !ctrl.isMobileDataEnabled
             }
-            AxPlatformClient.FEATURE_BLUETOOTH ->
+            AxPlatformFeature.BLUETOOTH ->
                 bluetoothController.setBluetoothEnabled(!bluetoothController.isBluetoothEnabled)
-            AxPlatformClient.FEATURE_HOTSPOT -> {
+            AxPlatformFeature.HOTSPOT -> {
                 val current = stateManager.getState(feature).getBoolean("enabled", false)
                 hotspotController.setHotspotEnabled(!current)
             }
-            AxPlatformClient.FEATURE_FLASHLIGHT -> {
+            AxPlatformFeature.FLASHLIGHT -> {
                 if (flashlightController.hasFlashlight())
                     flashlightController.setFlashlight(!flashlightController.isEnabled)
             }
-            AxPlatformClient.FEATURE_LOCATION ->
+            AxPlatformFeature.LOCATION ->
                 locationController.setLocationEnabled(!locationController.isLocationEnabled)
-            AxPlatformClient.FEATURE_ROTATION ->
+            AxPlatformFeature.ROTATION ->
                 rotationLockController.setRotationLocked(
                     !rotationLockController.isRotationLocked, TAG
                 )
-            AxPlatformClient.FEATURE_BATTERY_SAVER ->
+            AxPlatformFeature.BATTERY_SAVER ->
                 batteryController.setPowerSaveMode(!batteryController.isPowerSave)
-            AxPlatformClient.FEATURE_ZEN -> {
+            AxPlatformFeature.ZEN -> {
                 val current = zenModeController.zen
                 zenModeController.setZen(if (current == 0) 1 else 0, null, TAG)
             }
-            AxPlatformClient.FEATURE_DATA_SAVER ->
+            AxPlatformFeature.DATA_SAVER ->
                 dataSaverController.setDataSaverEnabled(!dataSaverController.isDataSaverEnabled)
-            AxPlatformClient.FEATURE_AOD ->
+            AxPlatformFeature.AOD ->
                 stateManager.toggleSecure(Settings.Secure.DOZE_ALWAYS_ON)
-            AxPlatformClient.FEATURE_AIRPLANE_MODE -> {
+            AxPlatformFeature.AIRPLANE_MODE -> {
                 val enabled = !stateManager.getGlobalBool(Settings.Global.AIRPLANE_MODE_ON)
                 stateManager.setGlobalBool(Settings.Global.AIRPLANE_MODE_ON, enabled)
                 context.sendBroadcastAsUser(
@@ -173,38 +174,38 @@ class AxPlatformFeatureController @Inject constructor(
                     UserHandle.ALL
                 )
             }
-            AxPlatformClient.FEATURE_NFC -> nfcAdapter?.let {
+            AxPlatformFeature.NFC -> nfcAdapter?.let {
                 if (it.isEnabled) it.disable() else it.enable()
             }
-            AxPlatformClient.FEATURE_DARK_MODE ->
+            AxPlatformFeature.DARK_MODE ->
                 uiModeManager.setNightModeActivated(
                     !isDarkMode(context.resources.configuration)
                 )
-            AxPlatformClient.FEATURE_NIGHT_LIGHT ->
+            AxPlatformFeature.NIGHT_LIGHT ->
                 colorDisplayManager.setNightDisplayActivated(
                     !colorDisplayManager.isNightDisplayActivated
                 )
-            AxPlatformClient.FEATURE_COLOR_INVERSION ->
+            AxPlatformFeature.COLOR_INVERSION ->
                 stateManager.toggleSecure(Settings.Secure.ACCESSIBILITY_DISPLAY_INVERSION_ENABLED)
-            AxPlatformClient.FEATURE_COLOR_CORRECTION ->
+            AxPlatformFeature.COLOR_CORRECTION ->
                 stateManager.toggleSecure(Settings.Secure.ACCESSIBILITY_DISPLAY_DALTONIZER_ENABLED)
-            AxPlatformClient.FEATURE_REDUCE_BRIGHTNESS ->
+            AxPlatformFeature.REDUCE_BRIGHTNESS ->
                 stateManager.toggleSecure(SETTING_REDUCE_BRIGHT)
-            AxPlatformClient.FEATURE_ONE_HANDED_MODE ->
+            AxPlatformFeature.ONE_HANDED_MODE ->
                 stateManager.toggleSecure(SETTING_ONE_HANDED)
-            AxPlatformClient.FEATURE_HEADS_UP ->
+            AxPlatformFeature.HEADS_UP ->
                 stateManager.toggleGlobal(Settings.Global.HEADS_UP_NOTIFICATIONS_ENABLED)
-            AxPlatformClient.FEATURE_AUTO_SYNC ->
+            AxPlatformFeature.AUTO_SYNC ->
                 ContentResolver.setMasterSyncAutomatically(
                     !ContentResolver.getMasterSyncAutomatically()
                 )
-            AxPlatformClient.FEATURE_CAMERA_PRIVACY ->
+            AxPlatformFeature.CAMERA_PRIVACY ->
                 sensorPrivacyController.setSensorBlocked(
                     SensorPrivacyManager.Sources.QS_TILE,
                     SensorPrivacyManager.Sensors.CAMERA,
                     !sensorPrivacyController.isSensorBlocked(SensorPrivacyManager.Sensors.CAMERA)
                 )
-            AxPlatformClient.FEATURE_MIC_PRIVACY ->
+            AxPlatformFeature.MIC_PRIVACY ->
                 sensorPrivacyController.setSensorBlocked(
                     SensorPrivacyManager.Sources.QS_TILE,
                     SensorPrivacyManager.Sensors.MICROPHONE,
@@ -212,22 +213,22 @@ class AxPlatformFeatureController @Inject constructor(
                         SensorPrivacyManager.Sensors.MICROPHONE
                     )
                 )
-            AxPlatformClient.FEATURE_WORK_PROFILE ->
+            AxPlatformFeature.WORK_PROFILE ->
                 managedProfileController.setWorkModeEnabled(
                     !managedProfileController.isWorkModeEnabled
                 )
-            AxPlatformClient.FEATURE_USB_TETHER -> {
+            AxPlatformFeature.USB_TETHER -> {
                 val current = stateManager.getState(feature).getBoolean("active", false)
                 tetheringManager?.setUsbTethering(!current)
             }
-            AxPlatformClient.FEATURE_DREAM -> try {
+            AxPlatformFeature.DREAM -> try {
                 dreamManager?.let { if (it.isDreaming) it.awaken() else it.dream() }
             } catch (e: RemoteException) {
                 Log.w(TAG, "Dream toggle failed", e)
             }
-            AxPlatformClient.FEATURE_POWER_SHARE ->
+            AxPlatformFeature.POWER_SHARE ->
                 batteryController.setReverseState(!batteryController.isReverseOn)
-            AxPlatformClient.FEATURE_CAFFEINE -> {
+            AxPlatformFeature.CAFFEINE -> {
                 if (wakeLock.isHeld) {
                     wakeLock.release()
                 } else {
@@ -235,19 +236,19 @@ class AxPlatformFeatureController @Inject constructor(
                 }
                 stateManager.broadcastBool(feature, wakeLock.isHeld)
             }
-            AxPlatformClient.FEATURE_VPN -> {
+            AxPlatformFeature.VPN -> {
                 if (securityController.isVpnEnabled) {
                     securityController.disconnectPrimaryVpn()
                 }
             }
-            AxPlatformClient.FEATURE_CAST -> {
+            AxPlatformFeature.CAST -> {
                 val active = castController.castDevices.firstOrNull { it.isCasting }
                 active?.let { castController.stopCasting(it, StopReason.STOP_QS_TILE) }
             }
 
-            AxPlatformClient.FEATURE_SMART_PIXELS ->
+            AxPlatformFeature.SMART_PIXELS ->
                 stateManager.toggleSecure(SETTING_SMART_PIXELS)
-            AxPlatformClient.FEATURE_SCREEN_RECORD -> {
+            AxPlatformFeature.SCREEN_RECORD -> {
                 if (screenRecordUxController.isStarting) {
                     screenRecordUxController.cancelCountdown()
                 } else if (screenRecordUxController.isRecording) {
@@ -256,7 +257,7 @@ class AxPlatformFeatureController @Inject constructor(
                     screenRecordUxController.createScreenRecordDialog(null).show()
                 }
             }
-            AxPlatformClient.FEATURE_SCREENSHOT -> {
+            AxPlatformFeature.SCREENSHOT -> {
                 screenshotHandler.postDelayed({
                     screenshotHelper.takeScreenshot(
                         WindowManager.TAKE_SCREENSHOT_FULLSCREEN,
@@ -272,77 +273,77 @@ class AxPlatformFeatureController @Inject constructor(
 
     fun setEnabled(feature: String, enabled: Boolean) {
         when (feature) {
-            AxPlatformClient.FEATURE_WIFI -> networkController.setWifiEnabled(enabled)
-            AxPlatformClient.FEATURE_MOBILE_DATA ->
+            AxPlatformFeature.WIFI -> networkController.setWifiEnabled(enabled)
+            AxPlatformFeature.MOBILE_DATA ->
                 networkController.mobileDataController?.let { it.isMobileDataEnabled = enabled }
-            AxPlatformClient.FEATURE_BLUETOOTH -> bluetoothController.setBluetoothEnabled(enabled)
-            AxPlatformClient.FEATURE_HOTSPOT -> hotspotController.setHotspotEnabled(enabled)
-            AxPlatformClient.FEATURE_FLASHLIGHT -> {
+            AxPlatformFeature.BLUETOOTH -> bluetoothController.setBluetoothEnabled(enabled)
+            AxPlatformFeature.HOTSPOT -> hotspotController.setHotspotEnabled(enabled)
+            AxPlatformFeature.FLASHLIGHT -> {
                 if (flashlightController.hasFlashlight()) flashlightController.setFlashlight(enabled)
             }
-            AxPlatformClient.FEATURE_LOCATION -> locationController.setLocationEnabled(enabled)
-            AxPlatformClient.FEATURE_ROTATION ->
+            AxPlatformFeature.LOCATION -> locationController.setLocationEnabled(enabled)
+            AxPlatformFeature.ROTATION ->
                 rotationLockController.setRotationLocked(!enabled, TAG)
-            AxPlatformClient.FEATURE_BATTERY_SAVER -> batteryController.setPowerSaveMode(enabled)
-            AxPlatformClient.FEATURE_ZEN ->
+            AxPlatformFeature.BATTERY_SAVER -> batteryController.setPowerSaveMode(enabled)
+            AxPlatformFeature.ZEN ->
                 zenModeController.setZen(if (enabled) 1 else 0, null, TAG)
-            AxPlatformClient.FEATURE_DATA_SAVER -> dataSaverController.setDataSaverEnabled(enabled)
-            AxPlatformClient.FEATURE_AOD ->
+            AxPlatformFeature.DATA_SAVER -> dataSaverController.setDataSaverEnabled(enabled)
+            AxPlatformFeature.AOD ->
                 stateManager.setSecureBool(Settings.Secure.DOZE_ALWAYS_ON, enabled)
-            AxPlatformClient.FEATURE_AIRPLANE_MODE -> {
+            AxPlatformFeature.AIRPLANE_MODE -> {
                 stateManager.setGlobalBool(Settings.Global.AIRPLANE_MODE_ON, enabled)
                 context.sendBroadcastAsUser(
                     Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED).putExtra("state", enabled),
                     UserHandle.ALL
                 )
             }
-            AxPlatformClient.FEATURE_NFC -> nfcAdapter?.let {
+            AxPlatformFeature.NFC -> nfcAdapter?.let {
                 if (enabled) it.enable() else it.disable()
             }
-            AxPlatformClient.FEATURE_DARK_MODE -> uiModeManager.setNightModeActivated(enabled)
-            AxPlatformClient.FEATURE_NIGHT_LIGHT ->
+            AxPlatformFeature.DARK_MODE -> uiModeManager.setNightModeActivated(enabled)
+            AxPlatformFeature.NIGHT_LIGHT ->
                 colorDisplayManager.setNightDisplayActivated(enabled)
-            AxPlatformClient.FEATURE_COLOR_INVERSION ->
+            AxPlatformFeature.COLOR_INVERSION ->
                 stateManager.setSecureBool(
                     Settings.Secure.ACCESSIBILITY_DISPLAY_INVERSION_ENABLED, enabled
                 )
-            AxPlatformClient.FEATURE_COLOR_CORRECTION ->
+            AxPlatformFeature.COLOR_CORRECTION ->
                 stateManager.setSecureBool(
                     Settings.Secure.ACCESSIBILITY_DISPLAY_DALTONIZER_ENABLED, enabled
                 )
-            AxPlatformClient.FEATURE_REDUCE_BRIGHTNESS ->
+            AxPlatformFeature.REDUCE_BRIGHTNESS ->
                 stateManager.setSecureBool(SETTING_REDUCE_BRIGHT, enabled)
-            AxPlatformClient.FEATURE_ONE_HANDED_MODE ->
+            AxPlatformFeature.ONE_HANDED_MODE ->
                 stateManager.setSecureBool(SETTING_ONE_HANDED, enabled)
-            AxPlatformClient.FEATURE_HEADS_UP ->
+            AxPlatformFeature.HEADS_UP ->
                 stateManager.setGlobalBool(
                     Settings.Global.HEADS_UP_NOTIFICATIONS_ENABLED, enabled
                 )
-            AxPlatformClient.FEATURE_AUTO_SYNC ->
+            AxPlatformFeature.AUTO_SYNC ->
                 ContentResolver.setMasterSyncAutomatically(enabled)
-            AxPlatformClient.FEATURE_CAMERA_PRIVACY ->
+            AxPlatformFeature.CAMERA_PRIVACY ->
                 sensorPrivacyController.setSensorBlocked(
                     SensorPrivacyManager.Sources.QS_TILE,
                     SensorPrivacyManager.Sensors.CAMERA,
                     enabled
                 )
-            AxPlatformClient.FEATURE_MIC_PRIVACY ->
+            AxPlatformFeature.MIC_PRIVACY ->
                 sensorPrivacyController.setSensorBlocked(
                     SensorPrivacyManager.Sources.QS_TILE,
                     SensorPrivacyManager.Sensors.MICROPHONE,
                     enabled
                 )
-            AxPlatformClient.FEATURE_WORK_PROFILE ->
+            AxPlatformFeature.WORK_PROFILE ->
                 managedProfileController.setWorkModeEnabled(enabled)
-            AxPlatformClient.FEATURE_USB_TETHER -> tetheringManager?.setUsbTethering(enabled)
-            AxPlatformClient.FEATURE_DREAM -> try {
+            AxPlatformFeature.USB_TETHER -> tetheringManager?.setUsbTethering(enabled)
+            AxPlatformFeature.DREAM -> try {
                 dreamManager?.let { if (enabled) it.dream() else it.awaken() }
             } catch (e: RemoteException) {
                 Log.w(TAG, "Dream setEnabled failed", e)
             }
-            AxPlatformClient.FEATURE_POWER_SHARE ->
+            AxPlatformFeature.POWER_SHARE ->
                 batteryController.setReverseState(enabled)
-            AxPlatformClient.FEATURE_CAFFEINE -> {
+            AxPlatformFeature.CAFFEINE -> {
                 if (enabled && !wakeLock.isHeld) {
                     wakeLock.acquire(CAFFEINE_DURATION_MS)
                 } else if (!enabled && wakeLock.isHeld) {
@@ -350,26 +351,26 @@ class AxPlatformFeatureController @Inject constructor(
                 }
                 stateManager.broadcastBool(feature, wakeLock.isHeld)
             }
-            AxPlatformClient.FEATURE_VPN -> {
+            AxPlatformFeature.VPN -> {
                 if (!enabled && securityController.isVpnEnabled) {
                     securityController.disconnectPrimaryVpn()
                 }
             }
-            AxPlatformClient.FEATURE_CAST -> {
+            AxPlatformFeature.CAST -> {
                 if (!enabled) {
                     castController.castDevices.firstOrNull { it.isCasting }
                         ?.let { castController.stopCasting(it, StopReason.STOP_QS_TILE) }
                 }
             }
 
-            AxPlatformClient.FEATURE_SMART_PIXELS ->
+            AxPlatformFeature.SMART_PIXELS ->
                 stateManager.setSecureBool(SETTING_SMART_PIXELS, enabled)
-            AxPlatformClient.FEATURE_SCREEN_RECORD -> {
+            AxPlatformFeature.SCREEN_RECORD -> {
                 if (!enabled && screenRecordUxController.isRecording) {
                     screenRecordUxController.stopRecording(StopReason.STOP_QS_TILE)
                 }
             }
-            AxPlatformClient.FEATURE_SCREENSHOT -> {
+            AxPlatformFeature.SCREENSHOT -> {
                 if (enabled) toggle(feature)
             }
             else -> Log.w(TAG, "Unknown setEnabled: $feature")
@@ -378,7 +379,7 @@ class AxPlatformFeatureController @Inject constructor(
 
     fun setValue(feature: String, value: Int) {
         when (feature) {
-            AxPlatformClient.FEATURE_ZEN -> {
+            AxPlatformFeature.ZEN -> {
                 if (zenModeController.zen != value)
                     zenModeController.setZen(value, null, TAG)
             }
@@ -419,26 +420,26 @@ class AxPlatformFeatureController @Inject constructor(
             (config.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
         private val BASE_FEATURES = arrayOf(
-            AxPlatformClient.FEATURE_WIFI,
-            AxPlatformClient.FEATURE_MOBILE_DATA,
-            AxPlatformClient.FEATURE_BLUETOOTH,
-            AxPlatformClient.FEATURE_HOTSPOT,
-            AxPlatformClient.FEATURE_FLASHLIGHT,
-            AxPlatformClient.FEATURE_LOCATION,
-            AxPlatformClient.FEATURE_ROTATION,
-            AxPlatformClient.FEATURE_BATTERY_SAVER,
-            AxPlatformClient.FEATURE_ZEN,
-            AxPlatformClient.FEATURE_AOD,
-            AxPlatformClient.FEATURE_DATA_SAVER,
-            AxPlatformClient.FEATURE_AIRPLANE_MODE,
-            AxPlatformClient.FEATURE_DARK_MODE,
-            AxPlatformClient.FEATURE_NIGHT_LIGHT,
-            AxPlatformClient.FEATURE_COLOR_INVERSION,
-            AxPlatformClient.FEATURE_COLOR_CORRECTION,
-            AxPlatformClient.FEATURE_REDUCE_BRIGHTNESS,
-            AxPlatformClient.FEATURE_ONE_HANDED_MODE,
-            AxPlatformClient.FEATURE_HEADS_UP,
-            AxPlatformClient.FEATURE_AUTO_SYNC
+            AxPlatformFeature.WIFI,
+            AxPlatformFeature.MOBILE_DATA,
+            AxPlatformFeature.BLUETOOTH,
+            AxPlatformFeature.HOTSPOT,
+            AxPlatformFeature.FLASHLIGHT,
+            AxPlatformFeature.LOCATION,
+            AxPlatformFeature.ROTATION,
+            AxPlatformFeature.BATTERY_SAVER,
+            AxPlatformFeature.ZEN,
+            AxPlatformFeature.AOD,
+            AxPlatformFeature.DATA_SAVER,
+            AxPlatformFeature.AIRPLANE_MODE,
+            AxPlatformFeature.DARK_MODE,
+            AxPlatformFeature.NIGHT_LIGHT,
+            AxPlatformFeature.COLOR_INVERSION,
+            AxPlatformFeature.COLOR_CORRECTION,
+            AxPlatformFeature.REDUCE_BRIGHTNESS,
+            AxPlatformFeature.ONE_HANDED_MODE,
+            AxPlatformFeature.HEADS_UP,
+            AxPlatformFeature.AUTO_SYNC
         )
     }
 }

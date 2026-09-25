@@ -233,8 +233,5 @@
     <string name="volume_ringer_priority_only">Priority</string>
     <string name="volume_ringer_alarms_only">Alarms</string>
     <string name="volume_ringer_dnd">DnD</string>
-    <string name="tristate_rotation_0">Portrait</string>
-    <string name="tristate_rotation_90">Landscape (90°)</string>
-    <string name="tristate_rotation_270">Landscape (270°)</string>
 </resources>
 

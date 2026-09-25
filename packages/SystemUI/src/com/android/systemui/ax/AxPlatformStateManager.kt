@@ -24,6 +24,7 @@ import android.os.RemoteException
 import android.os.UserHandle
 import android.util.Log
 import com.android.axion.platform.AxPlatformClient
+import com.android.axion.platform.AxFeatureState
 import com.android.axion.platform.IAxPlatformCallback
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
@@ -105,9 +106,9 @@ class AxPlatformStateManager @Inject constructor(
         if (state === Bundle.EMPTY) return
         if (!state.containsKey("tileState")) {
             state.putInt("tileState", when {
-                !state.getBoolean("available", true) -> AxPlatformClient.TILE_STATE_UNAVAILABLE
-                state.getBoolean("active", false) -> AxPlatformClient.TILE_STATE_ACTIVE
-                else -> AxPlatformClient.TILE_STATE_INACTIVE
+                !state.getBoolean("available", true) -> AxFeatureState.TILE_STATE_UNAVAILABLE
+                state.getBoolean("active", false) -> AxFeatureState.TILE_STATE_ACTIVE
+                else -> AxFeatureState.TILE_STATE_INACTIVE
             })
         }
         labelProvider?.let { provider ->

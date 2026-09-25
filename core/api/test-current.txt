@@ -1928,7 +1928,6 @@ package android.hardware.display {
     method public boolean alwaysOnChargingEnabledSetting(int);
     method public boolean alwaysOnEnabled(int);
     method public boolean alwaysOnEnabledSetting(int);
-    method public void disableDozeSettings(int);
     method public void disableDozeSettings(boolean, int);
     method public void disableDozeSettings(int);
     method public void restoreDozeSettings(int);
@@ -2312,6 +2311,10 @@ package android.media {
   public class AudioSystem {
     method @RequiresPermission(android.Manifest.permission.MODIFY_AUDIO_SETTINGS) public static float getMasterBalance();
     method public static final int getNumStreamTypes();
+    method public static boolean isBtWiredCoPlayEnabled();
+    method public static int setBtWiredCoPlayEnabled(boolean);
+    method public static int setDeviceConnectionState(android.media.AudioDeviceAttributes, int, int, boolean);
+    method public static int setDeviceConnectionState(int, android.os.Parcel, int, boolean);
     method @RequiresPermission(android.Manifest.permission.MODIFY_AUDIO_SETTINGS) public static int setMasterBalance(float);
     method @NonNull public static String streamToString(int);
     field public static final int DEVICE_ROLE_DISABLED = 2; // 0x2
@@ -2599,6 +2602,20 @@ package android.net {
     method @RequiresPermission(android.Manifest.permission.OBSERVE_NETWORK_POLICY) public boolean isUidRestrictedOnMeteredNetworks(int);
     method @NonNull public static String resolveNetworkId(@NonNull android.net.wifi.WifiConfiguration);
     method public void setRestrictBackground(boolean);
+  }
+
+  public static class NetworkPolicyManager.Listener extends android.os.Binder implements android.os.IInterface {
+    ctor public NetworkPolicyManager.Listener();
+    method public android.os.IBinder asBinder();
+    method public void onAllowedTransportsChanged(int[], long[]);
+    method public void onBlockedReasonChanged(int, int, int);
+    method public void onMeteredIfacesChanged(String[]);
+    method public void onRestrictBackgroundChanged(boolean);
+    method public void onSubscriptionOverride(int, int, int, int[]);
+    method public void onSubscriptionPlansChanged(int, android.telephony.SubscriptionPlan[]);
+    method public boolean onTransact(int, android.os.Parcel, android.os.Parcel, int) throws android.os.RemoteException;
+    method public void onUidPoliciesChanged(int, int);
+    method public void onUidRulesChanged(int, int);
   }
 
   public class NetworkStack {
