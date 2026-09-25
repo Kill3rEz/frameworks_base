@@ -45,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -161,6 +162,7 @@ fun StatusBarDynamicIslandContainer(
         } else {
             null
         }
+    var naturalCenterX by remember { mutableFloatStateOf(Float.NaN) }
     val companionDiameter = DynamicIslandCompanionDiameter * heightScale
     val companionBalance = companionDiameter + DynamicIslandCompanionGap
     val effectivePageCount = if (showCompanion) 1 else chips.size
@@ -169,7 +171,19 @@ fun StatusBarDynamicIslandContainer(
         modifier =
             modifier
                 .padding(horizontal = 8.dp)
-                .offset(x = cutoutSpec.horizontalOffset)
+                .then(
+                    if (cutoutSpec.cutoutCenterX != null) {
+                        Modifier.onPlaced { naturalCenterX = it.boundsInWindow().center.x }
+                            .graphicsLayer {
+                                val natural = naturalCenterX
+                                translationX =
+                                    if (natural.isNaN() || natural == 0f) 0f
+                                    else cutoutSpec.cutoutCenterX - natural
+                            }
+                    } else {
+                        Modifier.offset(x = cutoutSpec.horizontalOffset)
+                    }
+                )
                 .onGloballyPositioned { coordinates ->
                     val b = coordinates.boundsInWindow()
                     onIslandBoundsChanged(
