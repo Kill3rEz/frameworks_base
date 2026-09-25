@@ -19,6 +19,7 @@ package com.android.systemui.shade.ui.composable
 import com.android.systemui.qs.composefragment.BrightnessLayout
 import com.android.systemui.qs.ui.composable.qsHostTransition
 import com.android.systemui.qs.ui.composable.LocalQsHostTransition
+import com.android.systemui.qs.ui.composable.HarmonyHeader
 import com.android.systemui.qs.composefragment.ConnectivityFolder
 import com.android.systemui.qs.composefragment.MyUiGridGap
 import com.android.systemui.qs.composefragment.MyUiMediaCard
@@ -406,7 +407,8 @@ private fun ContentScope.SingleShade(
             },
             mediaAndQqsHeader = {
                 val isDefaultStyle = viewModel.panelStyle == QsPanelStyle.Default
-                val isMyUiStyle = viewModel.panelStyle == QsPanelStyle.MyUi
+                val isHarmonyStyle = viewModel.panelStyle == QsPanelStyle.Harmony
+                val isMyUiStyle = viewModel.panelStyle == QsPanelStyle.MyUi || isHarmonyStyle
                 val qqsShowsMedia =
                     !isDefaultStyle &&
                         viewModel.isQsEnabled &&
@@ -694,13 +696,17 @@ private fun ContentScope.SingleShade(
                         }
                     },
                     myUiHeader = {
-                        MyUiHeaderRow(
-                            tiles =
-                                viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels,
-                            interactable = true,
-                        )
+                        if (isHarmonyStyle) {
+                            HarmonyHeader(viewModel.qsContainerViewModel)
+                        } else {
+                            MyUiHeaderRow(
+                                tiles =
+                                    viewModel.qsContainerViewModel.tileGridViewModel.tileViewModels,
+                                interactable = true,
+                            )
+                        }
                     },
-                    showMedia = qqsShowsMedia,
+                    showMedia = qqsShowsMedia && !isHarmonyStyle,
                 )
                 }
             },

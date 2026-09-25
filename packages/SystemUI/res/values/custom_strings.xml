@@ -230,5 +230,14 @@
     <string name="weather_condition_snow">Snowy</string>
     <string name="weather_condition_wind">Windy</string>
     <string name="weather_condition_mist">Misty</string>
-</resources>
 
+    <!-- HarmonyOS Control Centre -->
+    <string name="harmony_control_centre">Control centre</string>
+    <string name="harmony_not_playing">Not playing</string>
+    <string name="harmony_devices">Devices</string>
+    <string name="harmony_cast_hint">Tap to cast your screen to a nearby device</string>
+    <string name="harmony_connected">Connected</string>
+    <string name="harmony_edit_title">Edit control centre</string>
+    <string name="harmony_edit_subtitle">Long press and drag to rearrange</string>
+    <string name="harmony_edit_more">More toggles</string>
+</resources>

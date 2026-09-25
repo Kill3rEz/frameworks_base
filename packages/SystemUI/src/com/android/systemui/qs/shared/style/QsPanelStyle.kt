@@ -21,7 +21,9 @@ enum class QsPanelStyle(val value: Int) {
 
     Penguin(1),
 
-    MyUi(2);
+    MyUi(2),
+
+    Harmony(3);
 
     companion object {
         const val SETTING_NAME = "qs_panel_style"

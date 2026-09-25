@@ -141,6 +141,27 @@ private fun EditModeContent(viewModel: EditModeViewModel, modifier: Modifier = M
         remember(tiles, folderMemberSpecs) {
             tiles.filterNot { it.isCurrent && it.tileSpec.spec in folderMemberSpecs }
         }
+    if (panelStyle == QsPanelStyle.Harmony) {
+        val present = remember(tiles) { tiles.filter { it.isCurrent }.map { it.tileSpec.spec } }
+        val fixedSpecs =
+            remember(present) {
+                buildSet {
+                    listOf("wifi", "internet").firstOrNull { it in present }?.let(::add)
+                    if ("bt" in present) add("bt")
+                    if ("cast" in present) add("cast")
+                }
+            }
+        HarmonyEditMode(
+            tiles = tiles,
+            fixedSpecs = fixedSpecs,
+            onAddTile = viewModel::addTile,
+            onRemoveTile = viewModel::removeTile,
+            onSetTiles = viewModel::setTiles,
+            onStopEditing = viewModel::stopEditing,
+            modifier = modifier,
+        )
+        return
+    }
     Column(modifier) {
         gridLayout.EditTileGrid(
             if (panelElementsEditable) {

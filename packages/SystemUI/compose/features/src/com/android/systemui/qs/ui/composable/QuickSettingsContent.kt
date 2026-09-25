@@ -79,6 +79,13 @@ import com.android.systemui.qs.composefragment.POSITION_BELOW_GRID
 import com.android.systemui.qs.composefragment.POSITION_HEADER
 import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_POSITION
 import com.android.systemui.qs.composefragment.ConnectivityFolderExpansion
+import com.android.systemui.qs.composefragment.harmonyCardSpecs
+import com.android.systemui.qs.composefragment.HarmonyTopRow
+import com.android.systemui.qs.composefragment.HarmonyTogglesCard
+import com.android.systemui.qs.composefragment.HarmonyTitle
+import com.android.systemui.qs.composefragment.HarmonyGap
+import com.android.systemui.qs.composefragment.HarmonyConnectedDevices
+import com.android.systemui.qs.composefragment.HarmonyCastCard
 import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_SPAN
 import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_POSITION
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
@@ -113,6 +120,7 @@ import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.res.R
+import com.android.systemui.scene.shared.model.Overlays
 import kotlinx.coroutines.flow.filterNotNull
 
 internal class QsHostTransition(val idle: Boolean, val leaving: Boolean)
@@ -145,6 +153,7 @@ fun ContentScope.QuickSettingsContent(
                 PenguinQuickSettingsContent(viewModel, mediaInRow, modifier, mediaSquishiness)
             QsPanelStyle.MyUi ->
                 MyUiQuickSettingsContent(viewModel, modifier, mediaSquishiness)
+            QsPanelStyle.Harmony -> HarmonyQuickSettingsContent(viewModel, modifier)
         }
     }
 }
@@ -207,6 +216,89 @@ private fun ContentScope.MyUiQuickSettingsContent(
             EditModeButton(viewModel = editButtonViewModel, isVisible = interactable)
         }
     }
+}
+
+@Composable
+private fun ContentScope.HarmonyQuickSettingsContent(
+    viewModel: QuickSettingsContainerViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val allTiles = viewModel.tileGridViewModel.tileViewModels
+    val cardSpecs = remember(allTiles) { harmonyCardSpecs(allTiles) }
+    val toggles = remember(allTiles, cardSpecs) { allTiles.filterNot { it.spec.spec in cardSpecs } }
+    var interactable by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
+            .filterNotNull()
+            .collect { interactable = it >= .5f }
+    }
+
+    Column(
+        verticalArrangement = spacedBy(HarmonyGap),
+        modifier =
+            modifier
+                .element(Elements.QuickSettingsContent)
+                .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))
+                .sysuiResTag("quick_settings_panel"),
+    ) {
+        HarmonyTitle()
+        HarmonyHeader(viewModel)
+        Box(Modifier.element(Elements.QuickSettingsTiles)) {
+            GridAnchor()
+            HarmonyTogglesCard(
+                tiles = toggles,
+                brightness = {
+                    Element(key = Elements.BrightnessSlider, modifier = Modifier) {
+                        Box(Modifier.thenIf(!interactable) { Modifier.gesturesDisabled() }) {
+                            BrightnessLayout(
+                                enable = interactable,
+                                horizontal = true,
+                                sliderHeight = LyingSliderHeight,
+                            )
+                        }
+                    }
+                },
+            )
+        }
+        HarmonyCastCard(allTiles)
+        HarmonyConnectedDevices(allTiles)
+        if (contentKey != Overlays.QuickSettingsShade) {
+            val editButtonViewModel =
+                rememberViewModel(traceName = "HarmonyQuickSettings-editButton") {
+                    viewModel.editModeButtonViewModelFactory.create()
+                }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                EditModeButton(viewModel = editButtonViewModel, isVisible = interactable)
+            }
+        }
+    }
+}
+
+@Composable
+fun ContentScope.HarmonyHeader(
+    viewModel: QuickSettingsContainerViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val showMedia =
+        viewModel.showMedia && viewModel.hasMediaCards && isAlwaysComposedContentVisible()
+    HarmonyTopRow(
+        tiles = viewModel.tileGridViewModel.tileViewModels,
+        media =
+            if (showMedia) {
+                {
+                    Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
+                        PenguinMediaCard(
+                            viewModelFactory = viewModel.mediaViewModelFactory,
+                            behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                            square = true,
+                        )
+                    }
+                }
+            } else {
+                null
+            },
+        modifier = modifier.element(Elements.ConnectivityFolder),
+    )
 }
 
 @Composable
