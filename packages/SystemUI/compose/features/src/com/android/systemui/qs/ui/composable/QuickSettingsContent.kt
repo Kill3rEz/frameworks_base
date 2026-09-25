@@ -119,6 +119,11 @@ import com.android.systemui.qs.shared.style.LocalQsPanelStyle
 import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
+import com.android.systemui.qs.panels.ui.compose.PanelBand
+import com.android.systemui.qs.panels.ui.compose.PanelBands
+import com.android.systemui.qs.panels.ui.compose.packPanel
+import com.android.systemui.qs.panels.ui.compose.panelOrder
+import com.android.systemui.qs.panels.ui.compose.splitPanel
 import com.android.systemui.res.R
 import com.android.systemui.scene.shared.model.Overlays
 import kotlinx.coroutines.flow.filterNotNull
@@ -425,117 +430,69 @@ private fun ContentScope.PenguinQuickSettingsContent(
                 onStopOrDispose { listening = false }
             }
 
-        val mediaInPanel =
-            showMedia && viewModel.hasMediaCards && isAlwaysComposedContentVisible()
+            val mediaInPanel =
+                showMedia && viewModel.hasMediaCards && isAlwaysComposedContentVisible()
             val gap = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
-            val folderOrder = secureIntSetting("qs_connectivity_folder_edit_index", 1)
-            val mediaOrder = secureIntSetting("qs_media_edit_index", 0)
-            val slidersOrder = secureIntSetting("qs_sliders_edit_index", 2)
-            fun elementsAt(slot: Int): List<PanelElement> = buildList {
-                val matches = { position: Int ->
-                    if (slot <= POSITION_ABOVE_GRID) position <= POSITION_ABOVE_GRID
-                    else position >= POSITION_BELOW_GRID
-                }
-                if (folderEnabled && matches(folderPosition)) {
-                    add(
-                        PanelElement(folderSpan, folderOrder) {
-                            ConnectivityFolder(
-                                tiles = viewModel.tileGridViewModel.tileViewModels,
-                                modifier = Modifier.element(Elements.ConnectivityFolder),
-                                compactHeight =
-                                    if (folderSpan < 2) qsModuleHeight(2) else null,
-                                onExpandedChange = { ConnectivityFolderExpansion.expanded = it },
-                            )
-                        }
-                    )
-                }
-                if (mediaInPanel && matches(mediaPosition)) {
-                    add(
-                        PanelElement(mediaSpan, mediaOrder) {
-                            if (mediaSpan < 2) {
-                                QsMedia(viewModel, mediaSquishiness, square = true)
-                            } else {
-                                QsMedia(viewModel, mediaSquishiness)
-                            }
-                        }
-                    )
-                }
-                val slidersSlot =
-                    if (slidersPosition == POSITION_HEADER) POSITION_ABOVE_GRID
-                    else slidersPosition
-                if (matches(slidersSlot)) {
-                    add(
-                        PanelElement(
-                            slidersSpan,
-                            slidersOrder,
-                            alignEnd = slidersSpan < 2,
-                        ) {
-                            if (slidersSpan < 2) {
-                                QsStandingSliders(
-                                    sliderHeight = standingSliderHeight,
-                                    gap = gap,
-                                )
-                            } else {
-                                QsSliders(
-                                    sliderHeight = LyingSliderHeight,
-                                    gap = gap,
-                                    horizontal = true,
-                                )
-                            }
-                        }
+            val rowGap = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
+            val (head, rest) =
+                penguinPanel(
+                    tiles = availableTiles.map { it.spec },
+                    largeTiles = viewModel.tileGridViewModel.largeTiles,
+                    folderEnabled = folderEnabled,
+                    mediaShown = mediaInPanel,
+                )
+            val tiles: @Composable (List<TileSpec>, Int) -> Unit = { specs, columns ->
+                if (specs.isNotEmpty()) {
+                    TileGrid(
+                        viewModel = viewModel.tileGridViewModel,
+                        includeSpecs = specs,
+                        columnsOverride = columns,
+                        listening = { listening },
                     )
                 }
             }
-            val aboveElements = elementsAt(POSITION_ABOVE_GRID).sortedBy { it.order }
-            val belowElements = elementsAt(POSITION_BELOW_GRID).sortedBy { it.order }
-            val pool = availableTiles.map { it.spec }
-            val largeTiles = viewModel.tileGridViewModel.largeTiles
-            val aboveSlots = panelFillerSlots(aboveElements)
-            val belowSlots = panelFillerSlots(belowElements)
-            var poolCursor = 0
-            val aboveFillers =
-                List(aboveSlots) {
-                    panelFillerTiles(pool.drop(poolCursor), largeTiles).also {
-                        poolCursor += it.size
-                    }
+            val element: @Composable (TileSpec, Boolean) -> Unit = { spec, half ->
+                when (spec) {
+                    FOLDER_SPEC ->
+                        ConnectivityFolder(
+                            tiles = viewModel.tileGridViewModel.tileViewModels,
+                            modifier = Modifier.element(Elements.ConnectivityFolder),
+                            compactHeight = if (half) qsModuleHeight(2) else null,
+                            onExpandedChange = { ConnectivityFolderExpansion.expanded = it },
+                        )
+                    MEDIA_SPEC -> QsMedia(viewModel, mediaSquishiness, square = half)
+                    else ->
+                        if (half) {
+                            QsStandingSliders(sliderHeight = standingSliderHeight, gap = gap)
+                        } else {
+                            QsSliders(sliderHeight = LyingSliderHeight, gap = gap, horizontal = true)
+                        }
                 }
-            val belowFillers =
-                List(belowSlots) {
-                    panelFillerTiles(pool.drop(poolCursor), largeTiles).also {
-                        poolCursor += it.size
-                    }
-                }
-            val excludeSpecs = aboveFillers.flatten() + belowFillers.flatten() + inFolderSpecs
-
-            PanelElementRows(aboveElements, gap) { slot ->
-                FillerTiles(viewModel, aboveFillers.getOrElse(slot) { emptyList() }, listening)
             }
+            PanelBands(head, gap, tiles, element)
             Box {
                 GridAnchor()
-                TileGrid(
-                    viewModel = viewModel.tileGridViewModel,
-                    excludeSpecs = excludeSpecs,
-                    listening = { listening },
+                Column(
                     modifier = Modifier.element(Elements.QuickSettingsTiles),
-                    belowTiles = {
-                        val rowGap = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
-                        Column(
-                            modifier =
-                                Modifier.thenIf(belowElements.isNotEmpty()) {
-                                    Modifier.padding(top = rowGap)
-                                },
-                            verticalArrangement = spacedBy(rowGap),
-                        ) {
-                            PanelElementRows(belowElements, gap) { slot ->
-                                FillerTiles(
-                                    viewModel,
-                                    belowFillers.getOrElse(slot) { emptyList() },
-                                    listening,
-                                )
-                            }
-                        }
-                    },
-                )
+                    verticalArrangement = spacedBy(rowGap),
+                ) {
+                    PanelBands(rest, gap, tiles, element)
+                }
+            }
+            if (contentKey != Overlays.QuickSettingsShade) {
+                var interactable by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
+                        .filterNotNull()
+                        .collect { interactable = it >= .5f }
+                }
+                val editButtonViewModel =
+                    rememberViewModel(traceName = "PenguinQuickSettings-editButton") {
+                        viewModel.editModeButtonViewModelFactory.create()
+                    }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    EditModeButton(viewModel = editButtonViewModel, isVisible = interactable)
+                }
             }
         }
 
@@ -555,6 +512,40 @@ private fun ContentScope.PenguinQuickSettingsContent(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun penguinPanel(
+    tiles: List<TileSpec>,
+    largeTiles: Set<TileSpec>,
+    folderEnabled: Boolean,
+    mediaShown: Boolean,
+): kotlin.Pair<List<PanelBand>, List<PanelBand>> {
+    val folderSpan = secureIntSetting(SETTING_QS_FOLDER_SPAN, 1)
+    val mediaSpan = secureIntSetting(SETTING_QS_MEDIA_SPAN, 1)
+    val slidersSpan = secureIntSetting(SETTING_QS_SLIDERS_SPAN, DEFAULT_SLIDERS_SPAN)
+    val folderIndex = secureIntSetting("qs_connectivity_folder_edit_index", 1)
+    val mediaIndex = secureIntSetting("qs_media_edit_index", 0)
+    val slidersIndex = secureIntSetting("qs_sliders_edit_index", 2)
+    return remember(
+        tiles,
+        largeTiles,
+        folderEnabled,
+        mediaShown,
+        folderSpan,
+        mediaSpan,
+        slidersSpan,
+        folderIndex,
+        mediaIndex,
+        slidersIndex,
+    ) {
+        val all = listOfNotNull(FOLDER_SPEC.takeIf { folderEnabled }, MEDIA_SPEC, SLIDERS_SPEC)
+        val present = all.filter { it != MEDIA_SPEC || mediaShown }
+        val index = mapOf(FOLDER_SPEC to folderIndex, MEDIA_SPEC to mediaIndex, SLIDERS_SPEC to slidersIndex)
+        val span = mapOf(FOLDER_SPEC to folderSpan, MEDIA_SPEC to mediaSpan, SLIDERS_SPEC to slidersSpan)
+        val order = panelOrder(tiles, present, all) { index.getValue(it) }
+        splitPanel(packPanel(order, largeTiles) { span.getValue(it) >= 2 }, largeTiles)
     }
 }
 

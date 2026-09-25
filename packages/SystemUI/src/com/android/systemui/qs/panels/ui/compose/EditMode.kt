@@ -162,6 +162,25 @@ private fun EditModeContent(viewModel: EditModeViewModel, modifier: Modifier = M
         )
         return
     }
+    if (panelStyle == QsPanelStyle.Penguin) {
+        gridLayout.TileSizing { largeTiles, resize ->
+            PenguinEditMode(
+                tiles = tiles,
+                folderMemberSpecs = folderMemberSpecs,
+                folderEnabled = connectivityFolderEnabled(),
+                largeTiles = largeTiles,
+                onResizeTile = resize,
+                onAddTile = viewModel::addTile,
+                onRemoveTile = viewModel::removeTile,
+                onCommitTiles = { specs ->
+                    viewModel.setTiles(specs + resolver.folderTilesToKeep(folderMemberSpecs, specs))
+                },
+                onStopEditing = viewModel::stopEditing,
+                modifier = modifier,
+            )
+        }
+        return
+    }
     Column(modifier) {
         gridLayout.EditTileGrid(
             if (panelElementsEditable) {
@@ -194,7 +213,6 @@ private fun ContentResolver.folderTilesToKeep(
         .map { TileSpec.create(it) }
         .filterNot { it in written }
 
-private fun TileSpec.isPanelElement() = this in PANEL_ELEMENT_SPECS
 
 private fun TileSpec.positionSetting() =
     when (this) {

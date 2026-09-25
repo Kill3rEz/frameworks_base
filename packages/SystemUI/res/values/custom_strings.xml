@@ -240,4 +240,7 @@
     <string name="harmony_edit_title">Edit control centre</string>
     <string name="harmony_edit_subtitle">Long press and drag to rearrange</string>
     <string name="harmony_edit_more">More toggles</string>
+    <string name="penguin_edit_title">Edit tiles</string>
+    <string name="penguin_edit_subtitle">Tap to resize, long press to move</string>
+    <string name="penguin_edit_more">Add tiles</string>
 </resources>

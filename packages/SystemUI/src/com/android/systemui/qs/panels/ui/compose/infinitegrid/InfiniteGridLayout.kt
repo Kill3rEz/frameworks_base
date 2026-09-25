@@ -184,6 +184,20 @@ constructor(
     }
 
     @Composable
+    override fun TileSizing(
+        content: @Composable (largeTiles: Set<TileSpec>, resize: (TileSpec, Boolean) -> Unit) -> Unit
+    ) {
+        val viewModel =
+            rememberViewModel(traceName = "InfiniteGridLayout.TileSizing") {
+                viewModelFactory.create()
+            }
+        val largeTiles by viewModel.iconTilesViewModel.largeTilesState
+        content(largeTiles) { spec, large ->
+            viewModel.iconTilesViewModel.resize(spec, toIcon = !large)
+        }
+    }
+
+    @Composable
     override fun EditTileGrid(
         tiles: List<EditTileViewModel>,
         modifier: Modifier,

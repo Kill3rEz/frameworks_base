@@ -46,6 +46,13 @@ interface GridLayout {
     )
 
     @Composable
+    fun TileSizing(
+        content: @Composable (largeTiles: Set<TileSpec>, resize: (TileSpec, Boolean) -> Unit) -> Unit
+    ) {
+        content(emptySet()) { _, _ -> }
+    }
+
+    @Composable
     fun EditTileGrid(
         tiles: List<EditTileViewModel>,
         modifier: Modifier,
