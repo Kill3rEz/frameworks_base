@@ -23,12 +23,7 @@ import android.os.Looper
 import android.os.SystemClock
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.InfiniteRepeatableSpec
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -66,6 +61,8 @@ private const val BAR_COUNT = 4
 
 private const val STALE_SIGNAL_TIMEOUT_MS = 400L
 
+private const val IDLE_STEP_MS = 600L
+
 private val PausedRestLevels = floatArrayOf(0.20f, 0.35f, 0.35f, 0.20f)
 
 private val BeatSpring = spring<Float>(
@@ -78,18 +75,13 @@ private val SettleSpring = spring<Float>(
     stiffness = 140f,
 )
 
-private data class IdleConfig(
-    val minLevel: Float,
-    val maxLevel: Float,
-    val durationMs: Int,
-    val phaseOffsetMs: Int,
-)
+private data class IdleConfig(val minLevel: Float, val maxLevel: Float)
 
 private val IdleConfigs = arrayOf(
-    IdleConfig(minLevel = 0.14f, maxLevel = 0.26f, durationMs = 2600, phaseOffsetMs = 300),
-    IdleConfig(minLevel = 0.22f, maxLevel = 0.42f, durationMs = 2200, phaseOffsetMs = 0),
-    IdleConfig(minLevel = 0.22f, maxLevel = 0.42f, durationMs = 2200, phaseOffsetMs = 150),
-    IdleConfig(minLevel = 0.14f, maxLevel = 0.26f, durationMs = 2600, phaseOffsetMs = 450),
+    IdleConfig(minLevel = 0.14f, maxLevel = 0.26f),
+    IdleConfig(minLevel = 0.22f, maxLevel = 0.42f),
+    IdleConfig(minLevel = 0.22f, maxLevel = 0.42f),
+    IdleConfig(minLevel = 0.14f, maxLevel = 0.26f),
 )
 
 @Composable
@@ -220,7 +212,7 @@ fun AudioReactiveBars(
         snapshotFlow { rawLevels.toList() to isPlaying }
             .distinctUntilChanged()
             .collect { (targets, playing) ->
-                val spec = if (playing) BeatSpring else SettleSpring
+                val spec = if (playing && reactiveActive) BeatSpring else SettleSpring
                 coroutineScope {
                     targets.forEachIndexed { index, target ->
                         launch {
@@ -231,33 +223,21 @@ fun AudioReactiveBars(
             }
     }
 
-    val idleTransition = rememberInfiniteTransition(label = "visualizer_idle")
-    val idleFloats = Array(BAR_COUNT) { index ->
-        val cfg = IdleConfigs[index]
-        val start = if (index % 2 == 0) cfg.minLevel else cfg.maxLevel
-        val end   = if (index % 2 == 0) cfg.maxLevel else cfg.minLevel
-        idleTransition.animateFloat(
-            initialValue = start,
-            targetValue = end,
-            animationSpec = InfiniteRepeatableSpec(
-                animation = tween(
-                    durationMillis = cfg.durationMs,
-                    delayMillis = cfg.phaseOffsetMs,
-                    easing = FastOutSlowInEasing,
-                ),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "idle_$index",
-        )
-    }
-
-    LaunchedEffect(isPlaying) {
-        if (isPlaying) return@LaunchedEffect
+    LaunchedEffect(isPlaying, reactiveActive) {
+        if (!isPlaying) {
+            PausedRestLevels.forEachIndexed { i, v -> rawLevels[i] = v }
+            return@LaunchedEffect
+        }
+        if (reactiveActive) return@LaunchedEffect
+        var high = false
         while (true) {
             for (i in 0 until BAR_COUNT) {
-                rawLevels[i] = idleFloats[i].value
+                val cfg = IdleConfigs[i]
+                val up = if (i % 2 == 0) high else !high
+                rawLevels[i] = if (up) cfg.maxLevel else cfg.minLevel
             }
-            kotlinx.coroutines.delay(32L)
+            high = !high
+            kotlinx.coroutines.delay(IDLE_STEP_MS)
         }
     }
 
@@ -286,12 +266,7 @@ fun AudioReactiveBars(
         val radius = CornerRadius(barPx / 2f, barPx / 2f)
 
         for (index in 0 until BAR_COUNT) {
-            val springLevel = animatedLevels[index].value
-            val idleLevel = idleFloats[index].value
-
-            val level =
-                (if (isPlaying && reactiveActive) springLevel else idleLevel)
-                    .coerceIn(0.08f, 1f)
+            val level = animatedLevels[index].value.coerceIn(0.08f, 1f)
 
             val barH = maxH * level
             val left = index * (barPx + spacingPx)

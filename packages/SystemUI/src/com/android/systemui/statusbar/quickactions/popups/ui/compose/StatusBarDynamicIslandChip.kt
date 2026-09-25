@@ -649,39 +649,6 @@ private fun CollapsedGlyphBadge(
     badgeSize: Dp = 20.dp,
     iconSize: Dp = 13.dp,
 ) {
-    val transition = rememberInfiniteTransition(label = "collapsed_glyph")
-    val breathe by
-        transition.animateFloat(
-            initialValue = 0.92f,
-            targetValue = 1.08f,
-            animationSpec =
-                infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-            label = "breathe",
-        )
-    val recScale by
-        transition.animateFloat(
-            initialValue = 0.9f,
-            targetValue = 1.12f,
-            animationSpec =
-                infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-            label = "rec_scale",
-        )
-    val recAlpha by
-        transition.animateFloat(
-            initialValue = 0.45f,
-            targetValue = 1f,
-            animationSpec =
-                infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-            label = "rec_alpha",
-        )
-    val spin by
-        transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart),
-            label = "spin",
-        )
-
     Box(
         modifier =
             modifier
@@ -690,26 +657,70 @@ private fun CollapsedGlyphBadge(
                 .background(IslandAccents.badgeFill(accent)),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            icon = icon,
-            modifier =
-                Modifier.size(iconSize).graphicsLayer {
-                    when (content) {
-                        is PopupContentModel.ScreenRecord -> {
-                            scaleX = recScale
-                            scaleY = recScale
-                            alpha = recAlpha
-                        }
-                        is PopupContentModel.Stopwatch -> rotationZ = spin
-                        is PopupContentModel.Alarm -> {
-                            scaleX = breathe
-                            scaleY = breathe
-                        }
-                        else -> Unit
-                    }
-                },
-            tint = accent,
+        val iconModifier =
+            when (content) {
+                is PopupContentModel.ScreenRecord -> Modifier.size(iconSize).recordingPulse()
+                is PopupContentModel.Stopwatch -> Modifier.size(iconSize).stopwatchSpin()
+                is PopupContentModel.Alarm -> Modifier.size(iconSize).alarmBreathe()
+                else -> Modifier.size(iconSize)
+            }
+        Icon(icon = icon, modifier = iconModifier, tint = accent)
+    }
+}
+
+@Composable
+private fun Modifier.recordingPulse(): Modifier {
+    val transition = rememberInfiniteTransition(label = "collapsed_glyph_rec")
+    val scale by
+        transition.animateFloat(
+            initialValue = 0.9f,
+            targetValue = 1.12f,
+            animationSpec =
+                infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "rec_scale",
         )
+    val alpha by
+        transition.animateFloat(
+            initialValue = 0.45f,
+            targetValue = 1f,
+            animationSpec =
+                infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "rec_alpha",
+        )
+    return graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+        this.alpha = alpha
+    }
+}
+
+@Composable
+private fun Modifier.stopwatchSpin(): Modifier {
+    val transition = rememberInfiniteTransition(label = "collapsed_glyph_spin")
+    val spin by
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart),
+            label = "spin",
+        )
+    return graphicsLayer { rotationZ = spin }
+}
+
+@Composable
+private fun Modifier.alarmBreathe(): Modifier {
+    val transition = rememberInfiniteTransition(label = "collapsed_glyph_breathe")
+    val breathe by
+        transition.animateFloat(
+            initialValue = 0.92f,
+            targetValue = 1.08f,
+            animationSpec =
+                infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "breathe",
+        )
+    return graphicsLayer {
+        scaleX = breathe
+        scaleY = breathe
     }
 }
 
