@@ -147,7 +147,8 @@ private fun MediaCard(card: MediaCardViewModel, isSelected: Boolean) {
         ) {
         WallpaperBlur(
             alpha = {
-                LockscreenMediaExpansion.lockscreenAlpha * (1f - LockscreenMediaExpansion.fraction)
+                if (LockscreenMediaExpansion.fraction > 0f) 0f
+                else LockscreenMediaExpansion.lockscreenAlpha
             },
             corner = CardCorner,
             modifier = Modifier.matchParentSize(),
