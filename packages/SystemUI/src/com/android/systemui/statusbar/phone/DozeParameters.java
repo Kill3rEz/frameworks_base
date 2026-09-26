@@ -345,7 +345,7 @@ public class DozeParameters implements
     }
 
     private boolean shouldUseScreenOffAnimationAod() {
-        return (mAmbientDisplayConfiguration.alwaysOnEnabled(mUserTracker.getUserId())
+        return (mAmbientDisplayConfiguration.screenOffAodEnabled(mUserTracker.getUserId())
                 && !mBatteryController.isAodPowerSave())
                 || isMinModeActive();
     }
