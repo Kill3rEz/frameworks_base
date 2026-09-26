@@ -24,11 +24,13 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateStartPadding
@@ -49,6 +51,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.Dp
@@ -64,6 +67,11 @@ import com.android.compose.windowsizeclass.LocalWindowSizeClass
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.clocks.ClockStyle
 import com.android.systemui.keyguard.shared.model.ClockSize
+import com.android.systemui.keyguard.ui.composable.media.LockscreenExpandedClock
+import com.android.systemui.keyguard.ui.composable.media.LockscreenMediaExpansion
+import com.android.systemui.keyguard.ui.composable.media.LockscreenMediaWidgets
+import com.android.systemui.keyguard.ui.composable.media.collapsible
+import com.android.systemui.keyguard.ui.composable.media.within
 import com.android.systemui.keyguard.ui.viewmodel.LockscreenUpperRegionViewModel
 import com.android.systemui.keyguard.ui.viewmodel.LockscreenUpperRegionViewModel.Decision
 import com.android.systemui.lifecycle.rememberViewModel
@@ -266,14 +274,57 @@ constructor(
                     }
                 }
                 scene(NarrowScenes.SmallClock) {
-                    Column {
-                        when {
-                            customStyle != 0 -> CustomClockView()
-                            clockHidden -> { /* no clock */ }
-                            else -> LockscreenElement(Region.Clock.Small)
+                    DisposableEffect(Unit) {
+                        LockscreenMediaExpansion.supported = true
+                        onDispose { LockscreenMediaExpansion.supported = false }
+                    }
+                    val expansion = LockscreenMediaExpansion.fraction
+                    // Without notifications the artwork takes the space above the player, so the
+                    // player settles at the bottom; with them it stays under the clock and the
+                    // notifications follow it.
+                    val artWeight =
+                        if (viewModel.isNotificationStackActive) 0f else expansion
+                    val collapseOnTap =
+                        Modifier.pointerInput(Unit) {
+                            detectTapGestures { LockscreenMediaExpansion.collapse() }
+                        }
+                    Column(Modifier.fillMaxSize()) {
+                        Box(
+                            Modifier.collapsible {
+                                1f - LockscreenMediaExpansion.fraction.within(0f, 0.6f)
+                            }
+                        ) {
+                            when {
+                                customStyle != 0 -> CustomClockView()
+                                clockHidden -> { /* no clock */ }
+                                else -> LockscreenElement(Region.Clock.Small)
+                            }
+                        }
+                        if (expansion > 0f) {
+                            LockscreenExpandedClock(
+                                Modifier.collapsible {
+                                        LockscreenMediaExpansion.fraction.within(0.3f, 1f)
+                                    }
+                                    .then(collapseOnTap)
+                                    .padding(top = 8.dp, bottom = 16.dp)
+                            )
+                        }
+                        if (artWeight > 0.001f) {
+                            Spacer(Modifier.weight(artWeight).fillMaxWidth().then(collapseOnTap))
                         }
                         MediaCarousel(Modifier.align(Alignment.Start))
-                        Notifications(aodAlignment = Alignment.TopStart)
+                        if (expansion > 0f && !viewModel.isNotificationStackActive) {
+                            LockscreenMediaWidgets(
+                                Modifier.collapsible {
+                                        LockscreenMediaExpansion.fraction.within(0.4f, 1f)
+                                    }
+                                    .padding(bottom = 12.dp)
+                            )
+                        }
+                        Notifications(
+                            aodAlignment = Alignment.TopStart,
+                            modifier = Modifier.weight(maxOf(1f - artWeight, 0.001f)),
+                        )
                     }
                 }
             }
