@@ -33,7 +33,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import com.android.systemui.statusbar.backtoapp.BackToAppChip
+import com.android.systemui.statusbar.backtoapp.BackToAppLabel
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -521,6 +521,52 @@ fun StatusBarRoot(
 }
 
 /** Adds the composable chips shown on the start side of the status bar. */
+private fun stackBackToAppUnderClock(
+    clockView: Clock,
+    statusBarViewModel: HomeStatusBarViewModel,
+    context: Context,
+) {
+    val parent = clockView.parent as? ViewGroup ?: return
+    val index = parent.indexOfChild(clockView)
+    val clockParams = clockView.layoutParams
+    val column =
+        LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER_VERTICAL or android.view.Gravity.START
+            clipChildren = false
+            layoutParams =
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                )
+        }
+    parent.removeViewAt(index)
+    parent.addView(column, index)
+    clockView.minHeight = 0
+    clockView.minimumHeight = 0
+    clockView.includeFontPadding = false
+    column.addView(
+        clockView,
+        LinearLayout.LayoutParams(clockParams.width, LinearLayout.LayoutParams.WRAP_CONTENT),
+    )
+    val labelStart = clockView.paddingStart / context.resources.displayMetrics.density
+    column.addView(
+        ComposeView(context).apply {
+            setContent {
+                WithAdaptiveTint(
+                    isDarkProvider = { bounds -> statusBarViewModel.areaDark.isDarkTheme(bounds) }
+                ) { tint ->
+                    BackToAppLabel(tint = tint, startPadding = labelStart.dp)
+                }
+            }
+        },
+        LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        ),
+    )
+}
+
 private fun addStartSideComposable(
     phoneStatusBarView: PhoneStatusBarView,
     clockViewModelFactory: ClockViewModel.Factory,
@@ -535,6 +581,7 @@ private fun addStartSideComposable(
     val startSideContainerView =
         phoneStatusBarView.requireViewById<View>(R.id.status_bar_start_side_container)
     val clockView = phoneStatusBarView.requireViewById<Clock>(R.id.clock)
+    stackBackToAppUnderClock(clockView, statusBarViewModel, context)
 
     val composeView =
         ComposeView(context).apply {
@@ -644,12 +691,6 @@ private fun addStartSideComposable(
                     }
 
                 val chipsVisibilityModel = statusBarViewModel.ongoingActivityChips
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                WithAdaptiveTint(
-                    isDarkProvider = { bounds -> statusBarViewModel.areaDark.isDarkTheme(bounds) }
-                ) { tint ->
-                    BackToAppChip(tint = tint)
-                }
                 if (chipsVisibilityModel.areChipsAllowed) {
                     var overlapsIsland by remember { mutableStateOf(false) }
                     OngoingActivityChips(
@@ -679,7 +720,6 @@ private fun addStartSideComposable(
                                         )
                                 },
                     )
-                }
                 }
             }
         }
