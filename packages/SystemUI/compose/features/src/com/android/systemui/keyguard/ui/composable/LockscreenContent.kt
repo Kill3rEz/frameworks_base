@@ -151,7 +151,17 @@ class LockscreenContent(
         }
 
         LockscreenExpandedMediaArt(
-            alpha = { min(viewModel.alpha, contentAlphaAnimatable.value) }
+            alpha = {
+                val transition = layoutState.currentTransition
+                val sceneAlpha =
+                    when {
+                        transition == null -> 1f
+                        transition.fromContent == contentKey -> 1f - transition.progress
+                        transition.toContent == contentKey -> transition.progress
+                        else -> 1f
+                    }.coerceIn(0f, 1f)
+                min(viewModel.alpha, contentAlphaAnimatable.value) * sceneAlpha
+            }
         )
         LockscreenBehindScrim(
             lockscreenBehindScrimViewModel,
