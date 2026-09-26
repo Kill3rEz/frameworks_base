@@ -55,6 +55,10 @@ object LockscreenMediaExpansion {
 
     var artwork by mutableStateOf<Icon?>(null)
 
+    var lockscreenAlpha by mutableStateOf(1f)
+
+    var artSlotBounds by mutableStateOf(Rect.Zero)
+
     var thumbnailBounds by mutableStateOf(Rect.Zero)
 
     internal var animateNextChange = false

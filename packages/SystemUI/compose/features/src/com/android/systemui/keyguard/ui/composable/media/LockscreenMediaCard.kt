@@ -50,12 +50,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp as lerpColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -91,8 +91,9 @@ private val ThumbnailSize = 64.dp
 private val ThumbnailCorner = 10.dp
 private val ControlSize = 44.dp
 private val TrackHeight = 6.dp
-private val CardTint = Color(0xFF1C1C1E).copy(alpha = 0.55f)
-private val CardBorder = Color.White.copy(alpha = 0.14f)
+private val CompactGlass = Color(0xFF3A3A3C).copy(alpha = 0.45f)
+private val ExpandedGlass = Color.White.copy(alpha = 0.14f)
+private val CardBorder = Color.White.copy(alpha = 0.18f)
 private val Secondary = Color.White.copy(alpha = 0.6f)
 
 @Composable
@@ -144,8 +145,14 @@ private fun MediaCard(card: MediaCardViewModel, isSelected: Boolean) {
                 .clip(RoundedCornerShape(CardCorner))
                 .border(1.dp, CardBorder, RoundedCornerShape(CardCorner))
         ) {
-        Artwork(card.background, Modifier.matchParentSize().blur(48.dp))
-        Box(Modifier.matchParentSize().background(CardTint))
+        WallpaperBlur(
+            alpha = {
+                LockscreenMediaExpansion.lockscreenAlpha * (1f - LockscreenMediaExpansion.fraction)
+            },
+            corner = CardCorner,
+            modifier = Modifier.matchParentSize(),
+        )
+        Box(Modifier.matchParentSize().background(lerpColor(CompactGlass, ExpandedGlass, f)))
         Column(
             modifier =
                 Modifier.fillMaxWidth()

@@ -24,6 +24,9 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,6 +55,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.dimensionResource
@@ -282,8 +287,13 @@ constructor(
                     val notificationsActive = viewModel.isNotificationStackActive
                     SideEffect { LockscreenMediaExpansion.notificationsShowing = notificationsActive }
                     val expansion = LockscreenMediaExpansion.fraction
-                    val artWeight =
-                        if (viewModel.isNotificationStackActive) 0f else expansion
+                    val notifications by
+                        animateFloatAsState(
+                            if (notificationsActive) 1f else 0f,
+                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                            label = "ExpandedMediaNotifications",
+                        )
+                    val artWeight = expansion * (1f - 0.45f * notifications)
                     val collapseOnTap =
                         Modifier.pointerInput(Unit) {
                             detectTapGestures { LockscreenMediaExpansion.collapse() }
@@ -310,13 +320,21 @@ constructor(
                             )
                         }
                         if (artWeight > 0.001f) {
-                            Spacer(Modifier.weight(artWeight).fillMaxWidth().then(collapseOnTap))
+                            Spacer(
+                                Modifier.weight(artWeight)
+                                    .fillMaxWidth()
+                                    .onGloballyPositioned {
+                                        LockscreenMediaExpansion.artSlotBounds = it.boundsInWindow()
+                                    }
+                                    .then(collapseOnTap)
+                            )
                         }
                         MediaCarousel(Modifier.align(Alignment.Start))
-                        if (expansion > 0f && !viewModel.isNotificationStackActive) {
+                        if (expansion > 0f && notifications < 1f) {
                             LockscreenMediaWidgets(
                                 Modifier.collapsible {
-                                        LockscreenMediaExpansion.fraction.within(0.4f, 1f)
+                                        LockscreenMediaExpansion.fraction.within(0.4f, 1f) *
+                                            (1f - notifications)
                                     }
                                     .padding(bottom = 12.dp)
                             )
