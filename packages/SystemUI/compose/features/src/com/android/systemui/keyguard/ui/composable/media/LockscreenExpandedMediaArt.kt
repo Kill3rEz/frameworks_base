@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,22 +47,36 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.android.systemui.util.WallpaperDepthUtils
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.distinctUntilChanged
+
+private const val ArtTop = 0.1f
 
 @Composable
 fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier) {
     val state = LockscreenMediaExpansion
     LaunchedEffect(Unit) {
-        state.progress.snapTo(if (state.expanded) 1f else 0f)
-        snapshotFlow { state.expanded && state.supported && state.artwork != null }
+        snapshotFlow { state.target }
             .distinctUntilChanged()
-            .collect { target -> state.progress.animateTo(if (target) 1f else 0f, state.Spec) }
+            .collect { target ->
+                val value = if (target) 1f else 0f
+                if (state.animateNextChange) {
+                    state.animateNextChange = false
+                    state.progress.animateTo(value, state.Spec)
+                } else {
+                    state.progress.snapTo(value)
+                }
+            }
     }
-    DisposableEffect(Unit) { onDispose { state.expanded = false } }
+    LaunchedEffect(Unit) {
+        snapshotFlow { state.fraction > 0f }
+            .distinctUntilChanged()
+            .collect { WallpaperDepthUtils.setExpandedMediaArtVisible(it) }
+    }
 
     var origin by remember { mutableStateOf(Offset.Zero) }
-    Box(
+    BoxWithConstraints(
         modifier
             .fillMaxSize()
             .onGloballyPositioned { origin = it.positionInWindow() }
@@ -71,69 +84,62 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
     ) {
         val f = state.fraction
         val artwork = state.artwork
-        if (f <= 0f || artwork == null) return@Box
+        if (f <= 0f || artwork == null) return@BoxWithConstraints
         val density = LocalDensity.current
-        BoxWithFullBounds { width, height ->
-            val from = state.thumbnailBounds.translate(-origin)
-            val to = Rect(0f, 0f, width, height)
-            val rect =
-                if (from.isEmpty) {
-                    to
-                } else {
-                    Rect(
-                        lerp(from.left, to.left, f),
-                        lerp(from.top, to.top, f),
-                        lerp(from.right, to.right, f),
-                        lerp(from.bottom, to.bottom, f),
-                    )
-                }
-            val shape = RoundedCornerShape(lerp(10f, 0f, f).dp)
-            val sizeDp = with(density) { DpSize(rect.width.toDp(), rect.height.toDp()) }
-            Box(
-                Modifier.offset { IntOffset(rect.left.roundToInt(), rect.top.roundToInt()) }
-                    .size(sizeDp)
-                    .clip(shape)
-            ) {
-                Artwork(artwork, Modifier.fillMaxSize())
-                Artwork(
-                    artwork,
-                    Modifier.fillMaxSize()
-                        .graphicsLayer {
-                            compositingStrategy = CompositingStrategy.Offscreen
-                            this.alpha = f.within(0.2f, 1f)
-                        }
-                        .blur(36.dp)
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(
-                                Brush.verticalGradient(
-                                    0.45f to Color.Transparent,
-                                    0.72f to Color.Black,
-                                ),
-                                blendMode = BlendMode.DstIn,
-                            )
-                        },
-                )
-                Box(
-                    Modifier.fillMaxSize()
-                        .graphicsLayer { this.alpha = f.within(0.3f, 1f) }
-                        .background(
-                            Brush.verticalGradient(
-                                0f to Color.Black.copy(alpha = 0.35f),
-                                0.2f to Color.Transparent,
-                                0.6f to Color.Transparent,
-                                1f to Color.Black.copy(alpha = 0.55f),
-                            )
-                        )
+        val width = constraints.maxWidth.toFloat()
+        val height = constraints.maxHeight.toFloat()
+
+        Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = f }) {
+            Artwork(artwork, Modifier.fillMaxSize().blur(60.dp))
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.28f)))
+        }
+
+        val from = state.thumbnailBounds.translate(-origin)
+        val to = Rect(0f, height * ArtTop, width, height * ArtTop + width)
+        val rect =
+            if (from.isEmpty) {
+                to
+            } else {
+                Rect(
+                    lerp(from.left, to.left, f),
+                    lerp(from.top, to.top, f),
+                    lerp(from.right, to.right, f),
+                    lerp(from.bottom, to.bottom, f),
                 )
             }
+        val size = with(density) { DpSize(rect.width.toDp(), rect.height.toDp()) }
+        Box(
+            Modifier.offset { IntOffset(rect.left.roundToInt(), rect.top.roundToInt()) }
+                .size(size)
+                .clip(RoundedCornerShape(lerp(10f, 0f, f).dp))
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    drawRect(
+                        Brush.verticalGradient(
+                            0f to Color.Black.copy(alpha = 1f - 0.7f * f),
+                            0.1f to Color.Black,
+                            0.7f to Color.Black,
+                            1f to Color.Black.copy(alpha = 1f - f),
+                        ),
+                        blendMode = BlendMode.DstIn,
+                    )
+                }
+        ) {
+            Artwork(artwork, Modifier.fillMaxSize())
         }
-    }
-}
 
-@Composable
-private fun BoxWithFullBounds(content: @Composable (width: Float, height: Float) -> Unit) {
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        content(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())
+        Box(
+            Modifier.fillMaxSize()
+                .graphicsLayer { this.alpha = f.within(0.3f, 1f) }
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color.Black.copy(alpha = 0.3f),
+                        0.15f to Color.Transparent,
+                        0.55f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = 0.5f),
+                    )
+                )
+        )
     }
 }
