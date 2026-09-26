@@ -52,11 +52,11 @@ constructor(
     }
 
     /**
-     * The One UI style is a card of its own rather than a column hugging the volume keys, so it is
-     * centred on the screen and gets its own layout.
+     * The One UI and MyUI styles are cards of their own rather than columns hugging the volume keys,
+     * so they are centred on the screen once expanded and get layouts of their own.
      */
-    private val isOneUiStyle =
-        isVolumeDialogVertical && VolumePanelStyle.current(context) == VolumePanelStyle.ONE_UI
+    private val panelStyle = VolumePanelStyle.current(context)
+    private val isOneUiStyle = isVolumeDialogVertical && panelStyle.isCard
 
     init {
         with(window!!) {
@@ -101,7 +101,13 @@ constructor(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (isOneUiStyle) {
-            setContentView(R.layout.volume_dialog_oneui)
+            setContentView(
+                if (panelStyle == VolumePanelStyle.MYUI) {
+                    R.layout.volume_dialog_myui
+                } else {
+                    R.layout.volume_dialog_oneui
+                }
+            )
         } else if (isVolumeDialogVertical) {
             setContentView(R.layout.volume_dialog)
         } else {

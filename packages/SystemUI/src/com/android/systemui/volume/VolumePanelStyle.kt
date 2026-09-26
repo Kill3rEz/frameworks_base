@@ -33,7 +33,17 @@ enum class VolumePanelStyle(val value: Int) {
 
     /** Same expanding behaviour as [EXPANDABLE], drawn as One UI does it: a dark card of blue
      * pills with a header and a label under every slider. */
-    ONE_UI(2);
+    ONE_UI(2),
+
+    /**
+     * Drawn as MyUI does it: a narrow glass column by the volume keys, with the sound icon on top
+     * and a thin track, that expands into a centred "Sound & vibration" card of thin sliders.
+     */
+    MYUI(3);
+
+    /** Whether the panel is a card of its own, centred once expanded, rather than a column. */
+    val isCard: Boolean
+        get() = this == ONE_UI || this == MYUI
 
     companion object {
         const val SETTING_NAME = "volume_panel_style"

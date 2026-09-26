@@ -48,4 +48,18 @@
     <dimen name="volume_panel_oneui_header_height">40dp</dimen>
     <!-- Keeps the header readable when the panel is collapsed down to a single pill. -->
     <dimen name="volume_panel_oneui_min_width">260dp</dimen>
+
+    <!-- MyUI volume panel style -->
+    <dimen name="volume_panel_myui_background_corner_radius">26dp</dimen>
+    <dimen name="volume_panel_myui_padding">14dp</dimen>
+    <dimen name="volume_panel_myui_header_height">34dp</dimen>
+    <dimen name="volume_panel_myui_slider_width">34dp</dimen>
+    <dimen name="volume_panel_myui_slider_container_height">196dp</dimen>
+    <dimen name="volume_panel_myui_slider_spacing">26dp</dimen>
+    <dimen name="volume_panel_myui_track_size">5dp</dimen>
+    <dimen name="volume_panel_myui_divider_inset">20dp</dimen>
+    <dimen name="volume_panel_myui_captions_size">46dp</dimen>
+    <dimen name="volume_panel_myui_expanded_width">300dp</dimen>
+    <dimen name="volume_panel_myui_screen_margin">12dp</dimen>
+    <dimen name="volume_panel_myui_footer_bottom">20dp</dimen>
 </resources>

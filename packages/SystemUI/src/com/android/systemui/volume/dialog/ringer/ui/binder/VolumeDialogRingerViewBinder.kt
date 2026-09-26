@@ -118,8 +118,9 @@ constructor(
         }
 
     override fun CoroutineScope.bind(view: View) {
-        if (expansionInteractor.style == VolumePanelStyle.ONE_UI) {
-            // That style has no ringer drawer in its layout - the header sits where it would go.
+        if (expansionInteractor.style.isCard) {
+            // Those styles have no ringer drawer in their layouts - the header sits where it would
+            // go.
             return
         }
         val volumeDialogBackgroundView = view.requireViewById<View>(R.id.volume_dialog_background)

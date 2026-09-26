@@ -126,8 +126,24 @@ private fun VolumeDialogSlider(
 ) {
     val isPillStyle = panelStyle != VolumePanelStyle.DEFAULT
     val isOneUi = panelStyle == VolumePanelStyle.ONE_UI
+    val isMyUi = panelStyle == VolumePanelStyle.MYUI
     val colors =
         when {
+            isMyUi -> {
+                // Resolved per theme, so the panel follows light and dark like the rest of MyUI.
+                val active = colorResource(R.color.volume_panel_myui_track_active)
+                val inactive = colorResource(R.color.volume_panel_myui_track_inactive)
+                SliderDefaults.colors(
+                    activeTrackColor = active,
+                    inactiveTrackColor = inactive,
+                    activeTickColor = active,
+                    inactiveTickColor = inactive,
+                    disabledActiveTrackColor = active,
+                    disabledInactiveTrackColor = inactive,
+                    disabledActiveTickColor = active,
+                    disabledInactiveTickColor = inactive,
+                )
+            }
             isOneUi -> {
                 val active = colorResource(R.color.volume_panel_oneui_track_active)
                 val inactive = colorResource(R.color.volume_panel_oneui_track_inactive)
@@ -180,12 +196,14 @@ private fun VolumeDialogSlider(
 
     val trackSize =
         when {
+            isMyUi -> dimensionResource(R.dimen.volume_panel_myui_track_size)
             isOneUi -> dimensionResource(R.dimen.volume_panel_oneui_track_size)
             isPillStyle -> dimensionResource(R.dimen.volume_panel_expandable_track_size)
             else -> dimensions.trackSize
         }
     val trackCornerSize =
         when {
+            isMyUi -> dimensionResource(R.dimen.volume_panel_myui_track_size) / 2
             isOneUi -> dimensionResource(R.dimen.volume_panel_oneui_track_corner_radius)
             isPillStyle -> dimensionResource(R.dimen.volume_panel_expandable_track_corner_radius)
             else -> 12.dp
@@ -196,7 +214,8 @@ private fun VolumeDialogSlider(
     the active track *start* icon is the one that lands at the foot of the pill.
     */
     val bottomIcon: (@Composable BoxScope.(iconsState: SliderIconsState) -> Unit)? =
-        if (isPillStyle) {
+        // A MyUI track is too thin to hold an icon; its icon goes under the track instead.
+        if (isPillStyle && !isMyUi) {
             val iconTint =
                 if (isOneUi) {
                     // Reads on both the blue fill and the grey track behind it.
@@ -367,7 +386,17 @@ private fun VolumeDialogSlider(
         )
     }
 
-    if (isOneUi && showLabel) {
+    if (isMyUi) {
+        val iconTint = colorResource(R.color.volume_panel_myui_icon)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
+            slider(Modifier.weight(1f))
+            Icon(
+                icon = sliderStateModel.icon,
+                tint = { iconTint },
+                modifier = Modifier.padding(top = 12.dp).size(dimensions.iconSize + 4.dp),
+            )
+        }
+    } else if (isOneUi && showLabel) {
         // One UI names every stream under its pill.
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
             slider(Modifier.weight(1f))

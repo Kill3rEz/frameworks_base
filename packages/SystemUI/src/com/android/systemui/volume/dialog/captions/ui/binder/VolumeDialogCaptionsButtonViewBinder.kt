@@ -65,6 +65,10 @@ constructor(
                 captionsButton.setBackgroundResource(
                     R.drawable.volume_panel_oneui_captions_background
                 )
+            VolumePanelStyle.MYUI ->
+                captionsButton.setBackgroundResource(
+                    R.drawable.volume_panel_myui_captions_background
+                )
             VolumePanelStyle.DEFAULT -> {}
         }
 
@@ -100,6 +104,8 @@ constructor(
                             when {
                                 panelStyle == VolumePanelStyle.ONE_UI ->
                                     R.color.volume_panel_oneui_icon
+                                panelStyle == VolumePanelStyle.MYUI ->
+                                    R.color.volume_panel_myui_icon
                                 panelStyle == VolumePanelStyle.EXPANDABLE && isEnabled ->
                                     R.color.volume_panel_expandable_icon_on_active
                                 panelStyle == VolumePanelStyle.EXPANDABLE ->

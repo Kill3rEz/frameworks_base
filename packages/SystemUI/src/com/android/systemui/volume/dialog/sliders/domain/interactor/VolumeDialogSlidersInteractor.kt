@@ -21,6 +21,7 @@ import android.media.AudioManager
 import android.media.AudioSystem
 import com.android.systemui.volume.VolumeDialogControllerImpl
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialog
+import com.android.systemui.volume.VolumePanelStyle
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogStateInteractor
@@ -53,6 +54,9 @@ private val EXPANDABLE_STREAMS =
         AudioManager.STREAM_ALARM,
         AudioManager.STREAM_VOICE_CALL,
     )
+
+/** MyUI lays out notification volume too, as a slider of its own beside ring. */
+private val MYUI_STREAMS = EXPANDABLE_STREAMS + AudioManager.STREAM_NOTIFICATION
 
 /** Provides a state for the Sliders section of the Volume Dialog. */
 @VolumeDialogScope
@@ -116,7 +120,13 @@ constructor(
         if (!packageManager.isTv()) {
             // The expandable style hides these behind the expand button, so they can be built up
             // front: the sliders model drops them again while the panel is collapsed.
-            if (expansionInteractor.isExpandable && streamModel.stream in EXPANDABLE_STREAMS) {
+            val expandableStreams =
+                if (expansionInteractor.style == VolumePanelStyle.MYUI) {
+                    MYUI_STREAMS
+                } else {
+                    EXPANDABLE_STREAMS
+                }
+            if (expansionInteractor.isExpandable && streamModel.stream in expandableStreams) {
                 return true
             }
 

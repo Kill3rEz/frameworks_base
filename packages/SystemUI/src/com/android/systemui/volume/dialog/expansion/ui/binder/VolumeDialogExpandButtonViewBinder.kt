@@ -19,7 +19,10 @@ package com.android.systemui.volume.dialog.expansion.ui.binder
 import android.content.res.ColorStateList
 import android.provider.Settings
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.updateLayoutParams
 import com.android.app.tracing.coroutines.launchInTraced
 import com.android.app.tracing.coroutines.launchTraced
 import com.android.systemui.res.R
@@ -74,7 +77,7 @@ constructor(
         }
         button.setOnClickListener(toggle)
 
-        // Collapsed, the One UI panel is only its pill: the dots on top of it take over from the
+        // Collapsed, the card panels are only their pill: the dots on it take over from the
         // header chevron.
         val collapsedButton: ImageButton? =
             view.findViewById<ImageButton>(R.id.volume_dialog_expand_collapsed)?.also {
@@ -84,8 +87,20 @@ constructor(
                 }
             }
 
+        val isMyUi = expansionInteractor.style == VolumePanelStyle.MYUI
+        if (isMyUi) {
+            // MyUI collapses from the Done button at the foot of the card instead of a chevron.
+            button.visibility = View.GONE
+            view.findViewById<View>(R.id.volume_dialog_myui_done)?.setOnClickListener(toggle)
+        }
+
         expansionInteractor.isExpanded
             .onEach { isExpanded ->
+                if (isMyUi) {
+                    view.applyMyUiChrome(isExpanded)
+                    collapsedButton?.visibility = if (isExpanded) View.GONE else View.VISIBLE
+                    return@onEach
+                }
                 if (expansionInteractor.style == VolumePanelStyle.ONE_UI) {
                     view.applyOneUiChrome(isExpanded)
                     collapsedButton?.visibility =
@@ -124,6 +139,44 @@ constructor(
                 context.resources.getDimensionPixelSize(R.dimen.volume_panel_oneui_min_width)
             } else {
                 0
+            }
+    }
+
+    /**
+     * Collapsed, the MyUI column shows the sound icon above its slider and the dots under it;
+     * expanded, the card takes the title on top and Done and Sound settings along the bottom.
+     */
+    private fun View.applyMyUiChrome(isExpanded: Boolean) {
+        val expandedOnly = if (isExpanded) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.volume_dialog_myui_title)?.visibility = expandedOnly
+        findViewById<View>(R.id.volume_dialog_myui_footer)?.visibility = expandedOnly
+        findViewById<View>(R.id.volume_dialog_myui_sound_icon)?.visibility =
+            if (isExpanded) View.GONE else View.VISIBLE
+        // The captions circle belongs to the collapsed column. Its own binder owns visibility, so
+        // it only fades out here and stops taking taps.
+        findViewById<View>(R.id.odi_captions_icon)?.apply {
+            alpha = if (isExpanded) 0f else 1f
+            isEnabled = !isExpanded
+        }
+        // ConstraintLayout measures against its own minimum, not the View one.
+        findViewById<ConstraintLayout>(R.id.volume_dialog_myui_card)?.minWidth =
+            if (isExpanded) {
+                context.resources.getDimensionPixelSize(R.dimen.volume_panel_myui_expanded_width)
+            } else {
+                0
+            }
+        // The gap before the primary slider only makes sense with others beside it; collapsed it
+        // would push the lone slider off the middle of the column.
+        findViewById<View>(R.id.volume_dialog_main_slider_container)
+            ?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                marginStart =
+                    if (isExpanded) {
+                        context.resources.getDimensionPixelSize(
+                            R.dimen.volume_panel_myui_slider_spacing
+                        )
+                    } else {
+                        0
+                    }
             }
     }
 

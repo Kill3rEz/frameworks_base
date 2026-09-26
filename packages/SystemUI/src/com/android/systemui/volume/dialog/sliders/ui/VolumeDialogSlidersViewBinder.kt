@@ -62,7 +62,10 @@ constructor(
         get() = expansionInteractor.isExpandable
 
     private val isOneUiStyle: Boolean
-        get() = expansionInteractor.style == VolumePanelStyle.ONE_UI
+        get() = expansionInteractor.style.isCard
+
+    private val isMyUiStyle: Boolean
+        get() = expansionInteractor.style == VolumePanelStyle.MYUI
 
     override fun CoroutineScope.bind(view: View) {
 
@@ -82,21 +85,31 @@ constructor(
             // Unlike the other styles the card is the whole panel here, so a tap anywhere on it has
             // to reach the dialog rather than the app behind it.
             launchTraced("VDSVB#addCardTouchableBounds") { dialogViewModel.addTouchableBounds(view) }
-            // Built once and put back when the panel expands. The design has no card behind the
-            // collapsed pill, and taking the drawable off is what stops the blur as well - fading it
-            // out would leave the blurred rectangle behind.
+            // MyUI keeps its captions button outside the card, so the card is a view of its own
+            // there rather than the root's background.
+            val cardView: View =
+                if (isMyUiStyle) view.requireViewById(R.id.volume_dialog_myui_card) else view
+            // Built once and put back when the panel expands. The One UI design has no card behind
+            // the collapsed pill, and taking the drawable off is what stops the blur as well -
+            // fading it out would leave the blurred rectangle behind. MyUI keeps its column.
             val card: Drawable? =
-                view.background?.let { if (viewModel.showBlur) view.frostedCard(it) else it }
+                cardView.background?.let {
+                    if (viewModel.showBlur) cardView.frostedCard(it) else it
+                }
             if (viewModel.showBlur && card != null) {
                 launchTraced("VDSVB#cardBlur") {
                     windowRootViewBlurInteractor.isBlurCurrentlySupported.collect { supported ->
-                        view.applyCardBlurSupport(card, supported)
+                        cardView.applyCardBlurSupport(card, supported)
                     }
                 }
             }
-            launchTraced("VDSVB#cardVisibility") {
-                expansionInteractor.isExpanded.collect { isExpanded ->
-                    view.background = if (isExpanded) card else null
+            if (isMyUiStyle) {
+                cardView.background = card
+            } else {
+                launchTraced("VDSVB#cardVisibility") {
+                    expansionInteractor.isExpanded.collect { isExpanded ->
+                        cardView.background = if (isExpanded) card else null
+                    }
                 }
             }
         } else if (isExpandableStyle) {
@@ -142,6 +155,15 @@ constructor(
                 )
                 floatingSliderViewBinders.fastForEachIndexed { index, sliderComponent ->
                     val sliderContainer = floatingSlidersContainer.getChildAt(index)
+                    if (isMyUiStyle) {
+                        // The stock slider layout is wider than a MyUI track and its icon.
+                        sliderContainer.updateLayoutParams<ViewGroup.LayoutParams> {
+                            width =
+                                view.context.resources.getDimensionPixelSize(
+                                    R.dimen.volume_panel_myui_slider_width
+                                )
+                        }
+                    }
                     if (viewModel.showBlur && !isExpandableStyle) {
                         sliderContainer.updateBackground()
                     }
@@ -169,7 +191,13 @@ constructor(
         val blurDrawable = viewRootImpl.createBackgroundBlurDrawable()
         blurDrawable.setCornerRadius(
             context.resources
-                .getDimensionPixelSize(R.dimen.volume_panel_oneui_background_corner_radius)
+                .getDimensionPixelSize(
+                    if (isMyUiStyle) {
+                        R.dimen.volume_panel_myui_background_corner_radius
+                    } else {
+                        R.dimen.volume_panel_oneui_background_corner_radius
+                    }
+                )
                 .toFloat()
         )
         blurDrawable.setBlurRadius(0)
@@ -191,10 +219,11 @@ constructor(
         )
         (layers.getDrawable(1) as GradientDrawable).setColor(
             context.getColor(
-                if (supported) {
-                    R.color.volume_panel_oneui_background_blur
-                } else {
-                    R.color.volume_panel_oneui_background_fallback
+                when {
+                    isMyUiStyle && supported -> R.color.volume_panel_myui_background_blur
+                    isMyUiStyle -> R.color.volume_panel_myui_background_fallback
+                    supported -> R.color.volume_panel_oneui_background_blur
+                    else -> R.color.volume_panel_oneui_background_fallback
                 }
             )
         )
