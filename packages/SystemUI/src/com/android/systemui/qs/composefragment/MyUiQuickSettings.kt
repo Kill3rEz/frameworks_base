@@ -46,6 +46,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -145,9 +147,7 @@ private fun MyUiCardRow(tile: TileViewModel) {
         ) {
             Icon(
                 icon = icon,
-                tint =
-                    if (active) colorResource(android.R.color.system_primary_light)
-                    else MaterialTheme.colorScheme.onSurface,
+                tint = if (active) activeContent() else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(22.dp),
             )
         }
@@ -170,6 +170,21 @@ private fun MyUiCardRow(tile: TileViewModel) {
     }
 }
 
+/**
+ * The accent on an active control. Active controls take the inverse surface, light over a dark
+ * panel and dark over a light one, so the accent has to come from the opposite scheme: the
+ * saturated tone on white, the pale one on grey.
+ */
+@Composable
+private fun activeContent(): Color =
+    colorResource(
+        if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) {
+            android.R.color.system_primary_light
+        } else {
+            android.R.color.system_primary_dark
+        }
+    )
+
 /** The specs the connectivity card lists, so the grid does not repeat them. */
 @Composable
 fun MyUiCardSpecs(tiles: List<TileViewModel>): Set<com.android.systemui.qs.pipeline.shared.TileSpec> {
@@ -182,12 +197,7 @@ fun MyUiCardSpecs(tiles: List<TileViewModel>): Set<com.android.systemui.qs.pipel
 fun MyUiTile(tile: TileViewModel, modifier: Modifier = Modifier) {
     val (uiState, icon) = rememberTileState(tile)
     val active = uiState.visualState == Tile.STATE_ACTIVE
-    // The active tile is the light surface, so its content has to come from the light scheme:
-    // system_primary_light is the saturated accent MyUI puts on white. inversePrimary is the pale
-    // tone and washes out against it.
-    val content =
-        if (active) colorResource(android.R.color.system_primary_light)
-        else MaterialTheme.colorScheme.onSurface
+    val content = if (active) activeContent() else MaterialTheme.colorScheme.onSurface
     Column(
         modifier =
             modifier
