@@ -44,6 +44,7 @@ import com.android.systemui.keyguard.domain.interactor.KeyguardClockInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.keyguard.shared.transition.KeyguardTransitionAnimationCallback
 import com.android.systemui.keyguard.ui.composable.elements.LockscreenElements
+import com.android.systemui.keyguard.ui.composable.media.LockscreenExpandedMediaArt
 import com.android.systemui.keyguard.ui.composable.modifier.nonAuthUI
 import com.android.systemui.keyguard.ui.viewmodel.LockscreenBehindScrimViewModel
 import com.android.systemui.keyguard.ui.viewmodel.LockscreenContentViewModel
@@ -149,6 +150,9 @@ class LockscreenContent(
             onDispose { handle.dispose() }
         }
 
+        LockscreenExpandedMediaArt(
+            alpha = { min(viewModel.alpha, contentAlphaAnimatable.value) }
+        )
         LockscreenBehindScrim(
             lockscreenBehindScrimViewModel,
             Modifier.element(LockscreenElementKeys.BehindScrim),
