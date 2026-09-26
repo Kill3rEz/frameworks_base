@@ -3479,6 +3479,16 @@ class Task extends TaskFragment {
 
         info.isRunning = top != null;
         info.topActivity = top != null ? top.mActivityComponent : null;
+        // Only an app opening another app's activity in a separate task, where back would not
+        // lead to it, is worth pointing back to.
+        final boolean openedByAnotherApp = top != null
+                && top.mLaunchSourceType == ActivityRecord.LAUNCH_SOURCE_TYPE_APPLICATION
+                && top.launchedFromTaskId != INVALID_TASK_ID
+                && top.launchedFromTaskId != mTaskId
+                && top.launchedFromPackage != null
+                && !top.launchedFromPackage.equals(top.packageName);
+        info.launchedFromPackage = openedByAnotherApp ? top.launchedFromPackage : null;
+        info.launchedFromTaskId = openedByAnotherApp ? top.launchedFromTaskId : INVALID_TASK_ID;
         info.origActivity = origActivity;
         info.realActivity = realActivity;
         info.isRealActivityAppLockEnabled = mRealActivityAppLockEnabled;

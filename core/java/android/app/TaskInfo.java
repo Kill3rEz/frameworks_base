@@ -453,6 +453,20 @@ public class TaskInfo {
     @Nullable
     public Rect topActivityMainWindowFrame;
 
+    /**
+     * The app that opened this task's top activity from another task, or {@code null} when it
+     * was opened by the launcher, the system or its own app.
+     * @hide
+     */
+    @Nullable
+    public String launchedFromPackage;
+
+    /**
+     * The task that {@link #launchedFromPackage} opened the top activity from.
+     * @hide
+     */
+    public int launchedFromTaskId = INVALID_TASK_ID;
+
     TaskInfo() {
         // Do nothing
     }
@@ -537,6 +551,8 @@ public class TaskInfo {
                 : null;
         isAppBubble = other.isAppBubble;
         isInteractive = other.isInteractive;
+        launchedFromPackage = other.launchedFromPackage;
+        launchedFromTaskId = other.launchedFromTaskId;
     }
 
     /** @hide */
@@ -768,6 +784,8 @@ public class TaskInfo {
         topActivityMainWindowFrame = source.readTypedObject(Rect.CREATOR);
         isAppBubble = source.readBoolean();
         isInteractive = source.readBoolean();
+        launchedFromPackage = source.readString8();
+        launchedFromTaskId = source.readInt();
     }
 
     /**
@@ -830,6 +848,8 @@ public class TaskInfo {
         dest.writeTypedObject(topActivityMainWindowFrame, flags);
         dest.writeBoolean(isAppBubble);
         dest.writeBoolean(isInteractive);
+        dest.writeString8(launchedFromPackage);
+        dest.writeInt(launchedFromTaskId);
     }
 
     @Override

@@ -33,6 +33,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import com.android.systemui.statusbar.backtoapp.BackToAppChip
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -643,6 +644,12 @@ private fun addStartSideComposable(
                     }
 
                 val chipsVisibilityModel = statusBarViewModel.ongoingActivityChips
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                WithAdaptiveTint(
+                    isDarkProvider = { bounds -> statusBarViewModel.areaDark.isDarkTheme(bounds) }
+                ) { tint ->
+                    BackToAppChip(tint = tint)
+                }
                 if (chipsVisibilityModel.areChipsAllowed) {
                     var overlapsIsland by remember { mutableStateOf(false) }
                     OngoingActivityChips(
@@ -672,6 +679,7 @@ private fun addStartSideComposable(
                                         )
                                 },
                     )
+                }
                 }
             }
         }

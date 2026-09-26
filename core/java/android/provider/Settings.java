@@ -7436,6 +7436,12 @@ public final class Settings {
         public static final String LS_MEDIA_EXPANDED = "ls_media_expanded";
 
         /**
+         * Whether the status bar offers a way back to the app that opened the current one
+         * @hide
+         */
+        public static final String BACK_TO_APP_INDICATOR = "back_to_app_indicator";
+
+        /**
          * Whether to hide the lockscreen clock completely
          * @hide
          */
