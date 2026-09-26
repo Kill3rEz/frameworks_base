@@ -152,10 +152,12 @@ private fun MediaCard(card: MediaCardViewModel, isSelected: Boolean) {
                 .border(1.dp, CardBorder, RoundedCornerShape(CardCorner))
         ) {
         // Frosted glass, as on iOS: compact it blurs the wallpaper; expanded the blurred cover is
-        // already behind it, so a light glass is enough.
+        // already behind it, so a light glass is enough. The compositor's blur trails the card by
+        // a frame as it moves, so it goes as soon as the card does, rather than fading with it.
         WallpaperBlur(
             alpha = {
-                LockscreenMediaExpansion.lockscreenAlpha * (1f - LockscreenMediaExpansion.fraction)
+                if (LockscreenMediaExpansion.fraction > 0f) 0f
+                else LockscreenMediaExpansion.lockscreenAlpha
             },
             corner = CardCorner,
             modifier = Modifier.matchParentSize(),
