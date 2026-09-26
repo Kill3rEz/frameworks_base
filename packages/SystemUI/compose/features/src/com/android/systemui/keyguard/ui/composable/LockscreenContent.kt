@@ -151,7 +151,19 @@ class LockscreenContent(
         }
 
         LockscreenExpandedMediaArt(
-            alpha = { min(viewModel.alpha, contentAlphaAnimatable.value) }
+            alpha = {
+                // Leaving the lock screen fades it through the scene transition, which the
+                // compositor's blurs behind the player know nothing about, so they follow it here.
+                val transition = layoutState.currentTransition
+                val sceneAlpha =
+                    when {
+                        transition == null -> 1f
+                        transition.fromContent == contentKey -> 1f - transition.progress
+                        transition.toContent == contentKey -> transition.progress
+                        else -> 1f
+                    }.coerceIn(0f, 1f)
+                min(viewModel.alpha, contentAlphaAnimatable.value) * sceneAlpha
+            }
         )
         LockscreenBehindScrim(
             lockscreenBehindScrimViewModel,
