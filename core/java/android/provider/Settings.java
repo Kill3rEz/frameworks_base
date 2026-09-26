@@ -7424,6 +7424,18 @@ public final class Settings {
         public static final String LS_MEDIA_ART_AOD_DIM_LEVEL = "ls_media_art_aod_dim_level";
 
         /**
+         * Whether tapping the lock screen player's artwork expands it over the lock screen
+         * @hide
+         */
+        public static final String LS_MEDIA_EXPAND = "ls_media_expand";
+
+        /**
+         * Whether the lock screen player was left expanded, so it comes back that way
+         * @hide
+         */
+        public static final String LS_MEDIA_EXPANDED = "ls_media_expanded";
+
+        /**
          * Whether to hide the lockscreen clock completely
          * @hide
          */

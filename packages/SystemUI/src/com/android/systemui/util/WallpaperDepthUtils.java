@@ -120,6 +120,15 @@ public class WallpaperDepthUtils {
         return instance;
     }
 
+    private static boolean sExpandedMediaArtVisible;
+
+    /** The expanded lock screen player's artwork replaces the wallpaper, subject and all. */
+    public static void setExpandedMediaArtVisible(boolean visible) {
+        if (sExpandedMediaArtVisible == visible) return;
+        sExpandedMediaArtVisible = visible;
+        if (instance != null) instance.updateDepthWallpaperVisibility();
+    }
+
     public void onUnlockStarted() {
         mUnlocking = true;
         hideDepthWallpaperImmediate();
@@ -295,7 +304,8 @@ public class WallpaperDepthUtils {
                 && !mUnlocking
                 && (currentState == null || currentState == ScrimState.KEYGUARD)
                 && mContext.getResources().getConfiguration().orientation != Configuration.ORIENTATION_LANDSCAPE
-                && !isAlbumArtVisible();
+                && !isAlbumArtVisible()
+                && !sExpandedMediaArtVisible;
     }
 
     public void updateDepthWallpaperVisibility() {

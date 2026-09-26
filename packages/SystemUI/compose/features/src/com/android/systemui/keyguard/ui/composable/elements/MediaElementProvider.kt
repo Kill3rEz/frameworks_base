@@ -22,7 +22,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.android.compose.animation.scene.ElementContentScope
@@ -31,6 +31,8 @@ import com.android.systemui.keyguard.ui.viewmodel.KeyguardMediaViewModel
 import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.keyguard.ui.composable.media.LockscreenMediaCard
 import com.android.systemui.keyguard.ui.composable.media.LockscreenMediaExpansion
+import com.android.systemui.media.remedia.ui.compose.Media
+import com.android.systemui.media.remedia.ui.compose.MediaPresentationStyle
 import com.android.systemui.plugins.keyguard.ui.composable.elements.BaseLockscreenElement.ElementSource
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElement
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementKeys
@@ -59,18 +61,30 @@ constructor(
             val viewModel =
                 rememberViewModel("MediaCarouselElement") { mediaViewModelFactory.create() }
 
+            LockscreenMediaExpansion.ObserveSettings()
             val visible = viewModel.isMediaVisible && !viewModel.isDozing
-            LaunchedEffect(visible) { if (!visible) LockscreenMediaExpansion.collapse() }
+            SideEffect { LockscreenMediaExpansion.mediaVisible = visible }
             AnimatedVisibility(
                 visible,
                 enter = expandVertically(expandFrom = Alignment.Top),
                 exit = fadeOut(),
             ) {
-                LockscreenMediaCard(
-                    viewModelFactory = viewModel.mediaViewModelFactory,
-                    behavior = viewModel.mediaUiBehavior,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                if (LockscreenMediaExpansion.enabled) {
+                    LockscreenMediaCard(
+                        viewModelFactory = viewModel.mediaViewModelFactory,
+                        behavior = viewModel.mediaUiBehavior,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    Media(
+                        viewModelFactory = viewModel.mediaViewModelFactory,
+                        presentationStyle = MediaPresentationStyle.Default,
+                        behavior = viewModel.mediaUiBehavior,
+                        onDismissed = viewModel::onSwipeToDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                        location = Media.Location.LOCKSCREEN,
+                    )
+                }
             }
         }
     }

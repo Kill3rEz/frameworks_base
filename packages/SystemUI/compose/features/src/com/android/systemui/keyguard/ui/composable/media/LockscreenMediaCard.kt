@@ -121,10 +121,7 @@ fun LockscreenMediaCard(
             .collect { if (it < cards.size) viewModel.onCardSelected(it) }
     }
     val selected = cards.getOrNull(pagerState.currentPage) ?: cards.first()
-    LaunchedEffect(selected.background) {
-        LockscreenMediaExpansion.artwork = selected.background
-        if (selected.background == null) LockscreenMediaExpansion.collapse()
-    }
+    LaunchedEffect(selected.background) { LockscreenMediaExpansion.artwork = selected.background }
     HorizontalPager(
         state = pagerState,
         pageSpacing = 12.dp,
