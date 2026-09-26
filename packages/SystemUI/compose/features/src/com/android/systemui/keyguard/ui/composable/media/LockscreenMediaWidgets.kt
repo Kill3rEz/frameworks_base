@@ -67,8 +67,8 @@ import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private val WidgetColor = Color(0xFF2C2C2E).copy(alpha = 0.52f)
-private val WidgetBorder = Color.White.copy(alpha = 0.14f)
+private val WidgetColor = Color.White.copy(alpha = 0.14f)
+private val WidgetBorder = Color.White.copy(alpha = 0.18f)
 
 /** The expanded player's clock: time and date on one line, as the artwork leaves little room. */
 @Composable

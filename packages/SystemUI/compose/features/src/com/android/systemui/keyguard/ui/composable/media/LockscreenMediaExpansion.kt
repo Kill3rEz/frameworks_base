@@ -69,6 +69,12 @@ object LockscreenMediaExpansion {
     /** The selected session's artwork, which becomes the background. */
     var artwork by mutableStateOf<Icon?>(null)
 
+    /** How visible the lock screen is, which the compositor blurs behind the player follow. */
+    var lockscreenAlpha by mutableStateOf(1f)
+
+    /** The room above the expanded player in window coordinates, where the cover stands. */
+    var artSlotBounds by mutableStateOf(Rect.Zero)
+
     /** The compact player's thumbnail in window coordinates, where the background grows from. */
     var thumbnailBounds by mutableStateOf(Rect.Zero)
 

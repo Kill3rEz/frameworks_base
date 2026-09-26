@@ -16,10 +16,8 @@
 
 package com.android.systemui.keyguard.ui.composable.media
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
@@ -34,13 +32,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -52,14 +46,17 @@ import com.android.systemui.util.WallpaperDepthUtils
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-/** Where the square artwork sits when expanded, as a share of the screen height. */
-private const val ArtTop = 0.1f
+/** Gap between the cover and the player under it. */
+private val CoverGap = 10.dp
+
+/** Below this the cover is too small to be worth showing, and fades out. */
+private val CoverMin = 96.dp
 
 /**
- * The artwork behind the expanded player, laid out as iOS does: the whole square cover across the
- * top of the lock screen, melting at its lower edge into a blurred copy that fills the rest. The
- * cover grows out of the compact player's thumbnail and shrinks back into it, so the two read as
- * one image.
+ * The artwork behind the expanded player, laid out as iOS does: the cover as a rounded square card
+ * standing on the player, over a blurred copy of itself that fills the lock screen. It grows out
+ * of the compact player's thumbnail and shrinks back into it, so the two read as one image, and
+ * shrinks to fit when notifications take the room above the player.
  *
  * It also drives [LockscreenMediaExpansion.progress], since it is composed for as long as the lock
  * screen is.
@@ -80,19 +77,18 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
                 }
             }
     }
-    // The depth wallpaper's subject would stand in front of someone else's artwork.
+    // The depth wallpaper's subject would show through the player's glass, and stand in front of
+    // someone else's artwork.
     LaunchedEffect(Unit) {
-        snapshotFlow { state.fraction > 0f }
+        snapshotFlow { state.fraction > 0f || (state.enabled && state.mediaVisible) }
             .distinctUntilChanged()
             .collect { WallpaperDepthUtils.setExpandedMediaArtVisible(it) }
     }
 
-    // With notifications under the player the cover would fight them for attention, so it
-    // gives way to the blur, as on iOS.
-    val coverAlpha by
-        animateFloatAsState(if (state.notificationsShowing) 0f else 1f, label = "cover")
+    LaunchedEffect(Unit) { snapshotFlow { alpha() }.collect { state.lockscreenAlpha = it } }
+
     var origin by remember { mutableStateOf(Offset.Zero) }
-    BoxWithConstraints(
+    Box(
         modifier
             .fillMaxSize()
             .onGloballyPositioned { origin = it.positionInWindow() }
@@ -100,73 +96,46 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
     ) {
         val f = state.fraction
         val artwork = state.artwork
-        if (f <= 0f || artwork == null) return@BoxWithConstraints
+        if (f <= 0f || artwork == null) return@Box
         val density = LocalDensity.current
-        val width = constraints.maxWidth.toFloat()
-        val height = constraints.maxHeight.toFloat()
 
         // The blurred fill takes over from the wallpaper as the cover grows.
         Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = f }) {
             Artwork(artwork, Modifier.fillMaxSize().blur(60.dp))
-            Box(
-                Modifier.fillMaxSize()
-                    .background(Color.Black.copy(alpha = lerp(0.42f, 0.28f, coverAlpha)))
-            )
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
         }
 
+        val gap = with(density) { CoverGap.toPx() }
+        val slot = state.artSlotBounds.translate(-origin)
+        val side = minOf(slot.width, slot.height - gap).coerceAtLeast(0f)
+        val to =
+            Rect(
+                left = slot.left + (slot.width - side) / 2f,
+                top = slot.bottom - gap - side,
+                right = slot.left + (slot.width + side) / 2f,
+                bottom = slot.bottom - gap,
+            )
         val from = state.thumbnailBounds.translate(-origin)
-        val to = Rect(0f, height * ArtTop, width, height * ArtTop + width)
+        if (slot.isEmpty || from.isEmpty) return@Box
         val rect =
-            if (from.isEmpty) {
-                to
-            } else {
-                Rect(
-                    lerp(from.left, to.left, f),
-                    lerp(from.top, to.top, f),
-                    lerp(from.right, to.right, f),
-                    lerp(from.bottom, to.bottom, f),
-                )
-            }
+            Rect(
+                lerp(from.left, to.left, f),
+                lerp(from.top, to.top, f),
+                lerp(from.right, to.right, f),
+                lerp(from.bottom, to.bottom, f),
+            )
+        val minSide = with(density) { CoverMin.toPx() }
         val size = with(density) { DpSize(rect.width.toDp(), rect.height.toDp()) }
         Box(
             Modifier.offset { IntOffset(rect.left.roundToInt(), rect.top.roundToInt()) }
                 .size(size)
-                .clip(RoundedCornerShape(lerp(10f, 0f, f).dp))
                 .graphicsLayer {
-                    compositingStrategy = CompositingStrategy.Offscreen
                     // Only once it has grown; the thumbnail it starts from stays solid.
-                    this.alpha = lerp(1f, coverAlpha, f)
+                    this.alpha = lerp(1f, side.within(minSide * 0.6f, minSide), f)
                 }
-                .drawWithContent {
-                    drawContent()
-                    // Fade the cover's edges into the blur, top a little and bottom a lot; none of
-                    // this while it is still the thumbnail.
-                    drawRect(
-                        Brush.verticalGradient(
-                            0f to Color.Black.copy(alpha = 1f - 0.7f * f),
-                            0.1f to Color.Black,
-                            0.7f to Color.Black,
-                            1f to Color.Black.copy(alpha = 1f - f),
-                        ),
-                        blendMode = BlendMode.DstIn,
-                    )
-                }
+                .clip(RoundedCornerShape(lerp(10f, 22f, f).dp))
         ) {
             Artwork(artwork, Modifier.fillMaxSize())
         }
-
-        // Keep the status bar, the clock and the controls readable on any artwork.
-        Box(
-            Modifier.fillMaxSize()
-                .graphicsLayer { this.alpha = f.within(0.3f, 1f) }
-                .background(
-                    Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.3f),
-                        0.15f to Color.Transparent,
-                        0.55f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = 0.5f),
-                    )
-                )
-        )
     }
 }
