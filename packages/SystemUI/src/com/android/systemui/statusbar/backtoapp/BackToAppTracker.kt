@@ -136,6 +136,10 @@ class BackToAppTracker private constructor(context: Context) {
             return
         }
         val origin = top.launchedFromTaskId
+        if (DEBUG) {
+            Log.d(TAG, "top=$taskId ${top.topActivity} previous=$previous origin=$origin " +
+                "from=${top.launchedFromPackage} chain=$chain")
+        }
         if (taskId != previous) {
             val openedFromPrevious = origin != INVALID_TASK_ID && origin == previous
             // Leaving an app any way but opening another from it retires its way back.
@@ -194,6 +198,7 @@ class BackToAppTracker private constructor(context: Context) {
 
     companion object {
         private const val TAG = "BackToAppTracker"
+        private val DEBUG = Log.isLoggable(TAG, Log.DEBUG)
 
         @Volatile private var instance: BackToAppTracker? = null
 

@@ -462,7 +462,10 @@ public final class ActivityRecord extends WindowToken {
     final String launchedFromFeatureId; // always the feature in launchedFromPackage
     @LaunchSourceType
     int mLaunchSourceType; // latest launch source type
-    final int launchedFromTaskId; // the task of the activity that started this one, if any
+    // The app and task that last opened this activity, for the status bar's way back to it.
+    // Updated when an opener reuses the activity, so it names the latest one.
+    int mBackTaskId = INVALID_TASK_ID;
+    String mBackPackage;
     final Intent intent;    // the original intent that generated us
     final String shortComponentName; // the short component name of the intent
     final String resolvedType; // as per original caller;
@@ -2025,8 +2028,17 @@ public final class ActivityRecord extends WindowToken {
         launchedFromProcessName = _caller != null ? _caller.mName : null;
         launchedFromFeatureId = _launchedFromFeature;
         mLaunchSourceType = determineLaunchSourceType(_launchedFromUid, _caller);
-        launchedFromTaskId = sourceRecord != null && sourceRecord.getTask() != null
-                ? sourceRecord.getTask().mTaskId : INVALID_TASK_ID;
+        if (sourceRecord != null && packageName.equals(_launchedFromPackage)) {
+            // An app moving on within itself, like a browser's trampoline handing the link to
+            // its tabs, keeps the way back to whoever opened it.
+            mBackTaskId = sourceRecord.mBackTaskId;
+            mBackPackage = sourceRecord.mBackPackage;
+        } else if (sourceRecord != null && sourceRecord.getTask() != null
+                && mLaunchSourceType != LAUNCH_SOURCE_TYPE_HOME
+                && mLaunchSourceType != LAUNCH_SOURCE_TYPE_SYSTEMUI) {
+            mBackTaskId = sourceRecord.getTask().mTaskId;
+            mBackPackage = _launchedFromPackage;
+        }
         shortComponentName = _intent.getComponent().flattenToShortString();
         resolvedType = _resolvedType;
         componentSpecified = _componentSpecified;
@@ -2293,6 +2305,12 @@ public final class ActivityRecord extends WindowToken {
         return mLaunchSourceType == LAUNCH_SOURCE_TYPE_SYSTEM
                 || mLaunchSourceType == LAUNCH_SOURCE_TYPE_HOME
                 || mLaunchSourceType == LAUNCH_SOURCE_TYPE_SYSTEMUI;
+    }
+
+    /** Takes the way back from a newer start that reused this activity instead. */
+    void takeBackTargetFrom(ActivityRecord newer) {
+        mBackTaskId = newer.mBackTaskId;
+        mBackPackage = newer.mBackPackage;
     }
 
     boolean isLaunchSourceType(@LaunchSourceType int type) {

@@ -2631,6 +2631,7 @@ class ActivityStarter {
         // activity before creating starting window.
         if (mLastStartActivityRecord != null && targetTaskTop != mLastStartActivityRecord) {
             targetTaskTop.mLaunchSourceType = mLastStartActivityRecord.mLaunchSourceType;
+            targetTaskTop.takeBackTargetFrom(mLastStartActivityRecord);
         }
         if (mMovedToFront) {
             // We moved the task to front, use starting window to hide initial drawn delay.
@@ -3407,6 +3408,7 @@ class ActivityStarter {
         }
 
         activity.logStartActivity(EventLogTags.WM_NEW_INTENT, activity.getTask());
+        if (activity != mStartActivity) activity.takeBackTargetFrom(mStartActivity);
         activity.deliverNewIntentLocked(mCallingUid, mStartActivity.intent, intentGrants,
                 mStartActivity.launchedFromPackage, mStartActivity.mShareIdentity,
                 mStartActivity.mUserId,
