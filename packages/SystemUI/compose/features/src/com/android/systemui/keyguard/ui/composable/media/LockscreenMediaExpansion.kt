@@ -51,6 +51,8 @@ object LockscreenMediaExpansion {
 
     var mediaVisible by mutableStateOf(false)
 
+    var notificationsShowing by mutableStateOf(false)
+
     var artwork by mutableStateOf<Icon?>(null)
 
     var thumbnailBounds by mutableStateOf(Rect.Zero)

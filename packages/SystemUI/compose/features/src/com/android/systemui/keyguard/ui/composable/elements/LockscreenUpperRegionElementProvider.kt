@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -278,6 +279,8 @@ constructor(
                         LockscreenMediaExpansion.supported = true
                         onDispose { LockscreenMediaExpansion.supported = false }
                     }
+                    val notificationsActive = viewModel.isNotificationStackActive
+                    SideEffect { LockscreenMediaExpansion.notificationsShowing = notificationsActive }
                     val expansion = LockscreenMediaExpansion.fraction
                     val artWeight =
                         if (viewModel.isNotificationStackActive) 0f else expansion

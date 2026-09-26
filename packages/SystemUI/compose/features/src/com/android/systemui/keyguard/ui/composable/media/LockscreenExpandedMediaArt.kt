@@ -16,6 +16,7 @@
 
 package com.android.systemui.keyguard.ui.composable.media
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -75,6 +76,8 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
             .collect { WallpaperDepthUtils.setExpandedMediaArtVisible(it) }
     }
 
+    val coverAlpha by
+        animateFloatAsState(if (state.notificationsShowing) 0f else 1f, label = "cover")
     var origin by remember { mutableStateOf(Offset.Zero) }
     BoxWithConstraints(
         modifier
@@ -91,7 +94,10 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
 
         Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = f }) {
             Artwork(artwork, Modifier.fillMaxSize().blur(60.dp))
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.28f)))
+            Box(
+                Modifier.fillMaxSize()
+                    .background(Color.Black.copy(alpha = lerp(0.42f, 0.28f, coverAlpha)))
+            )
         }
 
         val from = state.thumbnailBounds.translate(-origin)
@@ -112,7 +118,10 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
             Modifier.offset { IntOffset(rect.left.roundToInt(), rect.top.roundToInt()) }
                 .size(size)
                 .clip(RoundedCornerShape(lerp(10f, 0f, f).dp))
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.Offscreen
+                    this.alpha = lerp(1f, coverAlpha, f)
+                }
                 .drawWithContent {
                     drawContent()
                     drawRect(
