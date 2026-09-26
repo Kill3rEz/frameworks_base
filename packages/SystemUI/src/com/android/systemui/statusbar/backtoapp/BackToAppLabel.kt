@@ -19,23 +19,18 @@ package com.android.systemui.statusbar.backtoapp
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.ArrowLeft
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,19 +44,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.android.compose.ui.graphics.painter.rememberDrawablePainter
 
 /**
- * "‹ Telegram" beside the clock while the current app was opened from another; a tap goes back to
- * it. It keeps the most recent target through its exit animation, so the name doesn't vanish
- * before the pill does.
+ * "‹ Telegram" under the clock while the current app was opened from another, as iOS puts it; a
+ * tap goes back. It keeps the last target through its exit animation, so the name doesn't vanish
+ * before the label does, and takes no room at all while hidden.
  */
 @Composable
-fun BackToAppChip(tint: Color, modifier: Modifier = Modifier) {
+fun BackToAppLabel(tint: Color, startPadding: Dp, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val tracker = remember(context) { BackToAppTracker.get(context) }
     val target by tracker.target.collectAsState()
@@ -72,46 +69,40 @@ fun BackToAppChip(tint: Color, modifier: Modifier = Modifier) {
         visible = target != null,
         enter =
             fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) +
-                expandHorizontally(spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)) +
-                scaleIn(spring(dampingRatio = 0.7f), initialScale = 0.85f),
+                expandVertically(
+                    spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow),
+                    expandFrom = Alignment.Top,
+                ),
         exit =
             fadeOut(spring(stiffness = Spring.StiffnessMedium)) +
-                shrinkHorizontally(spring(stiffness = Spring.StiffnessMedium)) +
-                scaleOut(targetScale = 0.9f),
+                shrinkVertically(spring(stiffness = Spring.StiffnessMedium)),
         modifier = modifier,
     ) {
         val app = shown.value ?: return@AnimatedVisibility
         Row(
             modifier =
-                Modifier.padding(start = 4.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(tint.copy(alpha = 0.14f))
+                Modifier.clip(RoundedCornerShape(50))
                     .clickable { tracker.goBack(app) }
                     .semantics { contentDescription = "Back to ${app.label}" }
-                    .padding(start = 2.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
+                    .padding(start = startPadding, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                Icons.AutoMirrored.Filled.ArrowLeft,
                 contentDescription = null,
                 tint = tint,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(12.dp),
             )
-            app.icon?.let {
-                Image(
-                    rememberDrawablePainter(it),
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp).clip(CircleShape),
-                )
-            }
             Text(
                 text = app.label.toString(),
                 color = tint,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
+                lineHeight = 11.sp,
+                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 4.dp).widthIn(max = 96.dp),
+                modifier = Modifier.padding(start = 1.dp).widthIn(max = 88.dp),
             )
         }
     }
