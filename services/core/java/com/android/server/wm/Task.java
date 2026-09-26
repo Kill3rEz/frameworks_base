@@ -3479,6 +3479,14 @@ class Task extends TaskFragment {
 
         info.isRunning = top != null;
         info.topActivity = top != null ? top.mActivityComponent : null;
+        final boolean openedByAnotherApp = top != null
+                && top.mLaunchSourceType == ActivityRecord.LAUNCH_SOURCE_TYPE_APPLICATION
+                && top.launchedFromTaskId != INVALID_TASK_ID
+                && top.launchedFromTaskId != mTaskId
+                && top.launchedFromPackage != null
+                && !top.launchedFromPackage.equals(top.packageName);
+        info.launchedFromPackage = openedByAnotherApp ? top.launchedFromPackage : null;
+        info.launchedFromTaskId = openedByAnotherApp ? top.launchedFromTaskId : INVALID_TASK_ID;
         info.origActivity = origActivity;
         info.realActivity = realActivity;
         info.isRealActivityAppLockEnabled = mRealActivityAppLockEnabled;
