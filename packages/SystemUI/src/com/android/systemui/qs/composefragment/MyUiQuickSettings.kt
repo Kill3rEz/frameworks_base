@@ -46,6 +46,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -131,9 +133,7 @@ private fun MyUiCardRow(tile: TileViewModel) {
         ) {
             Icon(
                 icon = icon,
-                tint =
-                    if (active) colorResource(android.R.color.system_primary_light)
-                    else MaterialTheme.colorScheme.onSurface,
+                tint = if (active) activeContent() else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(22.dp),
             )
         }
@@ -157,6 +157,16 @@ private fun MyUiCardRow(tile: TileViewModel) {
 }
 
 @Composable
+private fun activeContent(): Color =
+    colorResource(
+        if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) {
+            android.R.color.system_primary_light
+        } else {
+            android.R.color.system_primary_dark
+        }
+    )
+
+@Composable
 fun MyUiCardSpecs(tiles: List<TileViewModel>): Set<com.android.systemui.qs.pipeline.shared.TileSpec> {
     val bySpec = remember(tiles) { tiles.associateBy { it.spec.spec } }
     return remember(bySpec) { CardSpecs.mapNotNull { bySpec[it]?.spec }.take(3).toSet() }
@@ -166,9 +176,7 @@ fun MyUiCardSpecs(tiles: List<TileViewModel>): Set<com.android.systemui.qs.pipel
 fun MyUiTile(tile: TileViewModel, modifier: Modifier = Modifier) {
     val (uiState, icon) = rememberTileState(tile)
     val active = uiState.visualState == Tile.STATE_ACTIVE
-    val content =
-        if (active) colorResource(android.R.color.system_primary_light)
-        else MaterialTheme.colorScheme.onSurface
+    val content = if (active) activeContent() else MaterialTheme.colorScheme.onSurface
     Column(
         modifier =
             modifier
