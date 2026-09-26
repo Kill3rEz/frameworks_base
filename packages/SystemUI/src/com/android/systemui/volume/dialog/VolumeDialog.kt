@@ -51,8 +51,8 @@ constructor(
         fun create(isVolumeDialogVertical: Boolean): VolumeDialog
     }
 
-    private val isOneUiStyle =
-        isVolumeDialogVertical && VolumePanelStyle.current(context) == VolumePanelStyle.ONE_UI
+    private val panelStyle = VolumePanelStyle.current(context)
+    private val isOneUiStyle = isVolumeDialogVertical && panelStyle.isCard
 
     init {
         with(window!!) {
@@ -95,7 +95,13 @@ constructor(
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (isOneUiStyle) {
-            setContentView(R.layout.volume_dialog_oneui)
+            setContentView(
+                if (panelStyle == VolumePanelStyle.MYUI) {
+                    R.layout.volume_dialog_myui
+                } else {
+                    R.layout.volume_dialog_oneui
+                }
+            )
         } else if (isVolumeDialogVertical) {
             setContentView(R.layout.volume_dialog)
         } else {

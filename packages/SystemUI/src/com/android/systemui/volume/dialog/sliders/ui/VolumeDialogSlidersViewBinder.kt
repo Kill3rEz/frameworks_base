@@ -58,7 +58,10 @@ constructor(
         get() = expansionInteractor.isExpandable
 
     private val isOneUiStyle: Boolean
-        get() = expansionInteractor.style == VolumePanelStyle.ONE_UI
+        get() = expansionInteractor.style.isCard
+
+    private val isMyUiStyle: Boolean
+        get() = expansionInteractor.style == VolumePanelStyle.MYUI
 
     override fun CoroutineScope.bind(view: View) {
 
@@ -76,18 +79,26 @@ constructor(
 
         if (isOneUiStyle) {
             launchTraced("VDSVB#addCardTouchableBounds") { dialogViewModel.addTouchableBounds(view) }
+            val cardView: View =
+                if (isMyUiStyle) view.requireViewById(R.id.volume_dialog_myui_card) else view
             val card: Drawable? =
-                view.background?.let { if (viewModel.showBlur) view.frostedCard(it) else it }
+                cardView.background?.let {
+                    if (viewModel.showBlur) cardView.frostedCard(it) else it
+                }
             if (viewModel.showBlur && card != null) {
                 launchTraced("VDSVB#cardBlur") {
                     windowRootViewBlurInteractor.isBlurCurrentlySupported.collect { supported ->
-                        view.applyCardBlurSupport(card, supported)
+                        cardView.applyCardBlurSupport(card, supported)
                     }
                 }
             }
-            launchTraced("VDSVB#cardVisibility") {
-                expansionInteractor.isExpanded.collect { isExpanded ->
-                    view.background = if (isExpanded) card else null
+            if (isMyUiStyle) {
+                cardView.background = card
+            } else {
+                launchTraced("VDSVB#cardVisibility") {
+                    expansionInteractor.isExpanded.collect { isExpanded ->
+                        cardView.background = if (isExpanded) card else null
+                    }
                 }
             }
         } else if (isExpandableStyle) {
@@ -124,6 +135,14 @@ constructor(
                 )
                 floatingSliderViewBinders.fastForEachIndexed { index, sliderComponent ->
                     val sliderContainer = floatingSlidersContainer.getChildAt(index)
+                    if (isMyUiStyle) {
+                        sliderContainer.updateLayoutParams<ViewGroup.LayoutParams> {
+                            width =
+                                view.context.resources.getDimensionPixelSize(
+                                    R.dimen.volume_panel_myui_slider_width
+                                )
+                        }
+                    }
                     if (viewModel.showBlur && !isExpandableStyle) {
                         sliderContainer.updateBackground()
                     }
@@ -150,7 +169,13 @@ constructor(
         val blurDrawable = viewRootImpl.createBackgroundBlurDrawable()
         blurDrawable.setCornerRadius(
             context.resources
-                .getDimensionPixelSize(R.dimen.volume_panel_oneui_background_corner_radius)
+                .getDimensionPixelSize(
+                    if (isMyUiStyle) {
+                        R.dimen.volume_panel_myui_background_corner_radius
+                    } else {
+                        R.dimen.volume_panel_oneui_background_corner_radius
+                    }
+                )
                 .toFloat()
         )
         blurDrawable.setBlurRadius(0)
@@ -172,10 +197,11 @@ constructor(
         )
         (layers.getDrawable(1) as GradientDrawable).setColor(
             context.getColor(
-                if (supported) {
-                    R.color.volume_panel_oneui_background_blur
-                } else {
-                    R.color.volume_panel_oneui_background_fallback
+                when {
+                    isMyUiStyle && supported -> R.color.volume_panel_myui_background_blur
+                    isMyUiStyle -> R.color.volume_panel_myui_background_fallback
+                    supported -> R.color.volume_panel_oneui_background_blur
+                    else -> R.color.volume_panel_oneui_background_fallback
                 }
             )
         )

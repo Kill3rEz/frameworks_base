@@ -283,4 +283,8 @@
     <string name="dynamic_island_charging_power">Power</string>
     <string name="dynamic_island_charging_voltage">Voltage</string>
     <string name="dynamic_island_charging_temperature">Temperature</string>
+
+    <!-- MyUI volume panel style -->
+    <string name="volume_panel_myui_title">Sound &amp; vibration</string>
+    <string name="volume_panel_myui_done">Done</string>
 </resources>

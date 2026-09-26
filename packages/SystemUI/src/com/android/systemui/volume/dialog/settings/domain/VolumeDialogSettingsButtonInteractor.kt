@@ -24,7 +24,6 @@ import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.policy.DeviceProvisionedController
 import com.android.systemui.volume.Events
-import com.android.systemui.volume.VolumePanelStyle
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialog
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
 import com.android.systemui.volume.dialog.domain.interactor.ExpandedAudioTileDetailsFeatureInteractor
@@ -69,7 +68,7 @@ constructor(
     }
 
     fun onButtonClicked() {
-        if (expansionInteractor.style == VolumePanelStyle.ONE_UI) {
+        if (expansionInteractor.style.isCard) {
             activityStarter.startActivityDismissingKeyguard(
                 /* intent = */ Intent(Settings.ACTION_SOUND_SETTINGS),
                 /* onlyProvisioned = */ false,

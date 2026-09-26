@@ -55,7 +55,11 @@ constructor(
             .onEach { isVisible -> button.visibility = if (isVisible) View.VISIBLE else View.GONE }
             .launchInTraced("VDSBVB#isVisible", this)
 
-        viewModel.icon.onEach { button.setImageDrawable(it) }.launchInTraced("VDSBVB#icon", this)
+        if (expansionInteractor.style == VolumePanelStyle.MYUI) {
+            button.setImageResource(R.drawable.ic_settings_24dp)
+        } else {
+            viewModel.icon.onEach { button.setImageDrawable(it) }.launchInTraced("VDSBVB#icon", this)
+        }
 
         button.setOnClickListener { viewModel.onButtonClicked() }
     }

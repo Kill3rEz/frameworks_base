@@ -25,7 +25,12 @@ enum class VolumePanelStyle(val value: Int) {
 
     EXPANDABLE(1),
 
-    ONE_UI(2);
+    ONE_UI(2),
+
+    MYUI(3);
+
+    val isCard: Boolean
+        get() = this == ONE_UI || this == MYUI
 
     companion object {
         const val SETTING_NAME = "volume_panel_style"

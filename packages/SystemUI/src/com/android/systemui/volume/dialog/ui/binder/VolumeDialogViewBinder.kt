@@ -42,7 +42,6 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.res.R
 import com.android.systemui.util.kotlin.awaitCancellationThenDispose
 import com.android.systemui.util.view.listenToComputeInternalInsets
-import com.android.systemui.volume.VolumePanelStyle
 import com.android.systemui.volume.dialog.captions.ui.viewmodel.VolumeDialogCaptionsButtonViewModel
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialog
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
@@ -85,7 +84,7 @@ constructor(
 ) {
 
     private val isOneUiStyle: Boolean
-        get() = expansionInteractor.style == VolumePanelStyle.ONE_UI
+        get() = expansionInteractor.style.isCard
 
     private val halfOpenedOffsetPx: Float =
         context.resources.getDimensionPixelSize(R.dimen.volume_dialog_half_opened_offset).toFloat()

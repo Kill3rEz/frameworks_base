@@ -125,8 +125,23 @@ private fun VolumeDialogSlider(
 ) {
     val isPillStyle = panelStyle != VolumePanelStyle.DEFAULT
     val isOneUi = panelStyle == VolumePanelStyle.ONE_UI
+    val isMyUi = panelStyle == VolumePanelStyle.MYUI
     val colors =
         when {
+            isMyUi -> {
+                val active = colorResource(R.color.volume_panel_myui_track_active)
+                val inactive = colorResource(R.color.volume_panel_myui_track_inactive)
+                SliderDefaults.colors(
+                    activeTrackColor = active,
+                    inactiveTrackColor = inactive,
+                    activeTickColor = active,
+                    inactiveTickColor = inactive,
+                    disabledActiveTrackColor = active,
+                    disabledInactiveTrackColor = inactive,
+                    disabledActiveTickColor = active,
+                    disabledInactiveTickColor = inactive,
+                )
+            }
             isOneUi -> {
                 val active = colorResource(R.color.volume_panel_oneui_track_active)
                 val inactive = colorResource(R.color.volume_panel_oneui_track_inactive)
@@ -177,19 +192,21 @@ private fun VolumeDialogSlider(
 
     val trackSize =
         when {
+            isMyUi -> dimensionResource(R.dimen.volume_panel_myui_track_size)
             isOneUi -> dimensionResource(R.dimen.volume_panel_oneui_track_size)
             isPillStyle -> dimensionResource(R.dimen.volume_panel_expandable_track_size)
             else -> dimensions.trackSize
         }
     val trackCornerSize =
         when {
+            isMyUi -> dimensionResource(R.dimen.volume_panel_myui_track_size) / 2
             isOneUi -> dimensionResource(R.dimen.volume_panel_oneui_track_corner_radius)
             isPillStyle -> dimensionResource(R.dimen.volume_panel_expandable_track_corner_radius)
             else -> 12.dp
         }
 
     val bottomIcon: (@Composable BoxScope.(iconsState: SliderIconsState) -> Unit)? =
-        if (isPillStyle) {
+        if (isPillStyle && !isMyUi) {
             val iconTint =
                 if (isOneUi) {
                     colorResource(R.color.volume_panel_oneui_icon)
@@ -348,7 +365,17 @@ private fun VolumeDialogSlider(
         )
     }
 
-    if (isOneUi && showLabel) {
+    if (isMyUi) {
+        val iconTint = colorResource(R.color.volume_panel_myui_icon)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
+            slider(Modifier.weight(1f))
+            Icon(
+                icon = sliderStateModel.icon,
+                tint = { iconTint },
+                modifier = Modifier.padding(top = 12.dp).size(dimensions.iconSize + 4.dp),
+            )
+        }
+    } else if (isOneUi && showLabel) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
             slider(Modifier.weight(1f))
             Text(

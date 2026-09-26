@@ -117,7 +117,8 @@ constructor(
         }
 
     override fun CoroutineScope.bind(view: View) {
-        if (expansionInteractor.style == VolumePanelStyle.ONE_UI) {
+        if (expansionInteractor.style.isCard) {
+            // go.
             return
         }
         val volumeDialogBackgroundView = view.requireViewById<View>(R.id.volume_dialog_background)

@@ -19,7 +19,10 @@ package com.android.systemui.volume.dialog.expansion.ui.binder
 import android.content.res.ColorStateList
 import android.provider.Settings
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageButton
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.view.updateLayoutParams
 import com.android.app.tracing.coroutines.launchInTraced
 import com.android.app.tracing.coroutines.launchTraced
 import com.android.systemui.res.R
@@ -73,8 +76,19 @@ constructor(
                 }
             }
 
+        val isMyUi = expansionInteractor.style == VolumePanelStyle.MYUI
+        if (isMyUi) {
+            button.visibility = View.GONE
+            view.findViewById<View>(R.id.volume_dialog_myui_done)?.setOnClickListener(toggle)
+        }
+
         expansionInteractor.isExpanded
             .onEach { isExpanded ->
+                if (isMyUi) {
+                    view.applyMyUiChrome(isExpanded)
+                    collapsedButton?.visibility = if (isExpanded) View.GONE else View.VISIBLE
+                    return@onEach
+                }
                 if (expansionInteractor.style == VolumePanelStyle.ONE_UI) {
                     view.applyOneUiChrome(isExpanded)
                     collapsedButton?.visibility =
@@ -108,6 +122,35 @@ constructor(
                 context.resources.getDimensionPixelSize(R.dimen.volume_panel_oneui_min_width)
             } else {
                 0
+            }
+    }
+
+    private fun View.applyMyUiChrome(isExpanded: Boolean) {
+        val expandedOnly = if (isExpanded) View.VISIBLE else View.GONE
+        findViewById<View>(R.id.volume_dialog_myui_title)?.visibility = expandedOnly
+        findViewById<View>(R.id.volume_dialog_myui_footer)?.visibility = expandedOnly
+        findViewById<View>(R.id.volume_dialog_myui_sound_icon)?.visibility =
+            if (isExpanded) View.GONE else View.VISIBLE
+        findViewById<View>(R.id.odi_captions_icon)?.apply {
+            alpha = if (isExpanded) 0f else 1f
+            isEnabled = !isExpanded
+        }
+        findViewById<ConstraintLayout>(R.id.volume_dialog_myui_card)?.minWidth =
+            if (isExpanded) {
+                context.resources.getDimensionPixelSize(R.dimen.volume_panel_myui_expanded_width)
+            } else {
+                0
+            }
+        findViewById<View>(R.id.volume_dialog_main_slider_container)
+            ?.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                marginStart =
+                    if (isExpanded) {
+                        context.resources.getDimensionPixelSize(
+                            R.dimen.volume_panel_myui_slider_spacing
+                        )
+                    } else {
+                        0
+                    }
             }
     }
 
