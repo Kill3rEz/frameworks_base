@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -80,6 +81,7 @@ import com.android.systemui.keyguard.ui.binder.KeyguardBottomAreaVibrations
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordanceHapticViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordanceViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordancesCombinedViewModel
+import com.android.systemui.keyguard.ui.composable.media.LockscreenMediaExpansion
 import com.android.systemui.plugins.FalsingManager
 import com.android.systemui.plugins.keyguard.ui.composable.elements.BaseLockscreenElement.ElementSource
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElement
@@ -170,7 +172,11 @@ constructor(
             if (quickAffordanceViewModel.isActivated) {
                 MaterialTheme.colorScheme.onPrimaryFixed
             } else {
-                MaterialTheme.colorScheme.onSurface
+                lerp(
+                    MaterialTheme.colorScheme.onSurface,
+                    Color.White,
+                    LockscreenMediaExpansion.fraction,
+                )
             }
 
         failureAnimation(triggerFailed, setTriggerFailed, hapticsViewModel, xAnimation)
@@ -330,15 +336,20 @@ constructor(
         if (!viewModel.isSelected) {
             val isBlurSupported by
                 windowRootViewBlurInteractor.isBlurCurrentlySupported.collectAsStateWithLifecycle()
+            val color =
+                if (viewModel.isActivated) {
+                    MaterialTheme.colorScheme.primaryFixed
+                } else if (enableLockscreenBlur() && isBlurSupported) {
+                    LocalAndroidColorScheme.current.surfaceEffect1
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHigh
+                }
+            // The wallpaper's palette looks out of place over someone's album artwork, so the
+            // expanded player turns the buttons the same neutral glass as its card.
             return this.background(
                 color =
-                    if (viewModel.isActivated) {
-                        MaterialTheme.colorScheme.primaryFixed
-                    } else if (enableLockscreenBlur() && isBlurSupported) {
-                        LocalAndroidColorScheme.current.surfaceEffect1
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHigh
-                    },
+                    if (viewModel.isActivated) color
+                    else lerp(color, ExpandedMediaShortcutColor, LockscreenMediaExpansion.fraction),
                 shape = CircleShape,
             )
         }
@@ -511,3 +522,5 @@ constructor(
         }
     }
 }
+
+private val ExpandedMediaShortcutColor = Color(0xFF2C2C2E).copy(alpha = 0.6f)

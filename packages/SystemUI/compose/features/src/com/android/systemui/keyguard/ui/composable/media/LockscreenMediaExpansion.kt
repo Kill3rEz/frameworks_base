@@ -63,6 +63,9 @@ object LockscreenMediaExpansion {
     /** Whether the player is on screen at all: playing, and not dozing. */
     var mediaVisible by mutableStateOf(false)
 
+    /** Whether notifications sit under the player, which dims the artwork behind them. */
+    var notificationsShowing by mutableStateOf(false)
+
     /** The selected session's artwork, which becomes the background. */
     var artwork by mutableStateOf<Icon?>(null)
 

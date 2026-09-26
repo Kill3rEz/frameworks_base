@@ -50,6 +50,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -90,7 +91,7 @@ private val ThumbnailSize = 64.dp
 private val ThumbnailCorner = 10.dp
 private val ControlSize = 44.dp
 private val TrackHeight = 6.dp
-private val CardColor = Color(0xFF2C2C2E).copy(alpha = 0.52f)
+private val CardTint = Color(0xFF1C1C1E).copy(alpha = 0.55f)
 private val CardBorder = Color.White.copy(alpha = 0.14f)
 private val Secondary = Color.White.copy(alpha = 0.6f)
 
@@ -144,12 +145,18 @@ private fun MediaCard(card: MediaCardViewModel, isSelected: Boolean) {
         useModifierBasedImplementation = true,
         defaultMinSize = false,
     ) { expandable ->
+        Box(
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(CardCorner))
+                .border(1.dp, CardBorder, RoundedCornerShape(CardCorner))
+        ) {
+        // Frosted glass made of the cover itself, as the iOS player is: nothing behind the card,
+        // like the depth wallpaper's subject, shows through it.
+        Artwork(card.background, Modifier.matchParentSize().blur(48.dp))
+        Box(Modifier.matchParentSize().background(CardTint))
         Column(
             modifier =
                 Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(CardCorner))
-                    .background(CardColor)
-                    .border(1.dp, CardBorder, RoundedCornerShape(CardCorner))
                     .onGloballyPositioned { coordinates ->
                         if (!isSelected) return@onGloballyPositioned
                         val pad = with(density) { CardPadding.toPx() }
@@ -169,6 +176,7 @@ private fun MediaCard(card: MediaCardViewModel, isSelected: Boolean) {
             SeekBar(card.navigation)
             Spacer(Modifier.height(10.dp))
             Controls(card)
+        }
         }
     }
 }
