@@ -17,8 +17,6 @@
 package com.android.systemui.classifier
 
 import android.content.Context
-import android.os.Build
-import android.widget.Toast
 import com.android.systemui.CoreStartable
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Application
@@ -38,15 +36,7 @@ constructor(
     private val falsingManager: Lazy<FalsingManager>,
 ) : CoreStartable {
 
-    override fun start() {
-        if (!Build.IS_USERDEBUG && !Build.IS_ENG) {
-            return
-        }
-
-        falsingManager.get().addFalsingBeliefListener {
-            Toast.makeText(context, "False touch rejected", Toast.LENGTH_SHORT).show()
-        }
-    }
+    override fun start() {}
 }
 
 @Module
