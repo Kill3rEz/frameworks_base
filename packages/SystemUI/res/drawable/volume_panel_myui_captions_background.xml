@@ -21,13 +21,13 @@
             android:paddingMode="stack">
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="@dimen/volume_panel_myui_background_corner_radius" />
+            <corners android:radius="@dimen/volume_panel_myui_collapsed_corner_radius" />
             <solid android:color="@color/volume_panel_myui_background_fallback" />
         </shape>
     </item>
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="@dimen/volume_panel_myui_background_corner_radius" />
+            <corners android:radius="@dimen/volume_panel_myui_collapsed_corner_radius" />
             <solid android:color="@color/volume_panel_myui_track_active" />
         </shape>
     </item>
