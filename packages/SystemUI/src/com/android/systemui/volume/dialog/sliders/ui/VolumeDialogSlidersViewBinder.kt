@@ -105,6 +105,22 @@ constructor(
             }
             if (isMyUiStyle) {
                 cardView.background = card
+                // A pill while it is the collapsed column, a rounded card once expanded.
+                launchTraced("VDSVB#cardCorners") {
+                    expansionInteractor.isExpanded.collect { isExpanded ->
+                        card?.setCornerRadius(
+                            cardView.context.resources
+                                .getDimensionPixelSize(
+                                    if (isExpanded) {
+                                        R.dimen.volume_panel_myui_background_corner_radius
+                                    } else {
+                                        R.dimen.volume_panel_myui_collapsed_corner_radius
+                                    }
+                                )
+                                .toFloat()
+                        )
+                    }
+                }
             } else {
                 launchTraced("VDSVB#cardVisibility") {
                     expansionInteractor.isExpanded.collect { isExpanded ->
@@ -203,6 +219,15 @@ constructor(
         blurDrawable.setBlurRadius(0)
         return LayerDrawable(arrayOf<Drawable>(blurDrawable, card.mutate())).also {
             applyCardBlurSupport(it, windowRootViewBlurInteractor.isBlurCurrentlySupported.value)
+        }
+    }
+
+    private fun Drawable.setCornerRadius(radius: Float) {
+        when (this) {
+            is LayerDrawable ->
+                (0 until numberOfLayers).forEach { getDrawable(it).setCornerRadius(radius) }
+            is BackgroundBlurDrawable -> setCornerRadius(radius)
+            is GradientDrawable -> cornerRadius = radius
         }
     }
 

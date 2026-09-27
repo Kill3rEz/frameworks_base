@@ -18,6 +18,6 @@
      tint and puts a blur layer underneath when blur is available. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <corners android:radius="@dimen/volume_panel_myui_background_corner_radius" />
+    <corners android:radius="@dimen/volume_panel_myui_collapsed_corner_radius" />
     <solid android:color="@color/volume_panel_myui_background_fallback" />
 </shape>

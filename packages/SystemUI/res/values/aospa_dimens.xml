@@ -50,7 +50,9 @@
     <dimen name="volume_panel_oneui_min_width">260dp</dimen>
 
     <!-- MyUI volume panel style -->
-    <dimen name="volume_panel_myui_background_corner_radius">26dp</dimen>
+    <dimen name="volume_panel_myui_background_corner_radius">30dp</dimen>
+    <!-- Half the collapsed column, 14dp + 34dp + 14dp wide. -->
+    <dimen name="volume_panel_myui_collapsed_corner_radius">31dp</dimen>
     <dimen name="volume_panel_myui_padding">14dp</dimen>
     <dimen name="volume_panel_myui_header_height">34dp</dimen>
     <dimen name="volume_panel_myui_slider_width">34dp</dimen>
