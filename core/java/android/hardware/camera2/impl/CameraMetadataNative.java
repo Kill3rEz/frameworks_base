@@ -636,6 +636,11 @@ public class CameraMetadataNative implements Parcelable {
             Marshaler<T> marshaler = getMarshalerForKey(key, nativeType);
             ByteBuffer buffer = ByteBuffer.wrap(values).order(ByteOrder.nativeOrder());
             return marshaler.unmarshal(buffer);
+        } catch (IllegalArgumentException e) {
+            if (!key.hasTag()) {
+                throw e;
+            }
+            return null;
         } catch (Exception e) {
                 return null;
         }
