@@ -165,7 +165,7 @@ constructor(
         volumeDialogBackgroundView.updateBackground()
         ringerBackgroundView.updateBackground()
         if (isExpandableStyle) {
-            ringerBackgroundView.alpha = 0f
+            ringerBackgroundView.hideExpandableCard()
         }
         launchTraced("VDRVB#addTouchableBounds") {
             dialogViewModel.addTouchableBounds(ringerBackgroundView)
@@ -310,6 +310,7 @@ constructor(
                                 )
                                 ringerBackgroundView.background =
                                     ringerBackgroundView.background.mutate()
+                                ringerBackgroundView.hideExpandableCard()
                             }
                         }
                     }
@@ -613,7 +614,14 @@ constructor(
         } else {
             (background as GradientDrawable).cornerRadius = radius
         }
+        hideExpandableCard()
         background.invalidateSelf()
+    }
+
+    private fun View.hideExpandableCard() {
+        if (!isExpandableStyle) return
+        alpha = 0f
+        background?.alpha = 0
     }
 
     private fun View.updateBackground() {
