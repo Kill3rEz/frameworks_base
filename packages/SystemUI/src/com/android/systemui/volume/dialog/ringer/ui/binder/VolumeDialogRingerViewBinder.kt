@@ -169,7 +169,7 @@ constructor(
         if (isExpandableStyle) {
             // No card behind the ringer buttons either: this style is bare pills and circles. Kept
             // in the layout rather than gone, because the drawer transitions are constrained to it.
-            ringerBackgroundView.alpha = 0f
+            ringerBackgroundView.hideExpandableCard()
         }
         launchTraced("VDRVB#addTouchableBounds") {
             dialogViewModel.addTouchableBounds(ringerBackgroundView)
@@ -314,6 +314,7 @@ constructor(
                                 )
                                 ringerBackgroundView.background =
                                     ringerBackgroundView.background.mutate()
+                                ringerBackgroundView.hideExpandableCard()
                             }
                         }
                     }
@@ -621,7 +622,18 @@ constructor(
         } else {
             (background as GradientDrawable).cornerRadius = radius
         }
+        hideExpandableCard()
         background.invalidateSelf()
+    }
+
+    /**
+     * The drawer's MotionLayout puts the view's alpha back as it animates and opening it swaps in
+     * a mutated copy of the drawable, so the card has to be hidden again after each.
+     */
+    private fun View.hideExpandableCard() {
+        if (!isExpandableStyle) return
+        alpha = 0f
+        background?.alpha = 0
     }
 
     private fun View.updateBackground() {

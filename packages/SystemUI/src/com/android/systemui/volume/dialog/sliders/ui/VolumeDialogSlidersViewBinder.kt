@@ -16,9 +16,13 @@
 
 package com.android.systemui.volume.dialog.sliders.ui
 
+import android.animation.LayoutTransition
+import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -27,6 +31,7 @@ import androidx.annotation.LayoutRes
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.updateLayoutParams
 import androidx.compose.ui.util.fastForEachIndexed
+import com.android.app.animation.Interpolators
 import com.android.app.tracing.coroutines.launchInTraced
 import com.android.app.tracing.coroutines.launchTraced
 import com.android.internal.graphics.drawable.BackgroundBlurDrawable
@@ -146,6 +151,15 @@ constructor(
             // between them would double the gap.
             (floatingSlidersContainer as? LinearLayout)?.showDividers =
                 LinearLayout.SHOW_DIVIDER_NONE
+            // The stock floating sliders sit on a card that pads them, which the negative margins
+            // make room for. Bare, they would come out taller than the primary pill.
+            (floatingSlidersContainer.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
+                it.topMargin = 0
+                it.bottomMargin = 0
+                floatingSlidersContainer.layoutParams = it
+            }
+            (floatingSlidersContainer as? ViewGroup)?.layoutTransition =
+                expandTransition(view)
         }
 
         viewModel.sliders
@@ -219,6 +233,39 @@ constructor(
         blurDrawable.setBlurRadius(0)
         return LayerDrawable(arrayOf<Drawable>(blurDrawable, card.mutate())).also {
             applyCardBlurSupport(it, windowRootViewBlurInteractor.isBlurCurrentlySupported.value)
+        }
+    }
+
+    /**
+     * The extra pills slide out from behind the primary one as they fade in, rather than popping
+     * in.
+     */
+    private fun expandTransition(view: View): LayoutTransition {
+        val onLeft =
+            Settings.Secure.getInt(
+                view.context.contentResolver,
+                Settings.Secure.VOLUME_PANEL_ON_LEFT,
+                0,
+            ) == 1
+        val shift = view.resources.displayMetrics.density * 32f * (if (onLeft) -1 else 1)
+        return LayoutTransition().apply {
+            setAnimator(
+                LayoutTransition.APPEARING,
+                ObjectAnimator.ofPropertyValuesHolder(
+                    null as Any?,
+                    PropertyValuesHolder.ofFloat(View.ALPHA, 0f, 1f),
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_X, shift, 0f),
+                    PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.85f, 1f),
+                ),
+            )
+            setInterpolator(LayoutTransition.APPEARING, Interpolators.EMPHASIZED_DECELERATE)
+            setDuration(LayoutTransition.APPEARING, 300)
+            setStartDelay(LayoutTransition.APPEARING, 0)
+            // A leaving pill keeps its space until it is done, but the window shrinks at once and
+            // would push the primary pill off the screen for the length of the animation.
+            disableTransitionType(LayoutTransition.DISAPPEARING)
+            disableTransitionType(LayoutTransition.CHANGE_APPEARING)
+            disableTransitionType(LayoutTransition.CHANGE_DISAPPEARING)
         }
     }
 
