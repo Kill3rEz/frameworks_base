@@ -119,6 +119,9 @@ fun LockscreenMediaCard(
     }
     val selected = cards.getOrNull(pagerState.currentPage) ?: cards.first()
     LaunchedEffect(selected.background) { LockscreenMediaExpansion.artwork = selected.background }
+    LaunchedEffect(selected.subtitle, selected.title) {
+        LockscreenMediaExpansion.track = selected.subtitle to selected.title
+    }
     HorizontalPager(
         state = pagerState,
         pageSpacing = 12.dp,

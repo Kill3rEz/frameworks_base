@@ -55,6 +55,11 @@ object LockscreenMediaExpansion {
 
     var artwork by mutableStateOf<Icon?>(null)
 
+    var motionArtEnabled by mutableStateOf(false)
+        private set
+
+    var track by mutableStateOf<Pair<String, String>?>(null)
+
     var lockscreenAlpha by mutableStateOf(1f)
 
     var artSlotBounds by mutableStateOf(Rect.Zero)
@@ -114,20 +119,32 @@ object LockscreenMediaExpansion {
                         0,
                         UserHandle.USER_CURRENT,
                     ) != 0
+                motionArtEnabled =
+                    Settings.System.getIntForUser(
+                        contentResolver,
+                        Settings.System.LS_MEDIA_MOTION_ART,
+                        0,
+                        UserHandle.USER_CURRENT,
+                    ) != 0
             }
             val observer =
                 object : ContentObserver(Handler(Looper.getMainLooper())) {
                     override fun onChange(selfChange: Boolean) = read()
                 }
             read()
-            listOf(Settings.System.LS_MEDIA_EXPAND, Settings.System.LS_MEDIA_EXPANDED).forEach {
-                contentResolver.registerContentObserver(
-                    Settings.System.getUriFor(it),
-                    false,
-                    observer,
-                    UserHandle.USER_ALL,
+            listOf(
+                    Settings.System.LS_MEDIA_EXPAND,
+                    Settings.System.LS_MEDIA_EXPANDED,
+                    Settings.System.LS_MEDIA_MOTION_ART,
                 )
-            }
+                .forEach {
+                    contentResolver.registerContentObserver(
+                        Settings.System.getUriFor(it),
+                        false,
+                        observer,
+                        UserHandle.USER_ALL,
+                    )
+                }
             onDispose { contentResolver.unregisterContentObserver(observer) }
         }
     }

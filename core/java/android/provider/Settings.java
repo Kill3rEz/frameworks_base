@@ -7431,6 +7431,11 @@ public final class Settings {
         /**
          * @hide
          */
+        public static final String LS_MEDIA_MOTION_ART = "ls_media_motion_art";
+
+        /**
+         * @hide
+         */
         public static final String BACK_TO_APP_INDICATOR = "back_to_app_indicator";
 
         /**
