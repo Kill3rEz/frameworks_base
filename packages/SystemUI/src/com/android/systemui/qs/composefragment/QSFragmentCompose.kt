@@ -1566,6 +1566,7 @@ fun VolumeLayout(
     vm: QSFragmentComposeViewModel? = null,
     sliderHeight: Dp,
     interactive: Boolean = true,
+    capsule: Boolean = false,
 ) {
     val context = LocalContext.current
     val audioManager = remember(context) {
@@ -1653,6 +1654,7 @@ fun VolumeLayout(
                     cornerRadius = verticalCornerRadius,
                     housingWidth = verticalWidth,
                     interactive = interactive,
+                    capsule = capsule,
                 )
             }
         }
@@ -1669,6 +1671,7 @@ fun BrightnessLayout(
     vm: QSFragmentComposeViewModel? = null,
     sliderHeight: Dp,
     interactive: Boolean = true,
+    capsule: Boolean = false,
 ) {
     val context = LocalContext.current
     val contentResolver = context.contentResolver
@@ -1806,6 +1809,7 @@ fun BrightnessLayout(
                     cornerRadius = verticalCornerRadius,
                     housingWidth = verticalWidth,
                     interactive = interactive,
+                    capsule = capsule,
                 )
             }
         }
@@ -1825,9 +1829,10 @@ fun VerticalSlider(
     interactive: Boolean = true,
     cornerRadius: Dp? = null,
     housingWidth: Dp? = 75.dp,
+    capsule: Boolean = false,
 ) {
-    val iconSize = 24.dp
-    val iconBottomPadding = 16.dp
+    val iconSize = if (capsule) 28.dp else 24.dp
+    val iconBottomPadding = if (capsule) housingHeight * 0.16f else 16.dp
 
     val iconCoveredFraction =
         if (housingHeight > 0.dp) (iconBottomPadding + iconSize) / housingHeight else 0f
@@ -1843,7 +1848,8 @@ fun VerticalSlider(
             .then(housingWidth?.let { Modifier.width(it) } ?: Modifier.fillMaxWidth())
             .height(housingHeight)
             .clip(
-                cornerRadius?.let { RoundedCornerShape(it) } ?: RoundedCornerShape(percent = 50)
+                if (capsule) RoundedCornerShape(percent = 50)
+                else cornerRadius?.let { RoundedCornerShape(it) } ?: RoundedCornerShape(percent = 50)
             )
             .background(
                 LocalAndroidColorScheme.current.surfaceEffect1.copy(
@@ -1857,7 +1863,7 @@ fun VerticalSlider(
     ) {
         val fillHeight = housingHeight * value
         val fillCapRadius =
-            if (cornerRadius != null) 0.dp
+            if (cornerRadius != null || capsule) 0.dp
             else ((housingWidth ?: 0.dp) / 2).coerceAtMost(fillHeight / 2)
         Box(
             modifier = Modifier

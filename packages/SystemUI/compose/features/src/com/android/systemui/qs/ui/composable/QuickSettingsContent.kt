@@ -550,7 +550,7 @@ fun penguinPanel(
 }
 
 @Composable
-private fun PanelElementPlaceholder(height: Dp, iconRes: Int, label: String) {
+internal fun PanelElementPlaceholder(height: Dp, iconRes: Int, label: String) {
     Column(
         modifier =
             Modifier.fillMaxWidth()

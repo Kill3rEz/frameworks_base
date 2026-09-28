@@ -311,6 +311,16 @@ private fun ContentScope.QuickSettingsContainer(
     ) { state ->
         when (state) {
             ShadeBodyState.Editing -> {
+                if (containerViewModel.panelStyle == QsPanelStyle.Penguin) {
+                    PenguinGridEditor(
+                        viewModel = containerViewModel,
+                        modifier =
+                            modifier
+                                .fillMaxWidth()
+                                .padding(vertical = QuickSettingsShade.Dimensions.VerticalPadding),
+                    )
+                    return@AnimatedContent
+                }
                 EditMode(
                     viewModel = containerViewModel.editModeViewModel,
                     modifier =
@@ -395,7 +405,12 @@ private fun ContentScope.QuickSettingsLayout(
 
         VerticalSeparator(QuickSettingsShade.Dimensions.ToolbarBottomPadding)
 
-        if (qsContainerViewModel.panelStyle != QsPanelStyle.Default) {
+        if (qsContainerViewModel.panelStyle == QsPanelStyle.Penguin) {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                PenguinGridQuickSettings(viewModel = qsContainerViewModel)
+                VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
+            }
+        } else if (qsContainerViewModel.panelStyle != QsPanelStyle.Default) {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 QuickSettingsContent(
                     viewModel = qsContainerViewModel,

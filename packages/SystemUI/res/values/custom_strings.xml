@@ -241,6 +241,19 @@
     <string name="harmony_edit_subtitle">Long press and drag to rearrange</string>
     <string name="harmony_edit_more">More toggles</string>
     <string name="penguin_edit_title">Edit tiles</string>
+    <!-- The Control Centre grid's media module when nothing is playing. [CHAR LIMIT=24] -->
+    <string name="penguin_media_not_playing">Not Playing</string>
+    <!-- Penguin Control Centre editor -->
+    <string name="penguin_cc_add_control">Add a Control</string>
+    <string name="penguin_cc_search">Search Controls</string>
+    <string name="penguin_cc_modules">Modules</string>
+    <string name="penguin_cc_controls">Controls</string>
+    <string name="penguin_cc_media">Media Player</string>
+    <string name="penguin_cc_brightness">Brightness</string>
+    <string name="penguin_cc_volume">Volume</string>
+    <string name="penguin_cc_remove">Remove</string>
+    <string name="penguin_cc_resize">Resize</string>
+    <string name="penguin_cc_reset">Reset</string>
     <string name="penguin_edit_subtitle">Tap to resize, long press to move</string>
     <string name="penguin_edit_more">Add tiles</string>
 

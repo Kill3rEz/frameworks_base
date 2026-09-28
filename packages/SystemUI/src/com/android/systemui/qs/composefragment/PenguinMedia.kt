@@ -16,7 +16,22 @@
 
 package com.android.systemui.qs.composefragment
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
 import androidx.compose.foundation.Canvas
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeDown
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextStyle
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -99,14 +114,21 @@ import kotlin.math.sin
 private val ArtworkCorner = 28.dp
 private val LogoSize = 44.dp
 private val ArtSize = 52.dp
+private val LargeArtSize = 112.dp
 private val WideHeight = 116.dp
 private val TrackHeight = 4.dp
 private val RingStroke = 3.dp
 private val ControlSize = 40.dp
 private val PageDotSize = 5.dp
 private val PageGap = 12.dp
+private val ScrubTouchHeight = 24.dp
+private val ExpandedCorner = 36.dp
+private val ExpandedPadding = 20.dp
+private val ExpandedPlaySize = 64.dp
 
 private val LocalMediaCardInteractive = compositionLocalOf { true }
+
+private val LocalMediaCardExpand = compositionLocalOf<(() -> Unit)?> { null }
 
 @Composable
 fun PenguinMediaCard(
@@ -115,9 +137,26 @@ fun PenguinMediaCard(
     modifier: Modifier = Modifier,
     square: Boolean = true,
     interactive: Boolean = true,
+    large: Boolean = false,
+    height: Dp? = null,
+    onExpand: (() -> Unit)? = null,
+    controlCentre: Boolean = false,
+    expanded: Boolean = false,
 ) {
-    CompositionLocalProvider(LocalMediaCardInteractive provides interactive) {
-        PenguinMediaCardContent(viewModelFactory, behavior, modifier, square)
+    CompositionLocalProvider(
+        LocalMediaCardInteractive provides interactive,
+        LocalMediaCardExpand provides onExpand,
+    ) {
+        PenguinMediaCardContent(
+            viewModelFactory,
+            behavior,
+            modifier,
+            square,
+            large,
+            height,
+            controlCentre,
+            expanded,
+        )
     }
 }
 
@@ -127,6 +166,10 @@ private fun PenguinMediaCardContent(
     behavior: MediaUiBehavior,
     modifier: Modifier,
     square: Boolean,
+    large: Boolean,
+    height: Dp?,
+    controlCentre: Boolean,
+    expanded: Boolean,
 ) {
     val context = LocalContext.current
     val viewModel =
@@ -146,10 +189,13 @@ private fun PenguinMediaCardContent(
     HorizontalPager(state = pagerState, pageSpacing = PageGap, modifier = modifier) { page ->
         val card = cards[page]
         val dots: @Composable () -> Unit = { PageDots(cards.size, pagerState.currentPage) }
-        if (square) {
-            SquareMediaCard(card, card.navigation, dots)
-        } else {
-            WideMediaCard(card, card.navigation, Modifier, dots)
+        when {
+            expanded -> ExpandedMediaPlayer(card, dots)
+            large -> LargeMediaCard(card, card.navigation, height ?: qsModuleHeight(4), dots)
+            square -> SquareMediaCard(card, card.navigation, dots, height)
+            controlCentre ->
+                ControlCentreWideMediaCard(card, card.navigation, height ?: qsModuleHeight(2), dots)
+            else -> WideMediaCard(card, card.navigation, Modifier, dots, height)
         }
     }
 }
@@ -159,8 +205,9 @@ private fun SquareMediaCard(
     card: MediaCardViewModel,
     navigation: MediaNavigationViewModel,
     dots: @Composable () -> Unit,
+    height: Dp? = null,
 ) {
-    val moduleHeight = qsModuleHeight(2)
+    val moduleHeight = height ?: qsModuleHeight(2)
 
     MediaCardContainer(card, RoundedCornerShape(ArtworkCorner)) {
     Column(
@@ -239,6 +286,7 @@ private fun WideMediaCard(
     navigation: MediaNavigationViewModel,
     modifier: Modifier,
     dots: @Composable () -> Unit,
+    height: Dp? = null,
 ) {
     val progress =
         (navigation as? MediaNavigationViewModel.Showing)?.progress?.coerceIn(0f, 1f) ?: 0f
@@ -247,7 +295,7 @@ private fun WideMediaCard(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(WideHeight)
+                .height(height ?: WideHeight)
                 .clip(RoundedCornerShape(ArtworkCorner))
     ) {
         Artwork(card.background, Modifier.fillMaxSize())
@@ -316,6 +364,345 @@ private fun WideMediaCard(
         }
     }
 }
+}
+
+@Composable
+private fun LargeMediaCard(
+    card: MediaCardViewModel,
+    navigation: MediaNavigationViewModel,
+    height: Dp,
+    dots: @Composable () -> Unit,
+) {
+    MediaCardContainer(card, RoundedCornerShape(ArtworkCorner)) {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .height(height)
+                    .clip(RoundedCornerShape(ArtworkCorner))
+                    .background(glassSurface())
+                    .padding(18.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(verticalAlignment = Alignment.Top) {
+                Artwork(
+                    card.background,
+                    Modifier.size(LargeArtSize).clip(RoundedCornerShape(16.dp)),
+                )
+                Spacer(Modifier.weight(1f))
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    (card.outputSwitcherChipButton as? MediaSecondaryActionViewModel.Action)?.let {
+                        MediaControl(it, ControlSize)
+                    }
+                    dots()
+                }
+            }
+            TrackText(card, MaterialTheme.typography.titleMedium)
+            ScrubBar(navigation)
+            Transport(card, navigation, ControlSize + 8.dp, ControlSize + 20.dp)
+        }
+    }
+}
+
+@Composable
+private fun ControlCentreWideMediaCard(
+    card: MediaCardViewModel,
+    navigation: MediaNavigationViewModel,
+    height: Dp,
+    dots: @Composable () -> Unit,
+) {
+    MediaCardContainer(card, RoundedCornerShape(ArtworkCorner)) {
+        Column(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .height(height)
+                    .clip(RoundedCornerShape(ArtworkCorner))
+                    .background(glassSurface())
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Artwork(card.background, Modifier.size(ArtSize).clip(RoundedCornerShape(12.dp)))
+                Box(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                    TrackText(card, MaterialTheme.typography.titleSmall)
+                }
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    (card.outputSwitcherChipButton as? MediaSecondaryActionViewModel.Action)?.let {
+                        MediaControl(it, ControlSize)
+                    }
+                    dots()
+                }
+            }
+            Transport(card, navigation, ControlSize, ControlSize + 8.dp)
+        }
+    }
+}
+
+@Composable
+private fun ExpandedMediaPlayer(card: MediaCardViewModel, dots: @Composable () -> Unit) {
+    Column(
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(ExpandedCorner))
+                .background(glassSurface())
+                .padding(ExpandedPadding),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(modifier = Modifier.fillMaxWidth(0.5f)) {
+                Artwork(
+                    card.background,
+                    Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(14.dp)),
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(
+                    icon = card.icon,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                dots()
+            }
+        }
+        TrackText(card, MaterialTheme.typography.titleMedium)
+        ScrubBar(card.navigation)
+        Transport(card, card.navigation, ControlSize + 8.dp, ExpandedPlaySize)
+        MusicVolumeSlider()
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            OutputChip(
+                card.outputSwitcherChip,
+                background = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                foreground = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TrackText(card: MediaCardViewModel, titleStyle: TextStyle) {
+    Column {
+        Text(
+            text = card.title,
+            color = MaterialTheme.colorScheme.onSurface,
+            style = titleStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = card.subtitle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun Transport(
+    card: MediaCardViewModel,
+    navigation: MediaNavigationViewModel,
+    size: Dp,
+    playSize: Dp,
+    filledPlay: Boolean = false,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        MediaControl(navigation.left, size, iconRes = R.drawable.ic_penguin_media_previous)
+        card.playPauseAction?.let { play ->
+            play.icon?.let { icon ->
+                val action = MediaSecondaryActionViewModel.Action(icon, play.onClick)
+                if (filledPlay) {
+                    Box(
+                        Modifier.size(playSize)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.onSurface),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        MediaControl(
+                            action,
+                            playSize,
+                            MaterialTheme.colorScheme.surface,
+                            playPauseIcon(play.state),
+                        )
+                    }
+                } else {
+                    MediaControl(action, playSize, iconRes = playPauseIcon(play.state))
+                }
+            }
+        }
+        MediaControl(navigation.right, size, iconRes = R.drawable.ic_penguin_media_next)
+    }
+}
+
+@Composable
+private fun ScrubBar(navigation: MediaNavigationViewModel) {
+    val showing = navigation as? MediaNavigationViewModel.Showing ?: return
+    val currentShowing by rememberUpdatedState(showing)
+    val interactive = LocalMediaCardInteractive.current
+    var touching by remember { mutableStateOf(false) }
+    val thickness by animateDpAsState(if (touching) 10.dp else 6.dp, label = "ScrubBar")
+    val scrubbable = interactive && showing.onScrubChange != null
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .height(ScrubTouchHeight)
+                    .semantics { contentDescription = showing.contentDescription }
+                    .thenIf(scrubbable) {
+                        Modifier.pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = {
+                                        touching = true
+                                        tryAwaitRelease()
+                                        touching = false
+                                    },
+                                    onTap = {
+                                        currentShowing.onScrubChange?.invoke(
+                                            (it.x / size.width).coerceIn(0f, 1f)
+                                        )
+                                        currentShowing.onScrubFinished?.invoke(Offset.Zero, true)
+                                    },
+                                )
+                            }
+                            .pointerInput(Unit) {
+                                var total = Offset.Zero
+                                detectHorizontalDragGestures(
+                                    onDragStart = {
+                                        total = Offset.Zero
+                                        touching = true
+                                    },
+                                    onDragEnd = {
+                                        touching = false
+                                        currentShowing.onScrubFinished?.invoke(total, true)
+                                    },
+                                    onDragCancel = {
+                                        touching = false
+                                        currentShowing.onScrubFinished?.invoke(Offset.Zero, false)
+                                    },
+                                ) { change, dragAmount ->
+                                    total += Offset(dragAmount, 0f)
+                                    currentShowing.onScrubChange?.invoke(
+                                        (change.position.x / size.width).coerceIn(0f, 1f)
+                                    )
+                                }
+                            }
+                    },
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(Modifier.fillMaxWidth().height(thickness).clip(CircleShape)) {
+                Box(
+                    Modifier.fillMaxSize()
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                )
+                Box(
+                    Modifier.fillMaxWidth(showing.progress.coerceIn(0f, 1f))
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.onSurface)
+                )
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = showing.progressText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = showing.durationText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MusicVolumeSlider() {
+    val context = LocalContext.current
+    val audioManager = remember(context) { context.getSystemService(AudioManager::class.java) }
+    val max = remember(audioManager) {
+        audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+    }
+    var volume by remember { mutableIntStateOf(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)) }
+    DisposableEffect(context, audioManager) {
+        val receiver =
+            object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                }
+            }
+        context.registerReceiver(
+            receiver,
+            IntentFilter(AudioManager.VOLUME_CHANGED_ACTION),
+            Context.RECEIVER_NOT_EXPORTED,
+        )
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+    val interactive = LocalMediaCardInteractive.current
+    fun setFrom(x: Float, width: Int) {
+        val target = ((x / width).coerceIn(0f, 1f) * max).roundToInt()
+        if (target != volume) {
+            volume = target
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
+        }
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        M3Icon(
+            imageVector = Icons.AutoMirrored.Rounded.VolumeDown,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+        Box(
+            modifier =
+                Modifier.weight(1f)
+                    .height(ScrubTouchHeight)
+                    .padding(horizontal = 10.dp)
+                    .thenIf(interactive) {
+                        Modifier.pointerInput(max) {
+                                detectTapGestures { setFrom(it.x, size.width) }
+                            }
+                            .pointerInput(max) {
+                                detectHorizontalDragGestures { change, _ ->
+                                    setFrom(change.position.x, size.width)
+                                }
+                            }
+                    },
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(Modifier.fillMaxWidth().height(8.dp).clip(CircleShape)) {
+                Box(
+                    Modifier.fillMaxSize()
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                )
+                Box(
+                    Modifier.fillMaxWidth(volume.toFloat() / max)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.onSurface)
+                )
+            }
+        }
+        M3Icon(
+            imageVector = Icons.AutoMirrored.Rounded.VolumeUp,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+    }
 }
 
 @Composable
@@ -406,6 +793,11 @@ private fun MediaCardContainer(
 ) {
     if (!LocalMediaCardInteractive.current) {
         content()
+        return
+    }
+    val expand = LocalMediaCardExpand.current
+    if (expand != null) {
+        Box(Modifier.clickable(onClick = expand)) { content() }
         return
     }
     val expandable = remember { Expandable() }
@@ -551,7 +943,7 @@ private fun MyUiMediaPage(card: MediaCardViewModel, height: Dp) {
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                MyUiOutputChip(card.outputSwitcherChip)
+                OutputChip(card.outputSwitcherChip, Color.White, Color.Black)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -596,13 +988,13 @@ private fun myUiControls(
 }
 
 @Composable
-private fun MyUiOutputChip(chip: MediaDeviceChipViewModel) {
+private fun OutputChip(chip: MediaDeviceChipViewModel, background: Color, foreground: Color) {
     val expandable = remember { Expandable() }
     val interactive = LocalMediaCardInteractive.current
     Expandable(
         expandable = expandable,
         controller =
-            rememberExpandableController(color = Color.White, shape = RoundedCornerShape(50)),
+            rememberExpandableController(color = background, shape = RoundedCornerShape(50)),
         useModifierBasedImplementation = false,
         defaultMinSize = false,
         modifier = Modifier.padding(start = 8.dp),
@@ -611,17 +1003,17 @@ private fun MyUiOutputChip(chip: MediaDeviceChipViewModel) {
             verticalAlignment = Alignment.CenterVertically,
             modifier =
                 Modifier.clip(RoundedCornerShape(50))
-                    .background(Color.White)
+                    .background(background)
                     .thenIf(interactive) {
                         Modifier.clickable { chip.onClick(expandable) }
                     }
                     .padding(horizontal = 10.dp, vertical = 4.dp),
         ) {
-            Icon(icon = chip.icon, tint = Color.Black, modifier = Modifier.size(14.dp))
+            Icon(icon = chip.icon, tint = foreground, modifier = Modifier.size(14.dp))
             chip.text?.let { text ->
                 Text(
                     text = text.toString(),
-                    color = Color.Black,
+                    color = foreground,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

@@ -254,9 +254,19 @@ fun ConnectivityFolder(
     compactHeight: Dp? = null,
     expanded: Boolean = false,
     onExpandedChange: (Boolean) -> Unit = {},
+    showHeader: Boolean = true,
+    carded: Boolean = true,
 ) {
     CompositionLocalProvider(LocalFolderInteractive provides interactive) {
-        ConnectivityFolderContent(tiles, modifier, compactHeight, expanded, onExpandedChange)
+        ConnectivityFolderContent(
+            tiles,
+            modifier,
+            compactHeight,
+            expanded,
+            onExpandedChange,
+            showHeader,
+            carded,
+        )
     }
 }
 
@@ -267,6 +277,8 @@ private fun ConnectivityFolderContent(
     compactHeight: Dp?,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
+    showHeader: Boolean,
+    carded: Boolean,
 ) {
     val bySpec = remember(tiles) { tiles.associateBy { it.spec.spec } }
     val (largeSpecs, smallSpecs) = folderSpecs()
@@ -290,7 +302,16 @@ private fun ConnectivityFolderContent(
             small = small,
             gap = gap,
             uniformGrid = secureIntSetting(SETTING_QS_FOLDER_SPAN, 1) >= 2,
-            onDone = { onExpandedChange(false) },
+            onDone = { onExpandedChange(false) }.takeIf { showHeader },
+            modifier =
+                if (showHeader || !carded) {
+                    modifier
+                } else {
+                    modifier
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(glassSurface())
+                        .padding(CardPadding)
+                },
         )
         return
     }
@@ -347,14 +368,15 @@ private fun ExpandedSheet(
     small: List<TileViewModel>,
     gap: Dp,
     uniformGrid: Boolean,
-    onDone: () -> Unit,
+    onDone: (() -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
     val all = large + small
     val cards = if (uniformGrid) all else all.filter { it.spec.spec in ConnectivityFolderSpecs.ExpandedCards }
     val rows = all.filterNot { it in cards }
 
-    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = spacedBy(gap)) {
-        Row(
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = spacedBy(gap)) {
+        if (onDone != null) Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
