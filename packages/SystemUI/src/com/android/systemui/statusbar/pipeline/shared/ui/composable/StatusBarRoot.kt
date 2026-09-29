@@ -397,6 +397,7 @@ fun StatusBarRoot(
                                     onMediaControlPopupVisibilityChanged = {},
                                     onIslandBoundsChanged = { bounds ->
                                         islandBoundsState.value = bounds
+                                        publishIslandBounds(context, bounds)
                                         collapseOverlappingStatusIcons(
                                             statusIconContainerRef,
                                             overlapDotParentRef,
@@ -1049,6 +1050,24 @@ private var overlapDotView: View? = null
 private var pendingOverlapCheck: Runnable? = null
 
 private const val SPOTLIGHT_OPEN_SETTING = "penguin_spotlight_open"
+private const val ISLAND_BOUNDS_SETTING = "penguin_island_bounds"
+
+private val islandBoundsHandler = Handler(Looper.getMainLooper())
+private var publishedIslandBounds: String? = null
+
+private fun publishIslandBounds(context: Context, bounds: android.graphics.Rect) {
+    val value = if (bounds.isEmpty) "" else bounds.flattenToString()
+    islandBoundsHandler.removeCallbacksAndMessages(null)
+    islandBoundsHandler.postDelayed(
+        {
+            if (value != publishedIslandBounds) {
+                publishedIslandBounds = value
+                Settings.Secure.putString(context.contentResolver, ISLAND_BOUNDS_SETTING, value)
+            }
+        },
+        100,
+    )
+}
 
 private var lastIslandBounds = android.graphics.Rect()
 private var dynamicIslandSettingEnabled = false
