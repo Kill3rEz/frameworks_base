@@ -23,12 +23,14 @@ import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -106,7 +108,12 @@ fun PopupSurface(
     colorMode: Int = rememberPopupColorMode(),
     content: @Composable () -> Unit,
 ) {
-    when (colorMode) {
+    val cameraClearance = LocalPopupCameraClearance.current
+    val body: @Composable () -> Unit = {
+        Box(Modifier.padding(top = cameraClearance)) { content() }
+    }
+    val mode = if (cameraClearance > 0.dp) POPUP_COLOR_MODE_SOLID_BLACK else colorMode
+    when (mode) {
         POPUP_COLOR_MODE_BLUR -> {
             val density = LocalDensity.current
             Box(
@@ -129,7 +136,7 @@ fun PopupSurface(
                 CompositionLocalProvider(
                     LocalContentColor provides MaterialTheme.colorScheme.onSurface
                 ) {
-                    content()
+                    body()
                 }
             }
         }
@@ -140,7 +147,7 @@ fun PopupSurface(
                 shape = shape,
                 shadowElevation = shadowElevation,
                 modifier = modifier,
-            ) { content() }
+            ) { body() }
         }
         else -> {
             Surface(
@@ -149,7 +156,9 @@ fun PopupSurface(
                 shape = shape,
                 shadowElevation = shadowElevation,
                 modifier = modifier,
-            ) { content() }
+            ) { body() }
         }
     }
 }
+
+val LocalPopupCameraClearance = compositionLocalOf { 0.dp }

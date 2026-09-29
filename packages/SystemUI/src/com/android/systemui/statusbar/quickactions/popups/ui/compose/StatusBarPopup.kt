@@ -17,6 +17,8 @@
 package com.android.systemui.statusbar.quickactions.popups.ui.compose
 
 import android.view.ViewTreeObserver
+import android.view.WindowManager
+import android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -35,6 +37,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -60,8 +63,12 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.android.systemui.res.R
 import com.android.systemui.statusbar.quickactions.alarm.ui.compose.AlarmPopup
@@ -80,12 +87,6 @@ import kotlinx.coroutines.coroutineScope
 import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings.POPUP_COLOR_MODE_BLUR
 import kotlinx.coroutines.launch
 
-/**
- * Displays a popup in the status bar area. The offset is calculated to draw the popup below the
- * status bar. When [chipBoundsInScreen] is provided, the popup grows out of the chip's on-screen
- * position and aspect ratio with an independent-axis squish animation, rather than a generic
- * uniform scale-in.
- */
 @Composable
 fun StatusBarPopup(
     viewModel: PopupChipModel.Shown,
@@ -96,22 +97,56 @@ fun StatusBarPopup(
     onPage: (Int) -> Unit = {},
 ) {
     val density = Density(LocalContext.current)
+    val statusBarHeightPx =
+        with(density) { dimensionResource(R.dimen.status_bar_height).roundToPx() }
+    val edgePaddingPx = with(density) { PopupEdgePadding.roundToPx() }
+    val cameraBottomPx = LocalView.current.rootWindowInsets?.displayCutout?.let { cutout ->
+        cutout.boundingRectTop.takeUnless { it.isEmpty }?.bottom
+    }
+    val popupTopPx = chipBoundsInScreen?.top?.toInt()
+    val cameraClearance =
+        if (popupTopPx != null && cameraBottomPx != null) {
+            with(density) { (cameraBottomPx - popupTopPx).coerceAtLeast(0).toDp() }
+        } else {
+            0.dp
+        }
+    val positionProvider =
+        remember(popupTopPx, statusBarHeightPx, edgePaddingPx) {
+            object : PopupPositionProvider {
+                override fun calculatePosition(
+                    anchorBounds: IntRect,
+                    windowSize: IntSize,
+                    layoutDirection: LayoutDirection,
+                    popupContentSize: IntSize,
+                ): IntOffset =
+                    IntOffset(
+                        x = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2,
+                        y =
+                            if (popupTopPx != null) popupTopPx - edgePaddingPx
+                            else anchorBounds.top + statusBarHeightPx,
+                    )
+            }
+        }
     Popup(
-        alignment = Alignment.TopCenter,
+        popupPositionProvider = positionProvider,
         properties =
             PopupProperties(
                 focusable = true,
                 dismissOnBackPress = true,
                 dismissOnClickOutside = true,
             ),
-        offset =
-            IntOffset(
-                x = 0,
-                y = with(density) { dimensionResource(R.dimen.status_bar_height).roundToPx() },
-            ),
         onDismissRequest = { viewModel.hidePopup() },
     ) {
         val popupView = LocalView.current
+        DisposableEffect(popupView) {
+            val root = popupView.rootView
+            val lp = root.layoutParams as? WindowManager.LayoutParams
+            if (lp != null && lp.layoutInDisplayCutoutMode != LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS) {
+                lp.layoutInDisplayCutoutMode = LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                root.context.getSystemService(WindowManager::class.java)?.updateViewLayout(root, lp)
+            }
+            onDispose {}
+        }
         var popupBoundsInScreen by remember { mutableStateOf<Rect?>(null) }
 
         val transformOrigin by remember {
@@ -274,7 +309,7 @@ fun StatusBarPopup(
 
             Box(
                 modifier =
-                    Modifier.padding(8.dp)
+                    Modifier.padding(PopupEdgePadding)
                         .wrapContentSize()
                         .onGloballyPositioned { coordinates ->
                             popupBoundsInScreen = coordinates.boundsInScreen(popupView)
@@ -360,7 +395,11 @@ fun StatusBarPopup(
                         },
                         label = "island_popup_pager",
                     ) { chip ->
-                        IslandPopupContent(chip)
+                        CompositionLocalProvider(
+                            LocalPopupCameraClearance provides cameraClearance
+                        ) {
+                            IslandPopupContent(chip)
+                        }
                     }
                 }
             }
@@ -388,7 +427,9 @@ private fun IslandPopupContent(viewModel: PopupChipModel.Shown) {
                     verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
                 ) {
                     MediaControlPopup(model = model, useWaveform = useWaveform)
-                    LyricsCard(model = model)
+                    CompositionLocalProvider(LocalPopupCameraClearance provides 0.dp) {
+                        LyricsCard(model = model)
+                    }
                 }
             } else {
                 MediaControlPopup(model = model, useWaveform = useWaveform)
@@ -409,3 +450,5 @@ private fun IslandPopupContent(viewModel: PopupChipModel.Shown) {
         PopupContentModel.None -> Unit
     }
 }
+
+private val PopupEdgePadding = 8.dp
