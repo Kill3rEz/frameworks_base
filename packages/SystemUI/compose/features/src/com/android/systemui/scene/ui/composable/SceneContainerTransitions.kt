@@ -30,6 +30,7 @@ import com.android.systemui.scene.ui.composable.transitions.dreamToCommunalTrans
 import com.android.systemui.scene.ui.composable.transitions.dreamToGoneTransition
 import com.android.systemui.scene.ui.composable.transitions.dreamToNotificationsShadeTransition
 import com.android.systemui.scene.ui.composable.transitions.dreamToQuickSettingsShadeTransition
+import com.android.systemui.scene.ui.composable.transitions.fromQuickSettingsShadeTransition
 import com.android.systemui.scene.ui.composable.transitions.dreamToQuickSettingsTransition
 import com.android.systemui.scene.ui.composable.transitions.dreamToSingleShadeTransition
 import com.android.systemui.scene.ui.composable.transitions.dreamToSplitShadeTransition
@@ -59,6 +60,7 @@ import com.android.systemui.scene.ui.composable.transitions.sharedBouncerTransit
 import com.android.systemui.scene.ui.composable.transitions.toBouncerTransition
 import com.android.systemui.scene.ui.composable.transitions.toNotificationsShadeTransition
 import com.android.systemui.scene.ui.composable.transitions.toQuickActionsTransition
+import com.android.systemui.scene.ui.composable.transitions.notificationsToQuickSettingsShadeTransition
 import com.android.systemui.scene.ui.composable.transitions.toQuickSettingsShadeTransition
 import com.android.systemui.scene.ui.viewmodel.ToBouncerTransitionViewModel
 import com.android.systemui.shade.ui.composable.Shade
@@ -557,12 +559,14 @@ class SceneContainerTransitions : SceneContainerTransitionsBuilder {
                 cuj = Cuj.CUJ_NOTIFICATION_SHADE_QS_EXPAND_COLLAPSE,
                 cujTag = TAG_COLLAPSE,
             ) {
-                reversed {
-                    toQuickSettingsShadeTransition(
-                        shadeExpansionMotion = shadeExpansionMotion,
-                        revealHaptics = revealHaptics,
-                    )
-                }
+                fromQuickSettingsShadeTransition()
+            }
+
+            from(Overlays.NotificationsShade, to = Overlays.QuickSettingsShade) {
+                notificationsToQuickSettingsShadeTransition()
+            }
+            from(Overlays.QuickSettingsShade, to = Overlays.NotificationsShade) {
+                reversed { notificationsToQuickSettingsShadeTransition() }
             }
 
             from(

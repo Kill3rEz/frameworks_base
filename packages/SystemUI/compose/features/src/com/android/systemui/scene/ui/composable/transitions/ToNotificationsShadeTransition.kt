@@ -16,17 +16,14 @@
 
 package com.android.systemui.scene.ui.composable.transitions
 
-import androidx.compose.animation.core.tween
 import com.android.compose.animation.scene.TransitionBuilder
 import com.android.compose.animation.scene.reveal.ContainerRevealHaptics
-import com.android.compose.animation.scene.reveal.verticalContainerReveal
 import com.android.mechanics.behavior.VerticalExpandContainerSpec
 import com.android.systemui.notifications.ui.composable.Notifications
 import com.android.systemui.notifications.ui.composable.NotificationsShade
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementKeys
 import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.shade.ui.composable.OverlayShade
-import kotlin.time.Duration.Companion.milliseconds
 
 fun TransitionBuilder.toNotificationsShadeTransition(
     durationScale: Double = 1.0,
@@ -34,7 +31,7 @@ fun TransitionBuilder.toNotificationsShadeTransition(
     shadeExpansionMotion: VerticalExpandContainerSpec,
     revealHaptics: ContainerRevealHaptics,
 ) {
-    spec = tween(durationMillis = (DefaultDuration * durationScale).inWholeMilliseconds.toInt())
+    spec = overlayShadeSpring(durationScale)
 
     // Ensure the shared elements aren't clipped by the shade outline during the transition from
     // lockscreen.
@@ -54,16 +51,10 @@ fun TransitionBuilder.toNotificationsShadeTransition(
         enabled = enableSharedElements,
     )
 
-    verticalContainerReveal(
-        container = NotificationsShade.Elements.Panel,
-        motionSpec = shadeExpansionMotion,
-        haptics = revealHaptics,
-        useMechanics = true,
-    )
+    oxygenPanelReveal(NotificationsShade.Elements.Panel)
 
     fractionRange(start = .16f, end = 0.8f) { fade(NotificationsShade.Elements.StatusBar) }
     fractionRange(start = .33f, end = 0.8f) { fade(Notifications.Elements.StackPlaceholder) }
     fractionRange(end = .5f) { fade(OverlayShade.Elements.Scrim) }
 }
 
-private val DefaultDuration = 300.milliseconds
