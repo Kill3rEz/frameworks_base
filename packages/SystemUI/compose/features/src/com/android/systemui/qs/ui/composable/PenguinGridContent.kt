@@ -96,6 +96,7 @@ import com.android.systemui.qs.shared.ui.QuickSettings.Elements
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.res.R
 import kotlin.math.max
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 
 object PenguinMediaExpansion {
@@ -207,6 +208,11 @@ private fun ContentScope.PenguinGridQuickSettingsContent(
         )
     }
     val sheetShowing = expanded || progress.value > 0.01f
+    var settled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(500)
+        settled = true
+    }
     val horizontalMargin = PenguinGridMargin
 
     Box(
@@ -214,7 +220,7 @@ private fun ContentScope.PenguinGridQuickSettingsContent(
             modifier
                 .element(Elements.QuickSettingsContent)
                 .fillMaxWidth()
-                .animateContentSize()
+                .then(if (settled) Modifier.animateContentSize() else Modifier)
                 .sysuiResTag("quick_settings_panel")
     ) {
         VerticalPager(

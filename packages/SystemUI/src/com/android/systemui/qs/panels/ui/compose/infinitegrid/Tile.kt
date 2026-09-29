@@ -179,7 +179,12 @@ fun ContentScope.Tile(
 
         // TODO(b/361789146): Draw the shapes instead of clipping
         val tileShape by TileDefaults.animateTileShapeAsState(uiState)
-        val animatedColor by animateColorAsState(colors.background, label = "QSTileBackgroundColor")
+        val animatedColor by
+            animateColorAsState(
+                colors.background,
+                tileColorSpec(),
+                label = "QSTileBackgroundColor",
+            )
         val isDualTarget = uiState.handlesToggleClick
         val interactionSource = remember { MutableInteractionSource() }
 
