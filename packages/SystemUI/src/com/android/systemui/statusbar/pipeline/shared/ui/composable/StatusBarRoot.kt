@@ -299,6 +299,38 @@ fun StatusBarRoot(
                     dynamicIslandSettingObserver,
                     UserHandle.USER_ALL,
                 )
+                var spotlightFade: android.animation.ValueAnimator? = null
+                val spotlightObserver =
+                    object : ContentObserver(Handler(Looper.getMainLooper())) {
+                        override fun onChange(selfChange: Boolean) {
+                            val open =
+                                Settings.Secure.getInt(
+                                    context.contentResolver,
+                                    SPOTLIGHT_OPEN_SETTING,
+                                    0,
+                                ) != 0
+                            spotlightFade?.cancel()
+                            spotlightFade =
+                                android.animation.ValueAnimator.ofFloat(
+                                        phoneStatusBarView.transitionAlpha,
+                                        if (open) 0f else 1f,
+                                    )
+                                    .apply {
+                                        duration = if (open) 100L else 200L
+                                        addUpdateListener {
+                                            phoneStatusBarView.transitionAlpha =
+                                                it.animatedValue as Float
+                                        }
+                                        start()
+                                    }
+                        }
+                    }
+                context.contentResolver.registerContentObserver(
+                    Settings.Secure.getUriFor(SPOTLIGHT_OPEN_SETTING),
+                    false,
+                    spotlightObserver,
+                    UserHandle.USER_ALL,
+                )
                 phoneStatusBarView.addOnAttachStateChangeListener(
                     object : View.OnAttachStateChangeListener {
                         override fun onViewAttachedToWindow(v: View) {}
@@ -307,6 +339,7 @@ fun StatusBarRoot(
                             context.contentResolver.unregisterContentObserver(
                                 dynamicIslandSettingObserver
                             )
+                            context.contentResolver.unregisterContentObserver(spotlightObserver)
                         }
                     }
                 )
@@ -1014,6 +1047,8 @@ private fun dispatchAndConsume(event: PointerEvent, legacyView: View) {
 
 private var overlapDotView: View? = null
 private var pendingOverlapCheck: Runnable? = null
+
+private const val SPOTLIGHT_OPEN_SETTING = "penguin_spotlight_open"
 
 private var lastIslandBounds = android.graphics.Rect()
 private var dynamicIslandSettingEnabled = false
