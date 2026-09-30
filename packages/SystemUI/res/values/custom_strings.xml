@@ -236,6 +236,11 @@
     <string name="harmony_not_playing">Not playing</string>
     <!-- One UI Quick Settings: the media pill when nothing is playing. -->
     <string name="oneui_play_music">Play music</string>
+    <!-- One UI Quick Settings: edits the tiles in the card of round toggles. -->
+    <string name="oneui_edit">Edit</string>
+    <!-- One UI Quick Settings: Add a control names for its cards. -->
+    <string name="oneui_toggles">Toggles</string>
+    <string name="oneui_sound_mode">Sound mode</string>
     <string name="harmony_devices">Devices</string>
     <string name="harmony_cast_hint">Tap to cast your screen to a nearby device</string>
     <string name="harmony_connected">Connected</string>

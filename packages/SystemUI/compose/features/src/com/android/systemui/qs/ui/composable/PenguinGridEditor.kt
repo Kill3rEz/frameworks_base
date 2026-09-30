@@ -50,6 +50,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.BrightnessHigh
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Wifi
@@ -60,6 +62,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -119,6 +122,21 @@ private class Drag(val item: Item, val fromPage: Int, val grab: Offset) {
 
 @Composable
 fun ContentScope.PenguinGridEditor(viewModel: QuickSettingsContainerViewModel, modifier: Modifier = Modifier) {
+    PenguinGridEditorHost(viewModel, modifier)
+}
+
+@Composable
+fun ContentScope.OneUiGridEditor(viewModel: QuickSettingsContainerViewModel, modifier: Modifier = Modifier) {
+    CompositionLocalProvider(LocalPenguinGridFlavor provides PenguinGrid.Flavor.OneUi) {
+        PenguinGridEditorHost(viewModel, modifier)
+    }
+}
+
+@Composable
+private fun ContentScope.PenguinGridEditorHost(
+    viewModel: QuickSettingsContainerViewModel,
+    modifier: Modifier,
+) {
     val editViewModel = viewModel.editModeViewModel
     val gridLayout by editViewModel.gridLayout.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { closeExpansions() }
@@ -137,9 +155,12 @@ private fun ContentScope.PenguinGridEditorContent(
 ) {
     val editViewModel = viewModel.editModeViewModel
     val resolver = LocalContext.current.contentResolver
+    val flavor = LocalPenguinGridFlavor.current
+    val oneUi = flavor == PenguinGrid.Flavor.OneUi
     val model = rememberPenguinGridModel(viewModel)
     val latestModel by rememberUpdatedState(model)
     val pages = model.pages
+    CompositionLocalProvider(LocalPenguinGridLoose provides model.loose) {
     val mediaShown = viewModel.showMedia && viewModel.hasMediaCards
     val editTiles by editViewModel.tiles.collectAsStateWithLifecycle(emptyList())
     val tilesBySpec = remember(editTiles) { editTiles.associateBy { it.tileSpec } }
@@ -167,7 +188,7 @@ private fun ContentScope.PenguinGridEditorContent(
             }
         }
         val cleaned = merged.filterIndexed { index, page -> index == 0 || page.isNotEmpty() }
-        Settings.Secure.putString(resolver, PenguinGrid.SETTING, PenguinGrid.serialize(cleaned))
+        Settings.Secure.putString(resolver, flavor.setting, PenguinGrid.serialize(cleaned))
     }
 
     var drag by remember { mutableStateOf<Drag?>(null) }
@@ -198,7 +219,7 @@ private fun ContentScope.PenguinGridEditorContent(
                 modifier =
                     Modifier.clip(RoundedCornerShape(12.dp))
                         .clickable {
-                            Settings.Secure.putString(resolver, PenguinGrid.SETTING, null)
+                            Settings.Secure.putString(resolver, flavor.setting, null)
                         }
                         .padding(horizontal = 12.dp, vertical = 8.dp),
             )
@@ -356,7 +377,7 @@ private fun ContentScope.PenguinGridEditorContent(
                             val next = pages.map { it.toMutableList() }
                             next.getOrNull(index)?.remove(item)
                             commit(next)
-                            if (!PenguinGrid.isModule(item.spec)) {
+                            if (!PenguinGrid.isModule(item.spec) && !oneUi) {
                                 editViewModel.removeTile(item.spec)
                             }
                         },
@@ -431,9 +452,10 @@ private fun ContentScope.PenguinGridEditorContent(
                 viewModel = viewModel,
                 modules = model.modules,
                 currentPage = pages.getOrNull(pagerState.currentPage).orEmpty(),
+                loose = if (oneUi) model.loose.toSet() else emptySet(),
                 onAddModule = { spec ->
                     val index = pagerState.currentPage.coerceIn(0, pages.lastIndex)
-                    val (w, h) = PenguinGrid.sizes(spec).first()
+                    val (w, h) = PenguinGrid.sizes(spec, flavor).first()
                     val next = pages.map { it.toMutableList() }
                     next[index] += PenguinGrid.firstFree(next[index], spec, w, h)
                     commit(next)
@@ -445,15 +467,16 @@ private fun ContentScope.PenguinGridEditorContent(
                     next[index] += PenguinGrid.firstFree(next[index], spec, 1, 1)
                     Settings.Secure.putString(
                         resolver,
-                        PenguinGrid.SETTING,
+                        flavor.setting,
                         PenguinGrid.serialize(next),
                     )
-                    editViewModel.addTile(spec)
+                    if (spec !in model.loose) editViewModel.addTile(spec)
                     adding = false
                 },
                 onDismiss = { adding = false },
             )
         }
+    }
     }
 }
 
@@ -464,7 +487,10 @@ private fun ContentScope.EditItem(
     mediaShown: Boolean,
     tiles: Map<TileSpec, EditTileViewModel>,
 ) {
-    if (PenguinGrid.isModule(item.spec)) {
+    if (
+        PenguinGrid.isModule(item.spec) ||
+            LocalPenguinGridFlavor.current == PenguinGrid.Flavor.OneUi
+    ) {
         GridItemContent(
             viewModel = viewModel,
             item = item,
@@ -601,7 +627,7 @@ private fun EditPage(
                     ) {
                         onRemove(item)
                     }
-                    if (PenguinGrid.sizes(item.spec).size > 1) {
+                    if (PenguinGrid.sizes(item.spec, LocalPenguinGridFlavor.current).size > 1) {
                         ResizeHandle(
                             item = item,
                             metrics = metrics,
@@ -625,7 +651,7 @@ private fun ResizeHandle(
     onResize: (TileSpec, Int, Int) -> Unit,
     modifier: Modifier,
 ) {
-    val sizes = PenguinGrid.sizes(item.spec)
+    val sizes = PenguinGrid.sizes(item.spec, LocalPenguinGridFlavor.current)
     val current by rememberUpdatedState(item)
     val currentMetrics by rememberUpdatedState(metrics)
     val currentOnPreview by rememberUpdatedState(onPreview)
@@ -738,6 +764,7 @@ private fun AddControlSheet(
     viewModel: QuickSettingsContainerViewModel,
     modules: Set<TileSpec>,
     currentPage: List<Item>,
+    loose: Set<TileSpec>,
     onAddModule: (TileSpec) -> Unit,
     onAddTile: (TileSpec) -> Unit,
     onDismiss: () -> Unit,
@@ -751,6 +778,8 @@ private fun AddControlSheet(
             FOLDER_SPEC to stringResource(R.string.quick_settings_connectivity_folder_title),
             PenguinGrid.BRIGHTNESS_SPEC to stringResource(R.string.penguin_cc_brightness),
             PenguinGrid.VOLUME_SPEC to stringResource(R.string.penguin_cc_volume),
+            PenguinGrid.ONEUI_TOGGLES_SPEC to stringResource(R.string.oneui_toggles),
+            PenguinGrid.ONEUI_SOUND_SPEC to stringResource(R.string.oneui_sound_mode),
         )
     val moduleIcons =
         mapOf(
@@ -758,14 +787,16 @@ private fun AddControlSheet(
             FOLDER_SPEC to Icons.Rounded.Wifi,
             PenguinGrid.BRIGHTNESS_SPEC to Icons.Rounded.BrightnessHigh,
             PenguinGrid.VOLUME_SPEC to Icons.AutoMirrored.Rounded.VolumeUp,
+            PenguinGrid.ONEUI_TOGGLES_SPEC to Icons.Rounded.Apps,
+            PenguinGrid.ONEUI_SOUND_SPEC to Icons.Rounded.Vibration,
         )
     val onPage = currentPage.map { it.spec }.toSet()
     val availableModules =
-        PenguinGrid.MODULE_SPECS.filter { it in modules && it !in onPage }
+        LocalPenguinGridFlavor.current.moduleSpecs.filter { it in modules && it !in onPage }
             .filter { moduleNames[it].orEmpty().contains(query, ignoreCase = true) }
     val availableTiles =
         tiles
-            .filter { !it.isCurrent }
+            .filter { !it.isCurrent || it.tileSpec in loose }
             .filter { it.label.text.contains(query, ignoreCase = true) }
             .sortedBy { it.label.text.lowercase() }
 

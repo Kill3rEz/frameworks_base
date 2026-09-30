@@ -31,9 +31,29 @@ object PenguinGrid {
     val BRIGHTNESS_SPEC = TileSpec.create("penguin_brightness")
     val VOLUME_SPEC = TileSpec.create("penguin_volume")
 
+    val ONEUI_TOGGLES_SPEC = TileSpec.create("penguin_oneui_toggles")
+
+    val ONEUI_SOUND_SPEC = TileSpec.create("penguin_oneui_sound")
+
     val MODULE_SPECS = listOf(FOLDER_SPEC, MEDIA_SPEC, BRIGHTNESS_SPEC, VOLUME_SPEC)
 
-    fun isModule(spec: TileSpec) = spec in MODULE_SPECS
+    private val ONEUI_MODULE_SPECS =
+        listOf(ONEUI_TOGGLES_SPEC, BRIGHTNESS_SPEC, VOLUME_SPEC, ONEUI_SOUND_SPEC, MEDIA_SPEC)
+
+    enum class Flavor(val setting: String, val maxRows: Int) {
+        ControlCentre(SETTING, MAX_ROWS),
+
+        OneUi("qs_oneui_grid", 14);
+
+        val moduleSpecs: List<TileSpec>
+            get() = if (this == OneUi) ONEUI_MODULE_SPECS else MODULE_SPECS
+
+        val placesEveryTile: Boolean
+            get() = this == ControlCentre
+    }
+
+    fun isModule(spec: TileSpec) =
+        spec in MODULE_SPECS || spec == ONEUI_TOGGLES_SPEC || spec == ONEUI_SOUND_SPEC
 
     data class Item(val spec: TileSpec, val x: Int, val y: Int, val w: Int, val h: Int) {
         val right: Int
@@ -48,7 +68,20 @@ object PenguinGrid {
         fun contains(cellX: Int, cellY: Int) = cellX in x until right && cellY in y until bottom
     }
 
-    fun sizes(spec: TileSpec): List<Pair<Int, Int>> =
+    fun sizes(spec: TileSpec, flavor: Flavor = Flavor.ControlCentre): List<Pair<Int, Int>> =
+        if (flavor == Flavor.OneUi) oneUiSizes(spec) else controlCentreSizes(spec)
+
+    private fun oneUiSizes(spec: TileSpec): List<Pair<Int, Int>> =
+        when (spec) {
+            ONEUI_TOGGLES_SPEC -> listOf(4 to 2, 4 to 3)
+            BRIGHTNESS_SPEC,
+            VOLUME_SPEC -> listOf(3 to 1, 4 to 1, 2 to 1)
+            ONEUI_SOUND_SPEC -> listOf(1 to 1)
+            MEDIA_SPEC -> listOf(4 to 2, 2 to 2, 4 to 4)
+            else -> listOf(1 to 1, 2 to 1)
+        }
+
+    private fun controlCentreSizes(spec: TileSpec): List<Pair<Int, Int>> =
         when (spec) {
             MEDIA_SPEC -> listOf(2 to 2, 4 to 2, 4 to 4, 4 to 6)
             FOLDER_SPEC -> listOf(2 to 2, 4 to 4)
@@ -57,8 +90,14 @@ object PenguinGrid {
             else -> listOf(1 to 1, 2 to 1)
         }
 
-    fun defaultSize(spec: TileSpec, largeTile: Boolean): Pair<Int, Int> =
-        if (isModule(spec)) sizes(spec).first() else if (largeTile) 2 to 1 else 1 to 1
+    fun defaultSize(
+        spec: TileSpec,
+        largeTile: Boolean,
+        flavor: Flavor = Flavor.ControlCentre,
+    ): Pair<Int, Int> =
+        if (isModule(spec)) sizes(spec, flavor).first()
+        else if (largeTile) 2 to 1
+        else 1 to 1
 
     fun rows(page: List<Item>) = page.maxOfOrNull { it.bottom } ?: 0
 
@@ -71,6 +110,7 @@ object PenguinGrid {
         tiles: List<TileSpec>,
         largeTiles: Set<TileSpec>,
         preferredPage: Map<TileSpec, Int> = emptyMap(),
+        flavor: Flavor = Flavor.ControlCentre,
     ): List<List<Item>> {
         val present = tiles.toSet()
         val seen = mutableSetOf<TileSpec>()
@@ -86,10 +126,10 @@ object PenguinGrid {
                         if (!module && (item.spec !in present || item.spec in seen)) continue
                         val (w, h) =
                             if (module) {
-                                if (item.w to item.h in sizes(item.spec)) item.w to item.h
-                                else sizes(item.spec).first()
+                                if (item.w to item.h in sizes(item.spec, flavor)) item.w to item.h
+                                else sizes(item.spec, flavor).first()
                             } else {
-                                defaultSize(item.spec, item.spec in largeTiles)
+                                defaultSize(item.spec, item.spec in largeTiles, flavor)
                             }
                         val fitted =
                             item.copy(
@@ -108,13 +148,15 @@ object PenguinGrid {
                 .toMutableList()
         if (out.isEmpty()) out.add(mutableListOf())
         for (spec in tiles) {
+            if (!flavor.placesEveryTile) break
             if (spec in seen) continue
             val index = preferredPage[spec]?.takeIf { it in out.indices } ?: 0
             val (w, h) = defaultSize(spec, spec in largeTiles)
             out[index].add(firstFree(out[index], spec, w, h))
         }
         return paginate(
-            out.filterIndexed { index, page -> index == 0 || page.isNotEmpty() }.map(::compact)
+            out.filterIndexed { index, page -> index == 0 || page.isNotEmpty() }.map(::compact),
+            flavor.maxRows,
         )
     }
 
@@ -132,22 +174,22 @@ object PenguinGrid {
         return out
     }
 
-    fun paginate(pages: List<List<Item>>): List<List<Item>> {
+    fun paginate(pages: List<List<Item>>, maxRows: Int = MAX_ROWS): List<List<Item>> {
         val out = mutableListOf<List<Item>>()
         var carried = emptyList<Item>()
         for (page in pages) {
-            carried = spill(page, out)
+            carried = spill(page, out, maxRows)
             while (carried.isNotEmpty()) {
                 val next = mutableListOf<Item>()
                 for (item in carried) next.add(firstFree(next, item.spec, item.w, item.h))
-                carried = spill(next, out)
+                carried = spill(next, out, maxRows)
             }
         }
         return out
     }
 
-    private fun spill(page: List<Item>, out: MutableList<List<Item>>): List<Item> {
-        val (fits, over) = page.partition { it.bottom <= MAX_ROWS }
+    private fun spill(page: List<Item>, out: MutableList<List<Item>>, maxRows: Int): List<Item> {
+        val (fits, over) = page.partition { it.bottom <= maxRows }
         out.add(fits)
         return over.sortedWith(compareBy({ it.y }, { it.x }))
     }
@@ -156,7 +198,9 @@ object PenguinGrid {
         modules: Set<TileSpec>,
         tiles: List<TileSpec>,
         largeTiles: Set<TileSpec>,
+        flavor: Flavor = Flavor.ControlCentre,
     ): List<List<Item>> {
+        if (flavor == Flavor.OneUi) return oneUiDefaults(modules, tiles, largeTiles)
         val first =
             listOf(
                     Item(FOLDER_SPEC, 0, 0, 2, 2),
@@ -172,6 +216,37 @@ object PenguinGrid {
                 listOf(Item(FOLDER_SPEC, 0, 0, 4, 4)).takeIf { FOLDER_SPEC in modules },
             )
         return resolve(pages, modules, tiles, largeTiles)
+    }
+
+    private fun oneUiDefaults(
+        modules: Set<TileSpec>,
+        tiles: List<TileSpec>,
+        largeTiles: Set<TileSpec>,
+    ): List<List<Item>> {
+        val present = tiles.toSet()
+        fun tile(vararg specs: String) =
+            specs.map { TileSpec.create(it) }.firstOrNull { it in present }
+        val wifi = tile("wifi", "internet")
+        val bluetooth = tile("bt")
+        val dark = tile("dark")
+        val page =
+            listOfNotNull(
+                    wifi?.let { Item(it, 0, 0, 2, 1) },
+                    bluetooth?.let { Item(it, 2, 0, 2, 1) },
+                    Item(ONEUI_TOGGLES_SPEC, 0, 1, 4, 2),
+                    Item(BRIGHTNESS_SPEC, 0, 3, 3, 1),
+                    dark?.let { Item(it, 3, 3, 1, 1) },
+                    Item(VOLUME_SPEC, 0, 4, 3, 1),
+                    Item(ONEUI_SOUND_SPEC, 3, 4, 1, 1),
+                    Item(MEDIA_SPEC, 0, 5, 4, 2),
+                )
+                .filter { it.spec in modules || !isModule(it.spec) }
+                .toMutableList()
+        val placed = page.map { it.spec }.toSet()
+        for (spec in tiles) {
+            if (spec in largeTiles && spec !in placed) page += firstFree(page, spec, 2, 1)
+        }
+        return resolve(listOf(page), modules, tiles, largeTiles, flavor = Flavor.OneUi)
     }
 
     fun firstFree(

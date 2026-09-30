@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -83,6 +84,7 @@ private val OneUiPillCorner = 40.dp
 private val OneUiCardCorner = 36.dp
 private val OneUiToggleSize = 58.dp
 private val OneUiSliderHeight = 72.dp
+private val OneUiDiscInPill = 52.dp
 private const val OneUiToggleColumns = 4
 private const val OneUiToggleRows = 2
 
@@ -125,7 +127,9 @@ fun OneUiQuickSettingsPanel(
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = spacedBy(OneUiGap)) {
         if (wifi != null || bluetooth != null) {
             Row(horizontalArrangement = spacedBy(OneUiGap)) {
-                listOfNotNull(wifi, bluetooth).forEach { OneUiPill(it, Modifier.weight(1f)) }
+                listOfNotNull(wifi, bluetooth).forEach {
+                    OneUiPill(it, Modifier.weight(1f).height(OneUiPillHeight))
+                }
                 if (wifi == null || bluetooth == null) Box(Modifier.weight(1f))
             }
         }
@@ -143,7 +147,7 @@ fun OneUiQuickSettingsPanel(
         media?.invoke() ?: OneUiIdleMedia()
         pills.chunked(2).forEach { row ->
             Row(horizontalArrangement = spacedBy(OneUiGap)) {
-                row.forEach { OneUiPill(it, Modifier.weight(1f)) }
+                row.forEach { OneUiPill(it, Modifier.weight(1f).height(OneUiPillHeight)) }
                 if (row.size == 1) Box(Modifier.weight(1f))
             }
         }
@@ -157,7 +161,6 @@ private fun OneUiPill(tile: TileViewModel, modifier: Modifier = Modifier) {
     Row(
         modifier =
             modifier
-                .height(OneUiPillHeight)
                 .oneUiCard(OneUiPillCorner)
                 .combinedClickable(
                     onClick = { tile.primaryAction(uiState) },
@@ -167,7 +170,7 @@ private fun OneUiPill(tile: TileViewModel, modifier: Modifier = Modifier) {
         horizontalArrangement = spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OneUiDisc(icon, active, OneUiPillHeight - 24.dp)
+        OneUiDisc(icon, active, OneUiDiscInPill)
         Column(Modifier.weight(1f)) {
             Text(
                 text = uiState.label,
@@ -209,27 +212,40 @@ private fun OneUiDisc(icon: Icon, active: Boolean, size: Dp) {
 }
 
 @Composable
-private fun OneUiTogglesCard(tiles: List<TileViewModel>) {
-    val perPage = OneUiToggleColumns * OneUiToggleRows
-    val pages = remember(tiles) { tiles.chunked(perPage) }
+fun OneUiTogglesCard(
+    tiles: List<TileViewModel>,
+    modifier: Modifier = Modifier,
+    rows: Int = OneUiToggleRows,
+    toggleSize: Dp = OneUiToggleSize,
+    interactive: Boolean = true,
+    onEdit: (() -> Unit)? = null,
+) {
+    ListenTo(tiles)
+    val perPage = OneUiToggleColumns * rows
+    val pages = remember(tiles, perPage) { tiles.chunked(perPage).ifEmpty { listOf(emptyList()) } }
     val pagerState = rememberPagerState(pageCount = { pages.size })
+    Box(modifier = modifier.fillMaxWidth()) {
     Column(
-        modifier = Modifier.fillMaxWidth().oneUiCard().padding(top = 20.dp, bottom = 10.dp),
+        modifier = Modifier.fillMaxWidth().oneUiCard().padding(top = 14.dp, bottom = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = spacedBy(10.dp),
+        verticalArrangement = spacedBy(8.dp),
     ) {
-        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
+        HorizontalPager(
+            state = pagerState,
+            userScrollEnabled = interactive,
+            modifier = Modifier.fillMaxWidth(),
+        ) { page ->
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
-                verticalArrangement = spacedBy(18.dp),
+                verticalArrangement = spacedBy(12.dp),
             ) {
-                pages[page].chunked(OneUiToggleColumns).let { rows ->
-                    rows + List(OneUiToggleRows - rows.size) { emptyList() }
+                pages[page].chunked(OneUiToggleColumns).let { chunks ->
+                    chunks + List(rows - chunks.size) { emptyList() }
                 }.forEach { row ->
-                    Row(modifier = Modifier.fillMaxWidth().height(OneUiToggleSize)) {
+                    Row(modifier = Modifier.fillMaxWidth().height(toggleSize)) {
                         row.forEach { tile ->
                             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                                OneUiToggle(tile)
+                                OneUiToggle(tile, toggleSize, interactive)
                             }
                         }
                         repeat(OneUiToggleColumns - row.size) { Box(Modifier.weight(1f)) }
@@ -253,24 +269,94 @@ private fun OneUiTogglesCard(tiles: List<TileViewModel>) {
             }
         }
     }
+    onEdit?.let { edit ->
+        Text(
+            text = stringResource(R.string.oneui_edit),
+            color = Color.White,
+            style = MaterialTheme.typography.titleSmall,
+            modifier =
+                Modifier.align(Alignment.Center)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .clickable(onClick = edit)
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
+        )
+    }
+    }
 }
 
 @Composable
-private fun OneUiToggle(tile: TileViewModel) {
+private fun OneUiToggle(tile: TileViewModel, size: Dp, interactive: Boolean) {
     val (uiState, icon) = rememberTileState(tile)
     Box(
         modifier =
-            Modifier.size(OneUiToggleSize)
+            Modifier.size(size)
                 .clip(CircleShape)
-                .combinedClickable(
-                    onClick = { tile.primaryAction(uiState) },
-                    onLongClick = { tile.settingsClick(null) },
+                .then(
+                    if (interactive) {
+                        Modifier.combinedClickable(
+                            onClick = { tile.primaryAction(uiState) },
+                            onLongClick = { tile.settingsClick(null) },
+                        )
+                    } else {
+                        Modifier
+                    }
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        OneUiDisc(icon, uiState.visualState == Tile.STATE_ACTIVE, OneUiToggleSize)
+        OneUiDisc(icon, uiState.visualState == Tile.STATE_ACTIVE, size)
     }
 }
+
+@Composable
+fun OneUiTileControl(
+    tile: TileViewModel,
+    wide: Boolean,
+    modifier: Modifier = Modifier,
+    interactive: Boolean = true,
+) {
+    ListenTo(listOf(tile))
+    if (wide) {
+        Box(modifier.fillMaxSize().then(if (interactive) Modifier else Modifier.gesturesOff())) {
+            OneUiPill(tile, Modifier.fillMaxSize())
+        }
+    } else {
+        Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            val (uiState, icon) = rememberTileState(tile)
+            Box(
+                Modifier.fillMaxHeight()
+                    .aspectRatio(1f)
+                    .clip(CircleShape)
+                    .then(
+                        if (interactive) {
+                            Modifier.combinedClickable(
+                                onClick = { tile.primaryAction(uiState) },
+                                onLongClick = { tile.settingsClick(null) },
+                            )
+                        } else {
+                            Modifier
+                        }
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                OneUiDisc(icon, uiState.visualState == Tile.STATE_ACTIVE, OneUiDiscCell)
+            }
+        }
+    }
+}
+
+private fun Modifier.gesturesOff(): Modifier =
+    pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    .changes
+                    .forEach { it.consume() }
+            }
+        }
+    }
+
+private val OneUiDiscCell = 72.dp
 
 @Composable
 private fun OneUiRoundControl(tile: TileViewModel, size: Dp) {
@@ -368,7 +454,7 @@ private fun OneUiMediaVolumeSlider(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun OneUiSoundModeButton(size: Dp) {
+fun OneUiSoundModeButton(size: Dp) {
     val (audioManager, audio) = rememberAudioState()
     val (glyph, active) =
         when (audio.ringerMode) {

@@ -44,6 +44,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.derivedStateOf
@@ -272,6 +273,7 @@ private fun ContentScope.QuickSettingsContainer(
     modifier: Modifier = Modifier,
 ) {
     val isEditing by containerViewModel.editModeViewModel.isEditing.collectAsStateWithLifecycle()
+    LaunchedEffect(isEditing) { if (!isEditing) OneUiToggleEditing.active = false }
     val tileDetails =
         if (QsDetailedView.isEnabled) containerViewModel.detailsViewModel.activeTileDetails
         else null
@@ -311,6 +313,19 @@ private fun ContentScope.QuickSettingsContainer(
     ) { state ->
         when (state) {
             ShadeBodyState.Editing -> {
+                if (
+                    containerViewModel.panelStyle == QsPanelStyle.OneUi &&
+                        !OneUiToggleEditing.active
+                ) {
+                    OneUiGridEditor(
+                        viewModel = containerViewModel,
+                        modifier =
+                            modifier
+                                .fillMaxWidth()
+                                .padding(vertical = QuickSettingsShade.Dimensions.VerticalPadding),
+                    )
+                    return@AnimatedContent
+                }
                 if (containerViewModel.panelStyle == QsPanelStyle.Penguin) {
                     PenguinGridEditor(
                         viewModel = containerViewModel,
@@ -408,6 +423,11 @@ private fun ContentScope.QuickSettingsLayout(
         if (qsContainerViewModel.panelStyle == QsPanelStyle.Penguin) {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 PenguinGridQuickSettings(viewModel = qsContainerViewModel)
+                VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
+            }
+        } else if (qsContainerViewModel.panelStyle == QsPanelStyle.OneUi) {
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                OneUiGridQuickSettings(viewModel = qsContainerViewModel)
                 VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
             }
         } else if (qsContainerViewModel.panelStyle != QsPanelStyle.Default) {
