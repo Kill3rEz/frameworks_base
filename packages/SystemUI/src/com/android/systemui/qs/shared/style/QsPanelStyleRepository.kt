@@ -23,7 +23,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 @SysUISingleton
@@ -35,9 +35,18 @@ constructor(
 ) {
 
     val style: StateFlow<QsPanelStyle> =
-        secureSettingsRepository
-            .intSetting(QsPanelStyle.SETTING_NAME, QsPanelStyle.Penguin.value)
-            .map { QsPanelStyle.fromValue(it) }
+        combine(
+                secureSettingsRepository.intSetting(
+                    QsPanelStyle.SETTING_NAME,
+                    QsPanelStyle.Penguin.value,
+                ),
+                secureSettingsRepository.boolSetting(
+                    QsPanelStyle.ONE_UI_SETTING_NAME,
+                    false,
+                ),
+            ) { chosen, oneUi ->
+                QsPanelStyle.effective(chosen, oneUi)
+            }
             .stateIn(
                 scope = applicationScope,
                 started = SharingStarted.Eagerly,

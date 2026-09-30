@@ -234,6 +234,8 @@
     <!-- HarmonyOS Control Centre -->
     <string name="harmony_control_centre">Control centre</string>
     <string name="harmony_not_playing">Not playing</string>
+    <!-- One UI Quick Settings: the media pill when nothing is playing. -->
+    <string name="oneui_play_music">Play music</string>
     <string name="harmony_devices">Devices</string>
     <string name="harmony_cast_hint">Tap to cast your screen to a nearby device</string>
     <string name="harmony_connected">Connected</string>

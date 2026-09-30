@@ -1,0 +1,425 @@
+/*
+ * Copyright (C) 2026 The PenguinOS Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.android.systemui.qs.composefragment
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
+import android.service.quicksettings.Tile
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement.spacedBy
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeOff
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material3.Icon as MaterialIcon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleStartEffect
+import com.android.systemui.common.shared.model.Icon
+import com.android.systemui.qs.panels.ui.compose.TileListener
+import com.android.systemui.qs.panels.ui.compose.infinitegrid.SmallTileContent
+import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
+import com.android.systemui.res.R
+import kotlin.math.roundToInt
+
+val OneUiGap = 12.dp
+private val OneUiPillHeight = 80.dp
+private val OneUiPillCorner = 40.dp
+private val OneUiCardCorner = 36.dp
+private val OneUiToggleSize = 58.dp
+private val OneUiSliderHeight = 72.dp
+private const val OneUiToggleColumns = 4
+private const val OneUiToggleRows = 2
+
+private val WifiSpecs = listOf("wifi", "internet")
+private const val BluetoothSpec = "bt"
+private const val DarkModeSpec = "dark"
+
+@Composable
+private fun Modifier.oneUiCard(corner: Dp = OneUiCardCorner): Modifier =
+    clip(RoundedCornerShape(corner)).background(glassSurface())
+
+@Composable
+private fun ListenTo(tiles: List<TileViewModel>) {
+    var listening by remember { mutableStateOf(false) }
+    LifecycleStartEffect(Unit) {
+        listening = true
+        onStopOrDispose { listening = false }
+    }
+    TileListener(tiles) { listening }
+}
+
+@Composable
+fun OneUiQuickSettingsPanel(
+    tiles: List<TileViewModel>,
+    largeTileSpecs: Set<String>,
+    brightness: @Composable (Modifier) -> Unit,
+    media: (@Composable () -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    val bySpec = remember(tiles) { tiles.associateBy { it.spec.spec } }
+    val wifi = WifiSpecs.firstNotNullOfOrNull { bySpec[it] }
+    val bluetooth = bySpec[BluetoothSpec]
+    val darkMode = bySpec[DarkModeSpec]
+    val placed = remember(wifi, bluetooth, darkMode) { setOfNotNull(wifi, bluetooth, darkMode) }
+    val rest = remember(tiles, placed) { tiles.filterNot { it in placed } }
+    val toggles = remember(rest, largeTileSpecs) { rest.filterNot { it.spec.spec in largeTileSpecs } }
+    val pills = remember(rest, largeTileSpecs) { rest.filter { it.spec.spec in largeTileSpecs } }
+    ListenTo(tiles)
+
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = spacedBy(OneUiGap)) {
+        if (wifi != null || bluetooth != null) {
+            Row(horizontalArrangement = spacedBy(OneUiGap)) {
+                listOfNotNull(wifi, bluetooth).forEach { OneUiPill(it, Modifier.weight(1f)) }
+                if (wifi == null || bluetooth == null) Box(Modifier.weight(1f))
+            }
+        }
+        if (toggles.isNotEmpty()) OneUiTogglesCard(toggles)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = spacedBy(OneUiGap)) {
+            Box(Modifier.weight(1f).height(OneUiSliderHeight)) {
+                brightness(Modifier.fillMaxSize())
+            }
+            darkMode?.let { OneUiRoundControl(it, OneUiSliderHeight) }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = spacedBy(OneUiGap)) {
+            OneUiMediaVolumeSlider(Modifier.weight(1f).height(OneUiSliderHeight))
+            OneUiSoundModeButton(OneUiSliderHeight)
+        }
+        media?.invoke() ?: OneUiIdleMedia()
+        pills.chunked(2).forEach { row ->
+            Row(horizontalArrangement = spacedBy(OneUiGap)) {
+                row.forEach { OneUiPill(it, Modifier.weight(1f)) }
+                if (row.size == 1) Box(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun OneUiPill(tile: TileViewModel, modifier: Modifier = Modifier) {
+    val (uiState, icon) = rememberTileState(tile)
+    val active = uiState.visualState == Tile.STATE_ACTIVE
+    Row(
+        modifier =
+            modifier
+                .height(OneUiPillHeight)
+                .oneUiCard(OneUiPillCorner)
+                .combinedClickable(
+                    onClick = { tile.primaryAction(uiState) },
+                    onLongClick = { tile.settingsClick(null) },
+                )
+                .padding(start = 12.dp, end = 16.dp),
+        horizontalArrangement = spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OneUiDisc(icon, active, OneUiPillHeight - 24.dp)
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = uiState.label,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (uiState.secondaryLabel.isNotBlank()) {
+                Text(
+                    text = uiState.secondaryLabel,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OneUiDisc(icon: Icon, active: Boolean, size: Dp) {
+    val background by
+        animateColorAsState(
+            if (active) Color.White else Color.Black.copy(alpha = 0.18f),
+            label = "OneUiDisc",
+        )
+    Box(
+        modifier = Modifier.size(size).clip(CircleShape).background(background),
+        contentAlignment = Alignment.Center,
+    ) {
+        SmallTileContent(
+            iconProvider = { icon },
+            color = if (active) Color(0xFF1C1B1F) else Color.White,
+            size = { size * 0.46f },
+        )
+    }
+}
+
+@Composable
+private fun OneUiTogglesCard(tiles: List<TileViewModel>) {
+    val perPage = OneUiToggleColumns * OneUiToggleRows
+    val pages = remember(tiles) { tiles.chunked(perPage) }
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+    Column(
+        modifier = Modifier.fillMaxWidth().oneUiCard().padding(top = 20.dp, bottom = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = spacedBy(10.dp),
+    ) {
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                verticalArrangement = spacedBy(18.dp),
+            ) {
+                pages[page].chunked(OneUiToggleColumns).let { rows ->
+                    rows + List(OneUiToggleRows - rows.size) { emptyList() }
+                }.forEach { row ->
+                    Row(modifier = Modifier.fillMaxWidth().height(OneUiToggleSize)) {
+                        row.forEach { tile ->
+                            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                OneUiToggle(tile)
+                            }
+                        }
+                        repeat(OneUiToggleColumns - row.size) { Box(Modifier.weight(1f)) }
+                    }
+                }
+            }
+        }
+        Row(horizontalArrangement = spacedBy(4.dp)) {
+            repeat(pages.size.coerceAtLeast(1)) { index ->
+                val current = index == pagerState.currentPage
+                Box(
+                    Modifier.width(if (current) 20.dp else 6.dp)
+                        .height(4.dp)
+                        .clip(CircleShape)
+                        .background(
+                            MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = if (current) 0.6f else 0.25f
+                            )
+                        )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OneUiToggle(tile: TileViewModel) {
+    val (uiState, icon) = rememberTileState(tile)
+    Box(
+        modifier =
+            Modifier.size(OneUiToggleSize)
+                .clip(CircleShape)
+                .combinedClickable(
+                    onClick = { tile.primaryAction(uiState) },
+                    onLongClick = { tile.settingsClick(null) },
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        OneUiDisc(icon, uiState.visualState == Tile.STATE_ACTIVE, OneUiToggleSize)
+    }
+}
+
+@Composable
+private fun OneUiRoundControl(tile: TileViewModel, size: Dp) {
+    val (uiState, icon) = rememberTileState(tile)
+    Box(
+        modifier =
+            Modifier.size(size)
+                .clip(CircleShape)
+                .combinedClickable(
+                    onClick = { tile.primaryAction(uiState) },
+                    onLongClick = { tile.settingsClick(null) },
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        OneUiDisc(icon, uiState.visualState == Tile.STATE_ACTIVE, size)
+    }
+}
+
+private class AudioState(val volume: Int, val max: Int, val ringerMode: Int)
+
+@Composable
+private fun rememberAudioState(): Pair<AudioManager, AudioState> {
+    val context = LocalContext.current
+    val audioManager = remember(context) { context.getSystemService(AudioManager::class.java) }
+    fun read() =
+        AudioState(
+            audioManager.getStreamVolume(AudioManager.STREAM_MUSIC),
+            audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1),
+            audioManager.ringerModeInternal,
+        )
+    var state by remember { mutableStateOf(read()) }
+    DisposableEffect(context, audioManager) {
+        val receiver =
+            object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    state = read()
+                }
+            }
+        context.registerReceiver(
+            receiver,
+            IntentFilter().apply {
+                addAction(AudioManager.VOLUME_CHANGED_ACTION)
+                addAction(AudioManager.INTERNAL_RINGER_MODE_CHANGED_ACTION)
+            },
+            Context.RECEIVER_NOT_EXPORTED,
+        )
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+    return audioManager to state
+}
+
+@Composable
+private fun OneUiMediaVolumeSlider(modifier: Modifier = Modifier) {
+    val (audioManager, audio) = rememberAudioState()
+    var dragged by remember { mutableIntStateOf(-1) }
+    val volume = if (dragged >= 0) dragged else audio.volume
+    fun setFrom(x: Float, width: Int) {
+        val target = ((x / width).coerceIn(0f, 1f) * audio.max).roundToInt()
+        dragged = target
+        if (target != audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)) {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
+        }
+    }
+    Box(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(OneUiPillCorner))
+                .background(Color.Black.copy(alpha = 0.18f))
+                .pointerInput(audio.max) { detectTapGestures { setFrom(it.x, size.width) } }
+                .pointerInput(audio.max) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = { dragged = -1 },
+                        onDragCancel = { dragged = -1 },
+                    ) { change, _ ->
+                        setFrom(change.position.x, size.width)
+                    }
+                },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Box(
+            Modifier.fillMaxHeight()
+                .fillMaxWidth(volume.toFloat() / audio.max)
+                .clip(RoundedCornerShape(OneUiPillCorner))
+                .background(Color.White)
+        )
+        MaterialIcon(
+            imageVector =
+                if (volume == 0) Icons.AutoMirrored.Rounded.VolumeOff
+                else Icons.Rounded.MusicNote,
+            contentDescription = null,
+            tint = Color(0xFF1C1B1F),
+            modifier = Modifier.padding(start = 24.dp).size(26.dp),
+        )
+    }
+}
+
+@Composable
+private fun OneUiSoundModeButton(size: Dp) {
+    val (audioManager, audio) = rememberAudioState()
+    val (glyph, active) =
+        when (audio.ringerMode) {
+            AudioManager.RINGER_MODE_VIBRATE -> Icons.Rounded.Vibration to true
+            AudioManager.RINGER_MODE_SILENT -> Icons.Rounded.NotificationsOff to true
+            else -> Icons.AutoMirrored.Rounded.VolumeUp to false
+        }
+    Box(
+        modifier =
+            Modifier.size(size)
+                .clip(CircleShape)
+                .background(if (active) Color.White else Color.Black.copy(alpha = 0.18f))
+                .clickable {
+                    audioManager.ringerModeInternal =
+                        when (audio.ringerMode) {
+                            AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
+                            AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT
+                            else -> AudioManager.RINGER_MODE_NORMAL
+                        }
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        MaterialIcon(
+            imageVector = glyph,
+            contentDescription = null,
+            tint = if (active) Color(0xFF1C1B1F) else Color.White,
+            modifier = Modifier.size(size * 0.42f),
+        )
+    }
+}
+
+@Composable
+private fun OneUiIdleMedia() {
+    Row(
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(OneUiPillHeight)
+                .oneUiCard(OneUiPillCorner)
+                .padding(horizontal = 24.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = spacedBy(14.dp),
+    ) {
+        MaterialIcon(
+            imageVector = Icons.Rounded.MusicNote,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource(R.string.oneui_play_music),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleSmall,
+        )
+    }
+}

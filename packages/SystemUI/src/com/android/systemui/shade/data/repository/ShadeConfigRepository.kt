@@ -30,10 +30,12 @@ import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shared.settings.data.repository.SecureSettingsRepository
 import com.android.systemui.shared.settings.data.repository.SystemSettingsRepository
 import com.android.systemui.util.kotlin.emitOnStart
+import com.android.systemui.qs.shared.style.QsPanelStyle
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -97,8 +99,18 @@ constructor(
                     } else {
                         Settings.Secure.DUAL_SHADE
                     }
-                    secureSettingsRepository
-                        .boolSetting(settingKey, defaultValue = defaultValue)
+                    combine(
+                            secureSettingsRepository.boolSetting(
+                                settingKey,
+                                defaultValue = defaultValue,
+                            ),
+                            secureSettingsRepository.boolSetting(
+                                QsPanelStyle.ONE_UI_SETTING_NAME,
+                                defaultValue = false,
+                            ),
+                        ) { chosen, oneUi ->
+                            chosen || oneUi
+                        }
                         .flowOn(backgroundDispatcher)
                 }
             }

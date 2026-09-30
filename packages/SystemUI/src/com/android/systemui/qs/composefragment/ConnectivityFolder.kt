@@ -74,6 +74,7 @@ import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toIconProvider
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.pipeline.shared.TileSpec
+import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.style.isStockQsStyle
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.res.R
@@ -167,6 +168,13 @@ fun secureIntSetting(key: String, default: Int): Int {
     }
     return value
 }
+
+@Composable
+fun effectiveQsPanelStyle(): QsPanelStyle =
+    QsPanelStyle.effective(
+        secureIntSetting(QsPanelStyle.SETTING_NAME, QsPanelStyle.Penguin.value),
+        secureIntSetting(QsPanelStyle.ONE_UI_SETTING_NAME, 0) != 0,
+    )
 
 @Composable
 fun connectivityFolderSpecs(): List<String> {

@@ -23,12 +23,19 @@ enum class QsPanelStyle(val value: Int) {
 
     MyUi(2),
 
-    Harmony(3);
+    Harmony(3),
+
+    OneUi(4);
 
     companion object {
         const val SETTING_NAME = "qs_panel_style"
 
+        const val ONE_UI_SETTING_NAME = "qs_oneui_experimental"
+
         fun fromValue(value: Int): QsPanelStyle =
-            entries.firstOrNull { it.value == value } ?: Penguin
+            entries.firstOrNull { it.value == value && it != OneUi } ?: Penguin
+
+        fun effective(chosen: Int, oneUi: Boolean): QsPanelStyle =
+            if (oneUi) OneUi else fromValue(chosen)
     }
 }

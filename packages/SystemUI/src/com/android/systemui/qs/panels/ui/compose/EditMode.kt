@@ -43,6 +43,7 @@ import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_POSITION
 import com.android.systemui.qs.panels.ui.viewmodel.AvailableEditActions
 import com.android.systemui.qs.composefragment.connectivityFolderEnabled
 import com.android.systemui.qs.composefragment.connectivityFolderSpecs
+import com.android.systemui.qs.composefragment.effectiveQsPanelStyle
 import com.android.systemui.qs.composefragment.secureIntSetting
 import com.android.systemui.qs.panels.ui.viewmodel.EditModeViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.EditTileViewModel
@@ -125,10 +126,7 @@ private fun EditModeContent(viewModel: EditModeViewModel, modifier: Modifier = M
 
     DisposableEffect(Unit) { onDispose { viewModel.stopEditing() } }
 
-    val panelStyle =
-        QsPanelStyle.fromValue(
-            secureIntSetting(QsPanelStyle.SETTING_NAME, QsPanelStyle.Penguin.value)
-        )
+    val panelStyle = effectiveQsPanelStyle()
     val panelElementsEditable = panelStyle == QsPanelStyle.Penguin
 
     val folderMemberSpecs =

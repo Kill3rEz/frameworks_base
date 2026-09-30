@@ -98,6 +98,7 @@ import com.android.systemui.qs.composefragment.MyUiTileAspect
 import com.android.systemui.qs.composefragment.MyUiConnectivityCard
 import com.android.systemui.qs.composefragment.MyUiMediaCard
 import com.android.systemui.qs.composefragment.MyUiTileGrid
+import com.android.systemui.qs.composefragment.OneUiQuickSettingsPanel
 import com.android.systemui.qs.composefragment.PenguinMediaCard
 import com.android.systemui.qs.panels.ui.compose.FOLDER_SPEC
 import com.android.systemui.qs.panels.ui.compose.PANEL_FILLER_COLUMNS
@@ -111,6 +112,7 @@ import com.android.systemui.qs.composefragment.DEFAULT_SLIDERS_SPAN
 import com.android.systemui.qs.composefragment.SETTING_QS_SLIDERS_SPAN
 import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_SPAN
 import com.android.systemui.qs.composefragment.qsModuleHeight
+import com.android.systemui.qs.composefragment.effectiveQsPanelStyle
 import com.android.systemui.qs.composefragment.secureIntSetting
 import com.android.systemui.qs.composefragment.VolumeLayout
 import com.android.systemui.qs.composefragment.ui.GridAnchor
@@ -159,6 +161,7 @@ fun ContentScope.QuickSettingsContent(
             QsPanelStyle.MyUi ->
                 MyUiQuickSettingsContent(viewModel, modifier, mediaSquishiness)
             QsPanelStyle.Harmony -> HarmonyQuickSettingsContent(viewModel, modifier)
+            QsPanelStyle.OneUi -> OneUiQuickSettingsContent(viewModel, modifier)
         }
     }
 }
@@ -278,6 +281,71 @@ private fun ContentScope.HarmonyQuickSettingsContent(
         }
     }
 }
+
+@Composable
+private fun ContentScope.OneUiQuickSettingsContent(
+    viewModel: QuickSettingsContainerViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val tiles = viewModel.tileGridViewModel.tileViewModels
+    val largeSpecs =
+        remember(viewModel.tileGridViewModel.largeTiles) {
+            viewModel.tileGridViewModel.largeTiles.map { it.spec }.toSet()
+        }
+    var interactable by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { Elements.QuickSettingsContent.currentAlpha() }
+            .filterNotNull()
+            .collect { interactable = it >= .5f }
+    }
+    val showMedia =
+        viewModel.showMedia && viewModel.hasMediaCards && isAlwaysComposedContentVisible()
+
+    Box(
+        modifier =
+            modifier
+                .element(Elements.QuickSettingsContent)
+                .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))
+                .sysuiResTag("quick_settings_panel")
+    ) {
+        Box(Modifier.element(Elements.QuickSettingsTiles)) {
+            GridAnchor()
+            OneUiQuickSettingsPanel(
+                tiles = tiles,
+                largeTileSpecs = largeSpecs,
+                brightness = { sliderModifier ->
+                    Element(key = Elements.BrightnessSlider, modifier = sliderModifier) {
+                        Box(Modifier.thenIf(!interactable) { Modifier.gesturesDisabled() }) {
+                            BrightnessLayout(
+                                enable = interactable,
+                                horizontal = true,
+                                sliderHeight = OneUiSliderRowHeight,
+                            )
+                        }
+                    }
+                },
+                media =
+                    if (showMedia) {
+                        {
+                            Element(key = Media.Elements.MediaCarousel, modifier = Modifier) {
+                                PenguinMediaCard(
+                                    viewModelFactory = viewModel.mediaViewModelFactory,
+                                    behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                                    square = false,
+                                    controlCentre = true,
+                                    height = qsModuleHeight(2),
+                                )
+                            }
+                        }
+                    } else {
+                        null
+                    },
+            )
+        }
+    }
+}
+
+private val OneUiSliderRowHeight = 72.dp
 
 @Composable
 fun ContentScope.HarmonyHeader(
@@ -654,10 +722,7 @@ fun panelElementPreviews(
 
 @Composable
 fun qsHeaderPreview(viewModel: QuickSettingsContainerViewModel): (@Composable () -> Unit)? {
-    val style =
-        QsPanelStyle.fromValue(
-            secureIntSetting(QsPanelStyle.SETTING_NAME, QsPanelStyle.Penguin.value)
-        )
+    val style = effectiveQsPanelStyle()
     if (style != QsPanelStyle.MyUi) return null
     val tiles = viewModel.tileGridViewModel.tileViewModels
     return {
