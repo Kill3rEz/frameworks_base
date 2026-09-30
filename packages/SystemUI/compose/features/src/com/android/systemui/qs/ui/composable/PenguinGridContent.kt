@@ -428,6 +428,7 @@ internal fun ContentScope.GridItemContent(
                         interactive = !preview,
                         square = item.w < 4,
                         large = item.h >= 4,
+                        tall = item.h >= 6,
                         height = height,
                         controlCentre = true,
                         onExpand = {

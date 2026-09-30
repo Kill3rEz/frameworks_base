@@ -50,7 +50,7 @@ object PenguinGrid {
 
     fun sizes(spec: TileSpec): List<Pair<Int, Int>> =
         when (spec) {
-            MEDIA_SPEC -> listOf(2 to 2, 4 to 2, 4 to 4)
+            MEDIA_SPEC -> listOf(2 to 2, 4 to 2, 4 to 4, 4 to 6)
             FOLDER_SPEC -> listOf(2 to 2, 4 to 4)
             BRIGHTNESS_SPEC,
             VOLUME_SPEC -> listOf(1 to 2, 2 to 1, 4 to 1)
