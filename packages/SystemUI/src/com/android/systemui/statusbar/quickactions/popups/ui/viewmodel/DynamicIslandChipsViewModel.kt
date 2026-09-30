@@ -268,6 +268,7 @@ constructor(
             }
             launch {
                 val consumedRequests = mutableMapOf<PopupChipId, Long>()
+                var heldPopupId: PopupChipId? = null
                 snapshotFlow {
                     Triple(
                         systemEventChips.chips,
@@ -286,6 +287,11 @@ constructor(
                         currentShownPopupChipId !in ids) {
                         showPopup(null)
                     }
+                    val held = chips.firstOrNull { it.chipId == heldPopupId }
+                    if (heldPopupId != null && (held == null || held.autoPopupRequest == null)) {
+                        if (currentShownPopupChipId == heldPopupId) showPopup(null)
+                        heldPopupId = null
+                    }
                     val requests = chips.filter { chip ->
                         chip.autoPopupRequest != null &&
                             consumedRequests[chip.chipId] != chip.autoPopupRequest
@@ -294,6 +300,7 @@ constructor(
                     requests.firstOrNull()?.let { chip ->
                         showPopup(chip.chipId)
                         chip.onAutoPopupShown()
+                        if (chip.autoPopupDurationMs == 0L) heldPopupId = chip.chipId
                         if (chip.autoPopupDurationMs > 0L) autoPopupJob = launch {
                             delay(chip.autoPopupDurationMs)
                             if (currentShownPopupChipId == chip.chipId) {

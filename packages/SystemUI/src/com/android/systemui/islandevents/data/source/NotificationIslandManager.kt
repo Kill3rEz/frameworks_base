@@ -858,10 +858,13 @@ constructor(
             }
 
         val callWhen = sbn.notification?.`when` ?: 0L
+        val connected =
+            callType == "Phone:active" && extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER)
         val previousCall = _callEvents.value.firstOrNull { it.sbn.key == sbn.key }
         val callStart = when {
-            previousCall?.callType == callType -> previousCall.callStartTimeMs
-            callWhen > 0L && extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER) -> callWhen
+            connected && callWhen > 0L -> callWhen
+            previousCall?.callType == callType && previousCall.connected == connected ->
+                previousCall.callStartTimeMs
             else -> System.currentTimeMillis()
         }
 
@@ -875,6 +878,7 @@ constructor(
                 callType = callType,
                 callStartTimeMs = callStart,
                 actions = actions,
+                connected = connected,
             )
 
         val current = _callEvents.value.toMutableList()

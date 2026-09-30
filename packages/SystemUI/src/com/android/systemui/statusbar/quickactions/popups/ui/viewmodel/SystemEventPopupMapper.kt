@@ -318,9 +318,7 @@ class SystemEventPopupMapper @Inject constructor(
                 else -> title
             },
 
-            callStartTimeMs = (event as? IslandEvent.Call)?.takeIf {
-                it.callType == "Phone:active"
-            }?.callStartTimeMs,
+            callStartTimeMs = (event as? IslandEvent.Call)?.takeIf { it.connected }?.callStartTimeMs,
             autoPopupRequest = when (event) {
                 is IslandEvent.Call -> event.callStartTimeMs.takeIf { event.callType == "Phone:incoming" }
                 is IslandEvent.BiometricUnlock -> event.createdAt
@@ -334,15 +332,14 @@ class SystemEventPopupMapper @Inject constructor(
             },
             colors = ColorsModel.DynamicIsland,
             contentDescription = description,
+            ownerPackage = (event as? IslandEvent.Call)?.sbn?.packageName,
             popupContent = PopupContentModel.SystemEvent(
                 kind = kind,
                 title = title,
                 text = text,
                 actions = actions,
                 progress = progress?.coerceIn(0f, 1f)?.takeIf { bluetoothBatteries.isEmpty() },
-                callStartTimeMs = (event as? IslandEvent.Call)?.takeIf {
-                    it.callType == "Phone:active"
-                }?.callStartTimeMs,
+                callStartTimeMs = (event as? IslandEvent.Call)?.takeIf { it.connected }?.callStartTimeMs,
                 timerEndTimeMs = timerEndTimeMs,
                 timerEndElapsedRealtimeMs = (event as? IslandEvent.Timer)?.endElapsedRealtimeMs,
                 timerRemainingMs = (event as? IslandEvent.Timer)?.remainingMs,
