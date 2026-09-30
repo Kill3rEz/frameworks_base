@@ -17,6 +17,7 @@
 package com.android.systemui.volume.dialog.sliders.ui
 
 import android.view.View
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.compose.modifiers.thenIf
 import com.android.compose.theme.PlatformTheme
 import com.android.systemui.common.ui.compose.Icon
 import com.android.systemui.haptics.slider.SliderHapticFeedbackFilter
@@ -204,6 +206,7 @@ private fun VolumeDialogSlider(
             isPillStyle -> dimensionResource(R.dimen.volume_panel_expandable_track_corner_radius)
             else -> 12.dp
         }
+    val trackOutline = colorResource(R.color.volume_panel_expandable_track_outline)
 
     val bottomIcon: (@Composable BoxScope.(iconsState: SliderIconsState) -> Unit)? =
         if (isPillStyle && !isMyUi) {
@@ -292,6 +295,13 @@ private fun VolumeDialogSlider(
                     modifier =
                         if (isPillStyle) {
                             Modifier.clip(RoundedCornerShape(trackCornerSize))
+                                .thenIf(!isOneUi && !isMyUi) {
+                                    Modifier.border(
+                                        1.dp,
+                                        trackOutline,
+                                        RoundedCornerShape(trackCornerSize),
+                                    )
+                                }
                         } else {
                             Modifier
                         },

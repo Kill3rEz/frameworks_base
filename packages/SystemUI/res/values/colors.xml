@@ -93,9 +93,12 @@
          wallpaper with no card behind them, so these are fixed instead of following the theme: the
          wallpaper is whatever the user picked, and a themed pill would disappear into half of them. -->
     <color name="volume_panel_expandable_track_active">#FFFFFFFF</color>
-    <!-- Translucent white rather than black: the empty part of a pill has to stay visible on a dark
-         wallpaper, otherwise pills at different volumes look like pills of different heights. -->
-    <color name="volume_panel_expandable_track_inactive">#4DFFFFFF</color>
+    <!-- A translucent mid grey: the empty part of a pill has to stay visible over a dark wallpaper
+         and over a white page alike, otherwise pills at different volumes look like pills of
+         different heights, or vanish. -->
+    <color name="volume_panel_expandable_track_inactive">#99787880</color>
+    <!-- Edges the pill so a white fill still has a shape over a white page. -->
+    <color name="volume_panel_expandable_track_outline">#26000000</color>
     <color name="volume_panel_expandable_icon_on_active">#FF1B1B1F</color>
     <color name="volume_panel_expandable_icon_on_inactive">#FFFFFFFF</color>
     <!-- Buttons are darker than the pills so they read as controls, not as sliders. -->
