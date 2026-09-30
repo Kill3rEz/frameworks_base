@@ -88,6 +88,7 @@ constructor(
             colors = ColorsModel.DynamicIsland,
             hoverBehavior = createHoverBehavior(model),
             popupContent = PopupContentModel.Media(model, useWaveform),
+            ownerPackage = model.packageName,
         )
     }
 

@@ -42,6 +42,9 @@ import com.android.systemui.statusbar.quickactions.popups.ui.model.PopupChipId
 import com.android.systemui.statusbar.quickactions.popups.ui.model.PopupChipModel
 import com.android.systemui.statusbar.quickactions.screenrecord.ui.viewmodel.ScreenRecordPopupChipViewModel
 import com.android.systemui.statusbar.quickactions.stopwatch.ui.viewmodel.StopwatchPopupChipViewModel
+import com.android.systemui.shared.system.ActivityManagerWrapper
+import com.android.systemui.shared.system.TaskStackChangeListener
+import com.android.systemui.shared.system.TaskStackChangeListeners
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Job
@@ -123,6 +126,22 @@ constructor(
     private var isReadyForAutoPopup by mutableStateOf(false)
     private var autoPopupJob: Job? = null
 
+    private var foregroundPackage by mutableStateOf<String?>(null)
+    private val taskStackListener =
+        object : TaskStackChangeListener {
+            override fun onTaskStackChanged() {
+                updateForegroundPackage()
+            }
+        }
+
+    private fun updateForegroundPackage() {
+        val top = ActivityManagerWrapper.getInstance().runningTask?.topActivity?.packageName
+        if (top != foregroundPackage) {
+            foregroundPackage = top
+            showPopup(null)
+        }
+    }
+
     private fun showPopup(id: PopupChipId?) {
         if (
             id != null &&
@@ -186,7 +205,10 @@ constructor(
                 )
             }
 
-        (systemEventChips.chips + candidateChips.filterIsInstance<PopupChipModel.Shown>()).map { chip ->
+        val openApp = if (isOnLockscreen) null else foregroundPackage
+        (systemEventChips.chips + candidateChips.filterIsInstance<PopupChipModel.Shown>())
+            .filter { it.ownerPackage == null || it.ownerPackage != openApp }
+            .map { chip ->
             chip.copy(
                 isPopupShown = chip.chipId == currentShownPopupChipId,
                 showPopup = { showPopup(chip.chipId) },
@@ -215,6 +237,8 @@ constructor(
             )
             userTracker.addCallback(userChangedCallback, context.mainExecutor)
             dynamicIslandObserver.onChange(false)
+            TaskStackChangeListeners.getInstance().registerTaskStackListener(taskStackListener)
+            updateForegroundPackage()
             launch {
                 combine(
                         shadeInteractor.isAnyExpanded,
@@ -290,6 +314,7 @@ constructor(
                 awaitCancellation()
             } finally {
                 showPopup(null)
+                TaskStackChangeListeners.getInstance().unregisterTaskStackListener(taskStackListener)
                 userTracker.removeCallback(userChangedCallback)
                 context.contentResolver.unregisterContentObserver(dynamicIslandObserver)
             }
