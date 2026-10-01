@@ -50,6 +50,7 @@ import com.android.systemui.statusbar.pipeline.mobile.domain.model.NetworkTypeIc
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.SignalIconModel
 import com.android.systemui.statusbar.pipeline.satellite.ui.model.SatelliteIconModel
 import com.android.systemui.statusbar.pipeline.shared.data.model.DataActivityModel
+import com.android.systemui.statusbar.policy.FiveGServiceClient
 import com.android.systemui.statusbar.policy.FiveGServiceClient.FiveGServiceState
 import com.android.systemui.util.CarrierNameCustomization
 import kotlinx.coroutines.CoroutineScope
@@ -571,7 +572,10 @@ class MobileIconInteractorImpl(
 
     private fun getLookupKey(resolvedNetworkType: ResolvedNetworkType,
                              customizationInfo: MobileIconCustomizationMode): String {
-        return if (isNsa(resolvedNetworkType.networkType)) {
+        // Showing the origin RAT on NSA relies on the QTI ExtPhone service (com.qti.phone) to
+        // provide the 5G icon. Devices whose telephony stack does not ship it would never show
+        // 5G on NSA, so keep the AOSP override mapping there.
+        return if (isNsa(resolvedNetworkType.networkType) && isQtiExtPhoneConnected()) {
             if (customizationInfo.originNetworkType  == TelephonyManager.NETWORK_TYPE_UNKNOWN) {
                 MobileMappings.toIconKey(customizationInfo.voiceNetworkType)
             }else {
@@ -581,6 +585,9 @@ class MobileIconInteractorImpl(
             resolvedNetworkType.lookupKey
         }
     }
+
+    private fun isQtiExtPhoneConnected(): Boolean =
+        FiveGServiceClient.getInstance(context).isServiceConnected()
 
     private fun isNsa(networkType: Int): Boolean {
         return networkType == TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA_MMWAVE
