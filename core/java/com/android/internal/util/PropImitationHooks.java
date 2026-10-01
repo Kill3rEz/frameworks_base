@@ -206,8 +206,6 @@ public class PropImitationHooks {
     private static final Boolean sDisableGmsProps = SystemProperties.getBoolean(
             "persist.sys.pihooks.disable.gms_props", false);
 
-    private static final Boolean sDisableKeyAttestationBlock = SystemProperties.getBoolean(
-            "persist.sys.pihooks.disable.gms_key_attestation_block", false);
     private static final String DATA_FILE = "gms_certified_props.json";
 
     private static final String PACKAGE_ARCORE = "com.google.ar.core";
@@ -508,33 +506,6 @@ public class PropImitationHooks {
             return false;
         }
         return gmsUid == callingUid;
-    }
-
-    private static boolean isCallerSafetyNet() {
-        return sIsGms && Arrays.stream(Thread.currentThread().getStackTrace())
-                .anyMatch(elem -> elem.getClassName().contains("DroidGuard"));
-    }
-    private static boolean isAttestationCompatActive() {
-        return SystemProperties.getBoolean("sys.keystore_compat.active", false)
-                || SystemProperties.getBoolean("sys.tee_simulator.active", false);
-    }
-
-    public static void onEngineGetCertificateChain() {
-        if (sDisableKeyAttestationBlock) {
-            dlog("Key attestation blocking is disabled by user");
-            return;
-        }
-
-        if (isAttestationCompatActive()) {
-            dlog("Attestation compat is active, allowing key attestation for Strong Integrity");
-            return;
-        }
-
-        // Check stack for SafetyNet or Play Integrity
-        if (isCallerSafetyNet() || sIsFinsky) {
-            dlog("Blocked key attestation sIsGms=" + sIsGms + " sIsFinsky=" + sIsFinsky);
-            throw new UnsupportedOperationException();
-        }
     }
 
     public static boolean hasSystemFeature(String name, boolean has) {
