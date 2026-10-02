@@ -21,36 +21,21 @@
     android:hasRoundedCorners="true"
     android:shareInterpolator="false">
 
-    <alpha
-        android:fromAlpha="1.0"
-        android:toAlpha="0.0"
-        android:fillEnabled="true"
-        android:fillBefore="true"
-        android:fillAfter="true"
-        android:interpolator="@interpolator/linear"
-        android:startOffset="35"
-        android:duration="83" />
-
     <translate
         android:fromXDelta="0"
-        android:toXDelta="96dp"
+        android:toXDelta="100%"
         android:fillEnabled="true"
         android:fillBefore="true"
         android:fillAfter="true"
-        android:interpolator="@interpolator/fast_out_extra_slow_in"
-        android:startOffset="0"
-        android:duration="450" />
+        android:interpolator="@interpolator/penguin_close_exit_translate"
+        android:duration="350" />
 
-    <extend
-        android:fromExtendLeft="96dp"
-        android:fromExtendTop="0"
-        android:fromExtendRight="0"
-        android:fromExtendBottom="0"
-        android:toExtendLeft="96dp"
-        android:toExtendTop="0"
-        android:toExtendRight="0"
-        android:toExtendBottom="0"
-        android:interpolator="@interpolator/fast_out_extra_slow_in"
-        android:startOffset="0"
-        android:duration="450" />
+    <alpha
+        android:fromAlpha="1.0"
+        android:toAlpha="1.0"
+        android:fillEnabled="true"
+        android:fillBefore="true"
+        android:fillAfter="true"
+        android:interpolator="@interpolator/penguin_slide_alpha"
+        android:duration="350" />
 </set>

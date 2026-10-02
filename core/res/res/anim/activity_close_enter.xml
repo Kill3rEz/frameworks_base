@@ -18,38 +18,25 @@
 -->
 
 <set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:showBackdrop="true"
+    android:backdropColor="@android:color/black"
     android:shareInterpolator="false">
 
-    <alpha
-        android:fromAlpha="1.0"
-        android:toAlpha="1.0"
-        android:fillEnabled="true"
-        android:fillBefore="true"
-        android:fillAfter="true"
-        android:interpolator="@interpolator/linear"
-        android:startOffset="0"
-        android:duration="450" />
-
     <translate
-        android:fromXDelta="-96dp"
+        android:fromXDelta="-30%"
         android:toXDelta="0"
         android:fillEnabled="true"
         android:fillBefore="true"
         android:fillAfter="true"
-        android:interpolator="@interpolator/fast_out_extra_slow_in"
-        android:startOffset="0"
-        android:duration="450" />
+        android:interpolator="@interpolator/penguin_close_enter_translate"
+        android:duration="350" />
 
-    <extend
-        android:fromExtendLeft="0"
-        android:fromExtendTop="0"
-        android:fromExtendRight="96dp"
-        android:fromExtendBottom="0"
-        android:toExtendLeft="0"
-        android:toExtendTop="0"
-        android:toExtendRight="96dp"
-        android:toExtendBottom="0"
-        android:interpolator="@interpolator/fast_out_extra_slow_in"
-        android:startOffset="0"
-        android:duration="450" />
+    <alpha
+        android:fromAlpha="0.5"
+        android:toAlpha="1.0"
+        android:fillEnabled="true"
+        android:fillBefore="true"
+        android:fillAfter="true"
+        android:interpolator="@interpolator/penguin_slide_alpha"
+        android:duration="350" />
 </set>
