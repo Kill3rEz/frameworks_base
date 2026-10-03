@@ -19,6 +19,7 @@ package com.android.systemui.scene.ui.composable.transitions
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.ui.unit.dp
+import com.android.compose.animation.scene.FixedDistance
 import com.android.compose.animation.scene.TransitionBuilder
 import com.android.compose.animation.scene.reveal.ContainerRevealHaptics
 import com.android.mechanics.behavior.VerticalExpandContainerSpec
@@ -31,6 +32,7 @@ fun TransitionBuilder.toQuickSettingsShadeTransition(
     revealHaptics: ContainerRevealHaptics,
 ) {
     spec = controlCentreSpring(durationScale)
+    distance = FixedDistance(200.dp)
 
     controlCentreReveal(QuickSettingsShade.Elements.Panel)
 

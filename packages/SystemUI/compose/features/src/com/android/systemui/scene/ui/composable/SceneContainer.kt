@@ -53,6 +53,7 @@ import com.android.compose.animation.scene.UserActionResult
 import com.android.compose.animation.scene.content.state.TransitionState
 import com.android.compose.animation.scene.observableTransitionState
 import com.android.compose.animation.scene.rememberMutableSceneTransitionLayoutState
+import com.android.compose.gesture.effect.rememberControlCentreOverscrollEffectFactory
 import com.android.compose.gesture.effect.rememberOffsetOverscrollEffectFactory
 import com.android.compose.snapshot.ObserveReads
 import com.android.systemui.Flags.blackScreenOnSceneContainerStartFix
@@ -285,6 +286,7 @@ private fun InternalSceneContainer(
     // Overlays use the offset overscroll effect when shown on large screens, otherwise they
     // stretch. All scenes use the OffsetOverscrollEffect.
     val offsetOverscrollEffectFactory = rememberOffsetOverscrollEffectFactory()
+    val controlCentreEffectFactory = rememberControlCentreOverscrollEffectFactory()
     val stretchOverscrollEffectFactory = checkNotNull(LocalOverscrollFactory.current)
     val overlayEffectFactory =
         if (isFullWidthShade) {
@@ -339,7 +341,12 @@ private fun InternalSceneContainer(
                 overlay(
                     key = overlayKey,
                     userActions = userActionsByContentKey.getOrDefault(overlayKey, emptyMap()),
-                    effectFactory = overlayEffectFactory,
+                    effectFactory =
+                        if (overlayKey == Overlays.QuickSettingsShade) {
+                            controlCentreEffectFactory
+                        } else {
+                            overlayEffectFactory
+                        },
                     alwaysCompose = overlay.alwaysCompose,
                     // The bouncer overlay is special and not rendered here, so avoid adding
                     // the fullscreen clickable which modals typically introduce. This avoids
