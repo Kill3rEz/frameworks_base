@@ -47,6 +47,8 @@ import dagger.Lazy;
 
 public class WallpaperDepthUtils {
 
+    private static final String TAG = "DepthWallpaper";
+
     private static final String WALLPAPER_DEPTH_KEY = "system:depth_wallpaper_subject_image_uri";
     private static final String WALLPAPER_DEPTH_ENABLED_KEY = "system:depth_wallpaper_enabled";
     private static final String WALLPAPER_DEPTH_OPACITY_KEY = "system:depth_wallpaper_opacity";
@@ -55,6 +57,7 @@ public class WallpaperDepthUtils {
     private static final String WALLPAPER_DEPTH_BOTTOM_FADE_KEY = "system:depth_wallpaper_bottom_fade";
     private static final String WALLPAPER_DEPTH_FADE_CURVE_KEY = "system:depth_wallpaper_fade_curve";
     private static final String WALLPAPER_DEPTH_BOTTOM_INSET_KEY = "system:depth_wallpaper_bottom_inset";
+    private static final String WALLPAPER_DEPTH_FLOATING_KEY = "depth_wallpaper_floating";
 
     private static final int DEFAULT_FADE_CURVE_PERCENT = 50;
     private static final int DEFAULT_BOTTOM_FADE_DP = 100;
@@ -79,6 +82,9 @@ public class WallpaperDepthUtils {
     private int mOffsetX;
     private int mOffsetY;
     private boolean mUnlocking;
+    private boolean mOnLockscreenScene = true;
+    private boolean mFloating;
+    private FloatingDepthMotion mFloatingMotion;
 
     private int mBottomFadeDp = DEFAULT_BOTTOM_FADE_DP;
     private int mFadeCurvePercent = DEFAULT_FADE_CURVE_PERCENT;
@@ -88,11 +94,12 @@ public class WallpaperDepthUtils {
         mContext = context.getApplicationContext();
         mScrimControllerLazy = scrimControllerLazy;
         mTunerService = Dependency.get(TunerService.class);
+        mFloatingMotion = new FloatingDepthMotion(mContext);
         mTunerService.addTunable(mTunable, WALLPAPER_DEPTH_KEY, 
             WALLPAPER_DEPTH_ENABLED_KEY, WALLPAPER_DEPTH_OPACITY_KEY, 
             WALLPAPER_DEPTH_OFFSET_X_KEY, WALLPAPER_DEPTH_OFFSET_Y_KEY,
             WALLPAPER_DEPTH_BOTTOM_FADE_KEY, WALLPAPER_DEPTH_FADE_CURVE_KEY,
-            WALLPAPER_DEPTH_BOTTOM_INSET_KEY);
+            WALLPAPER_DEPTH_BOTTOM_INSET_KEY, WALLPAPER_DEPTH_FLOATING_KEY);
         mLockScreenSubject = new FrameLayout(mContext) {
             @Override
             protected void onDetachedFromWindow() {
@@ -124,6 +131,16 @@ public class WallpaperDepthUtils {
         if (sExpandedMediaArtVisible == visible) return;
         sExpandedMediaArtVisible = visible;
         if (instance != null) instance.updateDepthWallpaperVisibility();
+    }
+
+    public void setLockscreenScene(boolean onLockscreen) {
+        if (mOnLockscreenScene == onLockscreen) return;
+        mOnLockscreenScene = onLockscreen;
+        if (onLockscreen) {
+            updateDepthWallpaperVisibility();
+        } else {
+            hideDepthWallpaperImmediate();
+        }
     }
 
     public void onUnlockStarted() {
@@ -185,6 +202,7 @@ public class WallpaperDepthUtils {
                 case WALLPAPER_DEPTH_ENABLED_KEY:
                     mDWallpaperEnabled = TunerService.parseIntegerSwitch(newValue, false);
                     updateDepthWallpaper(true);
+                    updateDepthWallpaperVisibility();
                     break;
                 case WALLPAPER_DEPTH_KEY:
                     mPreviousWallpaperPath = mWallpaperSubjectPath;
@@ -211,6 +229,10 @@ public class WallpaperDepthUtils {
                 case WALLPAPER_DEPTH_FADE_CURVE_KEY:
                     mFadeCurvePercent = TunerService.parseInteger(newValue, DEFAULT_FADE_CURVE_PERCENT);
                     applyFadeCurve();
+                    break;
+                case WALLPAPER_DEPTH_FLOATING_KEY:
+                    mFloating = TunerService.parseIntegerSwitch(newValue, false);
+                    updateDepthWallpaperVisibility();
                     break;
                 case WALLPAPER_DEPTH_BOTTOM_INSET_KEY:
                     mBottomInsetDp = TunerService.parseInteger(newValue, DEFAULT_BOTTOM_INSET_DP);
@@ -299,6 +321,7 @@ public class WallpaperDepthUtils {
                 && !mBouncerShowing
                 && !mGlanceableHubShowing
                 && !mUnlocking
+                && mOnLockscreenScene
                 && (currentState == null || currentState == ScrimState.KEYGUARD)
                 && mContext.getResources().getConfiguration().orientation != Configuration.ORIENTATION_LANDSCAPE
                 && !isAlbumArtVisible()
@@ -306,10 +329,27 @@ public class WallpaperDepthUtils {
     }
 
     public void updateDepthWallpaperVisibility() {
-        if (mLockScreenSubject == null || !isDWallpaperEnabled()) return;
-        final boolean canShow = canShowDepthWallpaper();
-        final int targetVisibility = canShow ? View.VISIBLE : View.GONE;
+        if (mLockScreenSubject == null) return;
+        if (!isDWallpaperEnabled()) {
+            mLockScreenSubject.post(() -> {
+                mLockScreenSubject.setVisibility(View.GONE);
+                mLockScreenSubject.setTranslationZ(-100f);
+                updateFloating(false);
+            });
+            return;
+        }
         mLockScreenSubject.post(() -> {
+            final boolean canShow = canShowDepthWallpaper();
+            if (Log.isLoggable(TAG, Log.DEBUG)) {
+                Log.d(TAG, "visible=" + canShow + " dozing=" + mDozing + " bouncer=" + mBouncerShowing
+                        + " hub=" + mGlanceableHubShowing + " unlocking=" + mUnlocking
+                        + " lockscreen=" + mOnLockscreenScene + " art=" + isAlbumArtVisible()
+                        + " expandedArt=" + sExpandedMediaArtVisible);
+            }
+            final int targetVisibility = canShow ? View.VISIBLE : View.GONE;
+            if (canShow) {
+                mLockScreenSubject.animate().cancel();
+            }
             mLockScreenSubject.setVisibility(targetVisibility);
             if (canShow) {
                 mLockScreenSubject.setAlpha(1f);
@@ -318,12 +358,15 @@ public class WallpaperDepthUtils {
             } else {
                 mLockScreenSubject.setTranslationZ(-100f);
             }
+            updateFloating(canShow);
         });
     }
     
     public void hideDepthWallpaper() {
         if (mLockScreenSubject == null) return;
+        if (Log.isLoggable(TAG, Log.DEBUG)) Log.d(TAG, "hide", new Throwable());
         mLockScreenSubject.post(() -> {
+            updateFloating(false);
             mLockScreenSubject.setVisibility(View.GONE);
             mLockScreenSubject.setTranslationZ(-100f);
         });
@@ -331,18 +374,30 @@ public class WallpaperDepthUtils {
 
     public void hideDepthWallpaperImmediate() {
         if (mLockScreenSubject == null) return;
+        if (Log.isLoggable(TAG, Log.DEBUG)) Log.d(TAG, "hideImmediate", new Throwable());
         mLockScreenSubject.post(() -> {
+            updateFloating(false);
             mLockScreenSubject.animate().cancel();
             mLockScreenSubject.animate()
                     .alpha(0f)
                     .setDuration(120)
                     .withEndAction(() -> {
+                        mLockScreenSubject.setAlpha(1f);
+                        if (canShowDepthWallpaper()) return;
                         mLockScreenSubject.setVisibility(View.GONE);
                         mLockScreenSubject.setTranslationZ(-100f);
-                        mLockScreenSubject.setAlpha(1f);
                     })
                     .start();
         });
+    }
+
+    private void updateFloating(boolean subjectShowing) {
+        if (subjectShowing && mFloating
+                && mLockScreenSubject.getParent() instanceof ViewGroup root) {
+            mFloatingMotion.start(root);
+        } else {
+            mFloatingMotion.stop();
+        }
     }
 
     public Bitmap getResizedBitmap(Bitmap wallpaperBitmap, float xOffsetDp, float yOffsetDp) {

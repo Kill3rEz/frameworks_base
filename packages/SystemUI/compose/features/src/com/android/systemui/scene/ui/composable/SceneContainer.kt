@@ -109,6 +109,7 @@ fun SceneContainer(
         (transition: TransitionState.Transition, animationScope: CoroutineScope) -> Unit,
     onSnap: (idle: TransitionState.Idle) -> Unit,
     modifier: Modifier = Modifier,
+    onTransitionEnd: (transition: TransitionState.Transition) -> Unit = {},
     swipeVelocityThreshold: Dp = SceneContainerDefaults.SwipeVelocityThreshold,
 ) {
     WithSceneContainerPreloadedResources {
@@ -124,6 +125,7 @@ fun SceneContainer(
             onTransitionStart = onTransitionStart,
             onSnap = onSnap,
             modifier = modifier,
+            onTransitionEnd = onTransitionEnd,
             swipeVelocityThreshold = swipeVelocityThreshold,
         )
     }
@@ -143,6 +145,7 @@ private fun InternalSceneContainer(
         (transition: TransitionState.Transition, animationScope: CoroutineScope) -> Unit,
     onSnap: (idle: TransitionState.Idle) -> Unit,
     modifier: Modifier = Modifier,
+    onTransitionEnd: (transition: TransitionState.Transition) -> Unit = {},
     swipeVelocityThreshold: Dp = SceneContainerDefaults.SwipeVelocityThreshold,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -205,6 +208,7 @@ private fun InternalSceneContainer(
                 sceneTransitionLatencyMonitor.onTransitionStart(transition)
             },
             onTransitionEnd = { transition ->
+                onTransitionEnd(transition)
                 sceneJankMonitor.onTransitionEnd(
                     from = transition.fromContent,
                     to = transition.toContent,

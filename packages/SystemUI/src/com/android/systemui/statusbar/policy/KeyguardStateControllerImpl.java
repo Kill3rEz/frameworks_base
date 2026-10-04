@@ -45,6 +45,7 @@ import com.android.systemui.flags.FeatureFlags;
 import com.android.systemui.keyguard.KeyguardUnlockAnimationController;
 import com.android.systemui.keyguard.domain.interactor.KeyguardInteractor;
 import com.android.systemui.res.R;
+import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.util.ScrimUtils;
 import com.android.systemui.user.domain.interactor.SelectedUserInteractor;
 
@@ -384,7 +385,9 @@ public class KeyguardStateControllerImpl implements KeyguardStateController {
             mPrimaryBouncerShowing = showing;
 
             invokeForEachCallback(Callback::onPrimaryBouncerShowingChanged);
-            ScrimUtils.get().onPrimaryBouncerShowingChanged(showing);
+            if (!SceneContainerFlag.isEnabled()) {
+                ScrimUtils.get().onPrimaryBouncerShowingChanged(showing);
+            }
         }
     }
 

@@ -156,12 +156,23 @@ object SceneWindowRootViewBinder {
                                         ?.onMainContainerTransitionStart(transition, animationScope)
                                     val isLockscreen = transition.toContent == Scenes.Lockscreen
                                     val isBouncerShowing = transition.currentOverlays.contains(Overlays.Bouncer)
-                                    WallpaperDepthUtils.get()?.onBouncerShowingChanged(!isLockscreen || isBouncerShowing)
+                                    val isUnlockSwipe =
+                                        transition.fromContent == Scenes.Lockscreen &&
+                                            transition.toContent == Scenes.Gone &&
+                                            !isBouncerShowing
+                                    if (!isUnlockSwipe) {
+                                        WallpaperDepthUtils.get()?.onBouncerShowingChanged(!isLockscreen || isBouncerShowing)
+                                    }
                                 },
                                 onSnap = { idle ->
                                     val isBouncerShowing = idle.currentOverlays.contains(Overlays.Bouncer)
                                     bouncerSceneTransitionCoordinator?.onMainContainerSnap(isBouncerShowing)
                                     val isLockscreen = idle.currentScene == Scenes.Lockscreen
+                                    WallpaperDepthUtils.get()?.onBouncerShowingChanged(!isLockscreen || isBouncerShowing)
+                                },
+                                onTransitionEnd = { transition ->
+                                    val isLockscreen = transition.currentScene == Scenes.Lockscreen
+                                    val isBouncerShowing = transition.currentOverlays.contains(Overlays.Bouncer)
                                     WallpaperDepthUtils.get()?.onBouncerShowingChanged(!isLockscreen || isBouncerShowing)
                                 },
                             )
@@ -181,6 +192,9 @@ object SceneWindowRootViewBinder {
                                 FrameLayout.LayoutParams.MATCH_PARENT,
                             )
                         )
+                        depthView.setSnapshotBinding {
+                            dwUtils.setLockscreenScene(viewModel.currentScene == Scenes.Lockscreen)
+                        }
                     }
 
                     val legacyView = view.requireViewById<View>(R.id.legacy_window_root)
@@ -255,6 +269,7 @@ object SceneWindowRootViewBinder {
         onTransitionStart:
             (transition: TransitionState.Transition, animationScope: CoroutineScope) -> Unit,
         onSnap: (idle: TransitionState.Idle) -> Unit,
+        onTransitionEnd: (transition: TransitionState.Transition) -> Unit,
     ): View {
         return ComposeView(context).apply {
             setSnapshotBinding {
@@ -284,6 +299,7 @@ object SceneWindowRootViewBinder {
                         onTransitionStart = onTransitionStart,
                         onSnap = onSnap,
                         modifier = modifier,
+                        onTransitionEnd = onTransitionEnd,
                     )
                 }
             }

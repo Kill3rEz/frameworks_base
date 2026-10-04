@@ -23,6 +23,7 @@ import android.service.notification.StatusBarNotification
 import android.view.View
 import android.view.ViewTreeObserver
 import com.android.systemui.Dependency
+import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.statusbar.StatusBarState.KEYGUARD
 import com.android.systemui.statusbar.StatusBarState.SHADE_LOCKED
 import com.android.systemui.statusbar.phone.ScrimController
@@ -125,6 +126,8 @@ class ScrimUtils private constructor(context: Context?) {
         if (fadingAway) {
             mWallpaperDepthUtils?.hideDepthWallpaper()
             mWallpaperDepthUtils?.hideDepthWallpaperImmediate()
+        } else {
+            restoreDepthWallpaper()
         }
     }
 
@@ -132,7 +135,9 @@ class ScrimUtils private constructor(context: Context?) {
         listeners.notifyOnMain { it.onKeyguardGoingAwayChanged(goingAway) }
         postKeyguardRetry()
         if (goingAway) {
-            mWallpaperDepthUtils?.hideDepthWallpaper()
+            if (!SceneContainerFlag.isEnabled) mWallpaperDepthUtils?.hideDepthWallpaper()
+        } else {
+            restoreDepthWallpaper()
         }
     }
 
@@ -140,6 +145,14 @@ class ScrimUtils private constructor(context: Context?) {
         listeners.notifyOnMain { it.onPrimaryBouncerShowingChanged(showing) }
         postKeyguardRetry()
         mWallpaperDepthUtils?.onBouncerShowingChanged(showing)
+        if (!showing) restoreDepthWallpaper()
+    }
+
+    private fun restoreDepthWallpaper() {
+        if (!mStateIsKeyguard) return
+        mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
+        mainHandler.postDelayed({ mWallpaperDepthUtils?.updateDepthWallpaperVisibility() }, 200)
+        mainHandler.postDelayed({ mWallpaperDepthUtils?.updateDepthWallpaperVisibility() }, 500)
     }
 
     private fun postKeyguardRetry() {
