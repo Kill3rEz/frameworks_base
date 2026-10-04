@@ -45,6 +45,7 @@ import com.android.systemui.deviceentry.domain.interactor.DeviceEntryFingerprint
 import com.android.systemui.display.DisplayExtensionsKt;
 import com.android.systemui.doze.DozeHost;
 import com.android.systemui.doze.DozeLog;
+import com.android.systemui.edgelighting.EdgeLightingController;
 import com.android.systemui.doze.DozeReceiver;
 import com.android.systemui.keyguard.WakefulnessLifecycle;
 import com.android.systemui.keyguard.domain.interactor.AodDimInteractor;
@@ -131,6 +132,7 @@ public final class DozeServiceHost implements DozeHost {
     private final AmbientDisplayConfiguration mAmbientDisplayConfiguration;
     private final AodDimInteractor mAodDimInteractor;
     private final SelectedUserInteractor mSelectedUserInteractor;
+    private final EdgeLightingController mEdgeLightingController;
 
     @Inject
     public DozeServiceHost(DozeLog dozeLog, PowerManager powerManager,
@@ -153,7 +155,8 @@ public final class DozeServiceHost implements DozeHost {
             Context context,
             AmbientDisplayConfiguration ambientDisplayConfiguration,
             AodDimInteractor aodDimInteractor,
-            SelectedUserInteractor selectedUserInteractor) {
+            SelectedUserInteractor selectedUserInteractor,
+            EdgeLightingController edgeLightingController) {
         super();
         mDozeLog = dozeLog;
         mPowerManager = powerManager;
@@ -180,6 +183,7 @@ public final class DozeServiceHost implements DozeHost {
         mAmbientDisplayConfiguration = ambientDisplayConfiguration;
         mAodDimInteractor = aodDimInteractor;
         mSelectedUserInteractor = selectedUserInteractor;
+        mEdgeLightingController = edgeLightingController;
     }
 
     // TODO: we should try to not pass status bar in here if we can avoid it.
@@ -333,11 +337,15 @@ public final class DozeServiceHost implements DozeHost {
                 callback.onPulseStarted(); // requestState(DozeMachine.State.DOZE_PULSING)
                 mCentralSurfaces.updateNotificationPanelTouchState();
                 setPulsing(true);
+                if (reason == DozeLog.PULSE_REASON_NOTIFICATION) {
+                    mEdgeLightingController.onNotificationPulseStarted();
+                }
             }
 
             @Override
             public void onPulseFinished() {
                 mPulsing = false;
+                mEdgeLightingController.onPulseFinished();
                 callback.onPulseFinished(); // requestState(DozeMachine.State.DOZE_PULSE_DONE)
                 mCentralSurfaces.updateNotificationPanelTouchState();
                 if (mScrimController != null) {

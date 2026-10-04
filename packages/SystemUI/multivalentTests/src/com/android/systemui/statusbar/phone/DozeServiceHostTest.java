@@ -46,6 +46,7 @@ import com.android.systemui.assist.AssistManager;
 import com.android.systemui.biometrics.AuthController;
 import com.android.systemui.doze.DozeHost;
 import com.android.systemui.doze.DozeLog;
+import com.android.systemui.edgelighting.EdgeLightingController;
 import com.android.systemui.flags.DisableSceneContainer;
 import com.android.systemui.flags.EnableSceneContainer;
 import com.android.systemui.keyguard.WakefulnessLifecycle;
@@ -109,6 +110,7 @@ public class DozeServiceHostTest extends SysuiTestCase {
     @Mock private AodDimInteractor mAodDimInteractor;
     @Mock private Display mDisplay;
     @Mock private SelectedUserInteractor mSelectedUserInteractor;
+    @Mock private EdgeLightingController mEdgeLightingController;
 
     private Context mContextSpy;
     private KosmosJavaAdapter mKosmos;
@@ -129,7 +131,7 @@ public class DozeServiceHostTest extends SysuiTestCase {
                 mShadeLockscreenInteractor, mDozeInteractor,
                 mKosmos.getDeviceEntryFingerprintAuthInteractor(),
                 mKosmos.getTestScope(), mContextSpy, mAmbientDisplayConfiguration,
-                mAodDimInteractor, mSelectedUserInteractor);
+                mAodDimInteractor, mSelectedUserInteractor, mEdgeLightingController);
 
         mDozeServiceHost.initialize(
                 mCentralSurfaces,
