@@ -5,7 +5,10 @@
 
 package com.android.systemui.edgelighting;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -27,9 +30,12 @@ import javax.inject.Inject;
 public class EdgeLightingController {
 
     private static final String TAG = "EdgeLighting";
-    private static final String AUTHORITY = "co.aospa.edgelighting.provider";
+    private static final String AUTHORITY = "com.penguin.edgelighting.provider";
     private static final Uri STATE_URI = Uri.parse("content://" + AUTHORITY + "/state");
     private static final Uri IMAGE_URI = Uri.parse("content://" + AUTHORITY + "/image");
+    private static final String PACKAGE = "com.penguin.edgelighting";
+    private static final String ACTION_PREVIEW = PACKAGE + ".action.PREVIEW";
+    private static final long PREVIEW_MS = 4500;
 
     private final Context mContext;
     private final WindowManager mWindowManager;
@@ -48,12 +54,31 @@ public class EdgeLightingController {
         mWindowManager = context.getSystemService(WindowManager.class);
         mMainExecutor = mainExecutor;
         mBgExecutor = bgExecutor;
+        context.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (PACKAGE.equals(getSentFromPackage())) onPreview();
+            }
+        }, new IntentFilter(ACTION_PREVIEW), Context.RECEIVER_EXPORTED);
+    }
+
+    private void onPreview() {
+        mBgExecutor.execute(() -> {
+            Bitmap cutout = loadCutout(true);
+            mMainExecutor.execute(() -> {
+                if (cutout == null || mView != null) return;
+                show(cutout);
+                mView.postDelayed(() -> {
+                    if (mView != null && !mPulsing) mView.finish();
+                }, PREVIEW_MS);
+            });
+        });
     }
 
     public void onNotificationPulseStarted() {
         mPulsing = true;
         mBgExecutor.execute(() -> {
-            Bitmap cutout = loadCutout();
+            Bitmap cutout = loadCutout(false);
             mMainExecutor.execute(() -> {
                 if (mPulsing && cutout != null) show(cutout);
             });
@@ -65,12 +90,13 @@ public class EdgeLightingController {
         if (mView != null) mView.finish();
     }
 
-    private Bitmap loadCutout() {
+    private Bitmap loadCutout(boolean force) {
         long version;
         try (Cursor cursor = mContext.getContentResolver().query(
                 STATE_URI, null, null, null, null)) {
-            if (cursor == null || !cursor.moveToFirst() || cursor.getInt(0) == 0) return null;
+            if (cursor == null || !cursor.moveToFirst()) return null;
             version = cursor.getLong(1);
+            if (version == 0 || (!force && cursor.getInt(0) == 0)) return null;
         } catch (RuntimeException e) {
             return null;
         }
