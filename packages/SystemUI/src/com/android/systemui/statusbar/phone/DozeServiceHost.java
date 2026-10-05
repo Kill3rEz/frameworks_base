@@ -338,7 +338,8 @@ public final class DozeServiceHost implements DozeHost {
                 mCentralSurfaces.updateNotificationPanelTouchState();
                 setPulsing(true);
                 if (reason == DozeLog.PULSE_REASON_NOTIFICATION) {
-                    mEdgeLightingController.onNotificationPulseStarted();
+                    mEdgeLightingController.onNotificationPulseStarted(
+                            mHeadsUpManager.getTopEntry());
                 }
             }
 
