@@ -87,6 +87,13 @@ public class ShellBackAnimationRegistry {
         updateSupportedAnimators();
     }
 
+    void unregisterAnimation(@BackNavigationInfo.BackTargetType int type,
+            @NonNull BackAnimationRunner runner) {
+        if (mAnimationDefinition.get(type) == runner) {
+            unregisterAnimation(type);
+        }
+    }
+
     private void updateSupportedAnimators() {
         mSupportedAnimators.clear();
         for (int i = mAnimationDefinition.size() - 1; i >= 0; --i) {
