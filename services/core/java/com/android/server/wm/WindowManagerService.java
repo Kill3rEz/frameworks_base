@@ -887,6 +887,7 @@ public class WindowManagerService extends IWindowManager.Stub
                 DEVELOPMENT_WM_DISPLAY_SETTINGS_PATH);
         private final Uri mMaximumObscuringOpacityForTouchUri = Settings.Global.getUriFor(
                 Settings.Global.MAXIMUM_OBSCURING_OPACITY_FOR_TOUCH);
+        private final Uri mLiquidGlassUri = Settings.Secure.getUriFor(LIQUID_GLASS_SETTING);
         private final Uri mMirrorBuiltInDisplayUri =
                 Settings.Secure.getUriFor(Settings.Secure.MIRROR_BUILT_IN_DISPLAY);
         private final Uri mDevelopmentOverrideDesktopExperienceUri = Settings.Global.getUriFor(
@@ -937,6 +938,7 @@ public class WindowManagerService extends IWindowManager.Stub
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(mMirrorBuiltInDisplayUri, false, this,
                     UserHandle.USER_ALL);
+            resolver.registerContentObserver(mLiquidGlassUri, false, this, UserHandle.USER_ALL);
         }
 
         @Override
@@ -947,6 +949,11 @@ public class WindowManagerService extends IWindowManager.Stub
 
             if (mForceDesktopModeOnExternalDisplaysUri.equals(uri)) {
                 updateForceDesktopModeOnExternalDisplays();
+                return;
+            }
+
+            if (mLiquidGlassUri.equals(uri)) {
+                syncLiquidGlass(mContext.getContentResolver());
                 return;
             }
 
@@ -1565,6 +1572,7 @@ public class WindowManagerService extends IWindowManager.Stub
         mForceDesktopModeOnExternalDisplays = Settings.Global.getInt(resolver,
                 DEVELOPMENT_FORCE_DESKTOP_MODE_ON_EXTERNAL_DISPLAYS, 0) != 0;
         mDexEnabled = readDexEnabled(resolver);
+        syncLiquidGlass(resolver);
 
         final String displaySettingsPath = Settings.Global.getString(resolver,
                 DEVELOPMENT_WM_DISPLAY_SETTINGS_PATH);
@@ -7907,6 +7915,15 @@ public class WindowManagerService extends IWindowManager.Stub
     @Override
     public int getDockedStackSide() {
         return 0;
+    }
+
+    private static final String LIQUID_GLASS_SETTING = "penguin_liquid_glass";
+    private static final String LIQUID_GLASS_PROPERTY = "persist.sys.penguin.liquid_glass";
+
+    private static void syncLiquidGlass(ContentResolver resolver) {
+        final boolean on = Settings.Secure.getIntForUser(resolver, LIQUID_GLASS_SETTING, 0,
+                UserHandle.USER_CURRENT) != 0;
+        SystemProperties.set(LIQUID_GLASS_PROPERTY, on ? "1" : "0");
     }
 
     private static boolean readDexEnabled(ContentResolver resolver) {
