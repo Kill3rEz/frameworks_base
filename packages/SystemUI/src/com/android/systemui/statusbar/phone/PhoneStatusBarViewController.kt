@@ -360,9 +360,15 @@ private constructor(
         private var initialTouchY = 0f
         private var isIntercepting = false
         private val cachedEvents = mutableListOf<MotionEvent>()
+        private var dexBar = false
 
         override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
             StatusBarEventForwardingModernization.assertInLegacyMode()
+
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                dexBar = DexStatusBar.isDex(mView.context.displayId)
+            }
+            if (dexBar) return true
 
             if (event.action == MotionEvent.ACTION_DOWN) {
                 dispatchEventToShadeDisplayPolicy(event)
@@ -406,6 +412,13 @@ private constructor(
 
         override fun onTouchEvent(event: MotionEvent): Boolean {
             StatusBarEventForwardingModernization.assertInLegacyMode()
+
+            if (dexBar) {
+                if (event.action == MotionEvent.ACTION_UP) {
+                    DexStatusBar.toggleControlCentre(mView.context, mView.context.displayId)
+                }
+                return true
+            }
 
             onTouch(event)
 
