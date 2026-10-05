@@ -116,6 +116,8 @@ private val BadgeZone = 26.dp
 private val EdgeZone = 36.dp
 private const val EdgeDwellMillis = 550L
 
+private val AddButtonSpace = 60.dp
+
 private class Drag(val item: Item, val fromPage: Int, val grab: Offset) {
     var pointer by mutableStateOf(Offset.Zero)
 }
@@ -235,220 +237,9 @@ private fun ContentScope.PenguinGridEditorContent(
         }
         Spacer(Modifier.height(12.dp))
 
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val gridWidth = maxWidth - horizontalMargin * 2
-            val columnWidth = (gridWidth - gap * (PenguinGrid.COLUMNS - 1)) / PenguinGrid.COLUMNS
-            val metrics =
-                remember(columnWidth, rowHeight, gap, horizontalMargin, density) {
-                    with(density) {
-                        CellMetrics(
-                        column = columnWidth.toPx(),
-                        row = rowHeight.toPx(),
-                        gap = gap.toPx(),
-                        left = horizontalMargin.toPx(),
-                        badge = BadgeZone.toPx(),
-                        )
-                    }
-                }
-            val currentMetrics by rememberUpdatedState(metrics)
-            val pageHeightPx = with(density) { pageHeight.toPx() }
-            val edgePx = with(density) { EdgeZone.toPx() }
-
-            val currentPages by rememberUpdatedState(pages)
-            val activeDrag = drag
-            val targetPage = pagerState.currentPage
-            val preview: (Int) -> List<Item> = { index ->
-                val page = pages.getOrNull(index).orEmpty()
-                val sized = resizing?.takeIf { it.first == index }?.second
-                val original = sized?.let { target -> page.firstOrNull { it.spec == target.spec } }
-                if (activeDrag == null && sized != null && original != null) {
-                    PenguinGrid.place(page, original, original.x, original.y, sized.w, sized.h)
-                } else if (activeDrag == null) {
-                    page
-                } else {
-                    val without =
-                        if (index == activeDrag.fromPage) page.filter { it != activeDrag.item }
-                        else page
-                    if (index == targetPage) {
-                        val (x, y) = metrics.cellFor(activeDrag.pointer - activeDrag.grab)
-                        dropOnto(without, activeDrag.item, x, y)
-                    } else {
-                        without
-                    }
-                }
-            }
-
-            LaunchedEffect(activeDrag) {
-                val held = activeDrag ?: return@LaunchedEffect
-                var dwell = 0L
-                while (true) {
-                    delay(50)
-                    val y = held.pointer.y
-                    val direction =
-                        when {
-                            y < edgePx -> -1
-                            y > pageHeightPx - edgePx -> 1
-                            else -> 0
-                        }
-                    val next = pagerState.currentPage + direction
-                    if (direction != 0 && next in 0 until pagerState.pageCount) {
-                        dwell += 50
-                        if (dwell >= EdgeDwellMillis) {
-                            dwell = 0
-                            pagerState.animateScrollToPage(next)
-                        }
-                    } else {
-                        dwell = 0
-                    }
-                }
-            }
-
-            Box(
-                Modifier.fillMaxWidth()
-                    .height(pageHeight)
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            val down =
-                                awaitFirstDown(
-                                    requireUnconsumed = false,
-                                    pass = PointerEventPass.Initial,
-                                )
-                            val page = pagerState.currentPage
-                            val hit =
-                                currentMetrics.hit(
-                                    currentPages.getOrNull(page).orEmpty(),
-                                    down.position,
-                                ) ?: return@awaitEachGesture
-                            try {
-                                var started: Drag? = null
-                                while (true) {
-                                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                                    if (!change.pressed) break
-                                    if (
-                                        started == null &&
-                                            (change.position - down.position).getDistance() >
-                                                viewConfiguration.touchSlop
-                                    ) {
-                                        started =
-                                            Drag(hit, page, down.position - currentMetrics.origin(hit)).also {
-                                                it.pointer = change.position
-                                                drag = it
-                                            }
-                                    }
-                                    if (started != null) {
-                                        change.consume()
-                                        started.pointer = change.position
-                                    }
-                                }
-                                val held = started ?: return@awaitEachGesture
-                                val target = pagerState.currentPage
-                                val (x, y) = currentMetrics.cellFor(held.pointer - held.grab)
-                                val next = currentPages.map { it.toMutableList() }.toMutableList()
-                                while (next.size <= target) next.add(mutableListOf())
-                                next[held.fromPage].remove(held.item)
-                                next[target] =
-                                    dropOnto(next[target], held.item, x, y).toMutableList()
-                                commit(next)
-                            } finally {
-                                drag = null
-                            }
-                        }
-                    }
-            ) {
-                VerticalPager(
-                    state = pagerState,
-                    userScrollEnabled = activeDrag == null,
-                    modifier = Modifier.fillMaxSize(),
-                ) { index ->
-                    EditPage(
-                        items = preview(index),
-                        rows = PenguinGrid.rows(pages.getOrNull(index).orEmpty()) + 1,
-                        metrics = metrics,
-                        horizontalMargin = horizontalMargin,
-                        columnWidth = columnWidth,
-                        rowHeight = rowHeight,
-                        gap = gap,
-                        dragged =
-                            activeDrag?.item?.spec?.takeIf {
-                                index == activeDrag.fromPage || index == targetPage
-                            },
-                        onRemove = { item ->
-                            val next = pages.map { it.toMutableList() }
-                            next.getOrNull(index)?.remove(item)
-                            commit(next)
-                            if (!PenguinGrid.isModule(item.spec) && !oneUi) {
-                                editViewModel.removeTile(item.spec)
-                            }
-                        },
-                        onResizePreview = { spec, w, h ->
-                            resizing = index to Item(spec, 0, 0, w, h)
-                        },
-                        onResize = { spec, w, h ->
-                            resizing = null
-                            val latest = currentPages
-                            val item = latest.getOrNull(index)?.firstOrNull { it.spec == spec }
-                            if (item != null && (item.w != w || item.h != h)) {
-                                val next = latest.map { it.toMutableList() }.toMutableList()
-                                next[index] =
-                                    PenguinGrid.place(next[index], item, item.x, item.y, w, h)
-                                        .toMutableList()
-                                commit(next)
-                                if (!PenguinGrid.isModule(spec)) resizeTile(spec, w > 1)
-                            }
-                        },
-                    ) { item ->
-                        EditItem(viewModel, item, mediaShown, tilesBySpec)
-                    }
-                }
-
-                PageIcons(
-                    pages = List(pageCount) { pages.getOrNull(it).orEmpty() },
-                    current = pagerState.currentPage,
-                    modifier =
-                        Modifier.align(Alignment.TopEnd)
-                            .offset(x = -(horizontalMargin - PageIconSize) / 2)
-                            .padding(top = pageHeight / 2),
-                )
-
-                activeDrag?.let { held ->
-                    val topLeft = held.pointer - held.grab
-                    Box(
-                        Modifier.offset {
-                                IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt())
-                            }
-                            .size(
-                                columnWidth * held.item.w + gap * (held.item.w - 1),
-                                rowHeight * held.item.h + gap * (held.item.h - 1),
-                            )
-                            .graphicsLayer {
-                                scaleX = 1.06f
-                                scaleY = 1.06f
-                                alpha = 0.92f
-                            }
-                            .gesturesDisabled()
-                    ) {
-                        EditItem(viewModel, held.item, mediaShown, tilesBySpec)
-                    }
-                }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.penguin_cc_add_control),
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.titleSmall,
-            modifier =
-                Modifier.align(Alignment.CenterHorizontally)
-                    .clip(CircleShape)
-                    .background(editorGlass())
-                    .clickable { adding = true }
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
-        )
-
         if (adding) {
             AddControlSheet(
+                modifier = Modifier.height(pageHeight + AddButtonSpace),
                 viewModel = viewModel,
                 modules = model.modules,
                 currentPage = pages.getOrNull(pagerState.currentPage).orEmpty(),
@@ -475,6 +266,219 @@ private fun ContentScope.PenguinGridEditorContent(
                 },
                 onDismiss = { adding = false },
             )
+        } else {
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val gridWidth = maxWidth - horizontalMargin * 2
+                val columnWidth = (gridWidth - gap * (PenguinGrid.COLUMNS - 1)) / PenguinGrid.COLUMNS
+                val metrics =
+                    remember(columnWidth, rowHeight, gap, horizontalMargin, density) {
+                        with(density) {
+                            CellMetrics(
+                            column = columnWidth.toPx(),
+                            row = rowHeight.toPx(),
+                            gap = gap.toPx(),
+                            left = horizontalMargin.toPx(),
+                            badge = BadgeZone.toPx(),
+                            )
+                        }
+                    }
+                val currentMetrics by rememberUpdatedState(metrics)
+                val pageHeightPx = with(density) { pageHeight.toPx() }
+                val edgePx = with(density) { EdgeZone.toPx() }
+
+                val currentPages by rememberUpdatedState(pages)
+                val activeDrag = drag
+                val targetPage = pagerState.currentPage
+                val preview: (Int) -> List<Item> = { index ->
+                    val page = pages.getOrNull(index).orEmpty()
+                    val sized = resizing?.takeIf { it.first == index }?.second
+                    val original = sized?.let { target -> page.firstOrNull { it.spec == target.spec } }
+                    if (activeDrag == null && sized != null && original != null) {
+                        PenguinGrid.place(page, original, original.x, original.y, sized.w, sized.h)
+                    } else if (activeDrag == null) {
+                        page
+                    } else {
+                        val without =
+                            if (index == activeDrag.fromPage) page.filter { it != activeDrag.item }
+                            else page
+                        if (index == targetPage) {
+                            val (x, y) = metrics.cellFor(activeDrag.pointer - activeDrag.grab)
+                            dropOnto(without, activeDrag.item, x, y)
+                        } else {
+                            without
+                        }
+                    }
+                }
+
+                LaunchedEffect(activeDrag) {
+                    val held = activeDrag ?: return@LaunchedEffect
+                    var dwell = 0L
+                    while (true) {
+                        delay(50)
+                        val y = held.pointer.y
+                        val direction =
+                            when {
+                                y < edgePx -> -1
+                                y > pageHeightPx - edgePx -> 1
+                                else -> 0
+                            }
+                        val next = pagerState.currentPage + direction
+                        if (direction != 0 && next in 0 until pagerState.pageCount) {
+                            dwell += 50
+                            if (dwell >= EdgeDwellMillis) {
+                                dwell = 0
+                                pagerState.animateScrollToPage(next)
+                            }
+                        } else {
+                            dwell = 0
+                        }
+                    }
+                }
+
+                Box(
+                    Modifier.fillMaxWidth()
+                        .height(pageHeight)
+                        .pointerInput(Unit) {
+                            awaitEachGesture {
+                                val down =
+                                    awaitFirstDown(
+                                        requireUnconsumed = false,
+                                        pass = PointerEventPass.Initial,
+                                    )
+                                val page = pagerState.currentPage
+                                val hit =
+                                    currentMetrics.hit(
+                                        currentPages.getOrNull(page).orEmpty(),
+                                        down.position,
+                                    ) ?: return@awaitEachGesture
+                                try {
+                                    var started: Drag? = null
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                        if (!change.pressed) break
+                                        if (
+                                            started == null &&
+                                                (change.position - down.position).getDistance() >
+                                                    viewConfiguration.touchSlop
+                                        ) {
+                                            started =
+                                                Drag(hit, page, down.position - currentMetrics.origin(hit)).also {
+                                                    it.pointer = change.position
+                                                    drag = it
+                                                }
+                                        }
+                                        if (started != null) {
+                                            change.consume()
+                                            started.pointer = change.position
+                                        }
+                                    }
+                                    val held = started ?: return@awaitEachGesture
+                                    val target = pagerState.currentPage
+                                    val (x, y) = currentMetrics.cellFor(held.pointer - held.grab)
+                                    val next = currentPages.map { it.toMutableList() }.toMutableList()
+                                    while (next.size <= target) next.add(mutableListOf())
+                                    next[held.fromPage].remove(held.item)
+                                    next[target] =
+                                        dropOnto(next[target], held.item, x, y).toMutableList()
+                                    commit(next)
+                                } finally {
+                                    drag = null
+                                }
+                            }
+                        }
+                ) {
+                    VerticalPager(
+                        state = pagerState,
+                        userScrollEnabled = activeDrag == null,
+                        modifier = Modifier.fillMaxSize(),
+                    ) { index ->
+                        EditPage(
+                            items = preview(index),
+                            rows = PenguinGrid.rows(pages.getOrNull(index).orEmpty()) + 1,
+                            metrics = metrics,
+                            horizontalMargin = horizontalMargin,
+                            columnWidth = columnWidth,
+                            rowHeight = rowHeight,
+                            gap = gap,
+                            dragged =
+                                activeDrag?.item?.spec?.takeIf {
+                                    index == activeDrag.fromPage || index == targetPage
+                                },
+                            onRemove = { item ->
+                                val next = pages.map { it.toMutableList() }
+                                next.getOrNull(index)?.remove(item)
+                                commit(next)
+                                if (!PenguinGrid.isModule(item.spec) && !oneUi) {
+                                    editViewModel.removeTile(item.spec)
+                                }
+                            },
+                            onResizePreview = { spec, w, h ->
+                                resizing = index to Item(spec, 0, 0, w, h)
+                            },
+                            onResize = { spec, w, h ->
+                                resizing = null
+                                val latest = currentPages
+                                val item = latest.getOrNull(index)?.firstOrNull { it.spec == spec }
+                                if (item != null && (item.w != w || item.h != h)) {
+                                    val next = latest.map { it.toMutableList() }.toMutableList()
+                                    next[index] =
+                                        PenguinGrid.place(next[index], item, item.x, item.y, w, h)
+                                            .toMutableList()
+                                    commit(next)
+                                    if (!PenguinGrid.isModule(spec)) resizeTile(spec, w > 1)
+                                }
+                            },
+                        ) { item ->
+                            EditItem(viewModel, item, mediaShown, tilesBySpec)
+                        }
+                    }
+
+                    PageIcons(
+                        pages = List(pageCount) { pages.getOrNull(it).orEmpty() },
+                        current = pagerState.currentPage,
+                        modifier =
+                            Modifier.align(Alignment.TopEnd)
+                                .offset(x = -(horizontalMargin - PageIconSize) / 2)
+                                .padding(top = pageHeight / 2),
+                    )
+
+                    activeDrag?.let { held ->
+                        val topLeft = held.pointer - held.grab
+                        Box(
+                            Modifier.offset {
+                                    IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt())
+                                }
+                                .size(
+                                    columnWidth * held.item.w + gap * (held.item.w - 1),
+                                    rowHeight * held.item.h + gap * (held.item.h - 1),
+                                )
+                                .graphicsLayer {
+                                    scaleX = 1.06f
+                                    scaleY = 1.06f
+                                    alpha = 0.92f
+                                }
+                                .gesturesDisabled()
+                        ) {
+                            EditItem(viewModel, held.item, mediaShown, tilesBySpec)
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.penguin_cc_add_control),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleSmall,
+                modifier =
+                    Modifier.align(Alignment.CenterHorizontally)
+                        .clip(CircleShape)
+                        .background(editorGlass())
+                        .clickable { adding = true }
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+            )
+
         }
     }
     }
@@ -585,10 +589,22 @@ private fun EditPage(
 ) {
     val cellColor = editorGlass(0.4f)
     Box(Modifier.fillMaxSize()) {
+        val occupied =
+            remember(items, dragged) {
+                buildSet {
+                    for (item in items) {
+                        if (item.spec == dragged) continue
+                        for (dy in 0 until item.h) {
+                            for (dx in 0 until item.w) add((item.x + dx) to (item.y + dy))
+                        }
+                    }
+                }
+            }
         Canvas(Modifier.fillMaxSize()) {
             val radius = minOf(metrics.column, metrics.row) * 0.36f
             for (y in 0 until rows) {
                 for (x in 0 until PenguinGrid.COLUMNS) {
+                    if ((x to y) in occupied) continue
                     val center =
                         Offset(
                             metrics.left + x * (metrics.column + metrics.gap) + metrics.column / 2,
@@ -768,6 +784,7 @@ private fun AddControlSheet(
     onAddModule: (TileSpec) -> Unit,
     onAddTile: (TileSpec) -> Unit,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     BackHandler { onDismiss() }
     val tiles by viewModel.editModeViewModel.tiles.collectAsStateWithLifecycle(emptyList())
@@ -802,8 +819,8 @@ private fun AddControlSheet(
 
     Column(
         modifier =
-            Modifier.fillMaxWidth()
-                .padding(top = 16.dp)
+            modifier
+                .fillMaxWidth()
                 .padding(horizontal = dimensionResource(id = R.dimen.qs_horizontal_margin))
                 .clip(RoundedCornerShape(28.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
@@ -857,7 +874,7 @@ private fun AddControlSheet(
                         .padding(8.dp),
             )
         }
-        LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
+        LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
             if (availableModules.isNotEmpty()) {
                 item { SectionTitle(stringResource(R.string.penguin_cc_modules)) }
                 items(availableModules, key = { it.spec }) { spec ->
