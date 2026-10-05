@@ -252,6 +252,18 @@
     <string name="penguin_media_not_playing">Not Playing</string>
     <!-- Penguin Control Centre editor -->
     <string name="penguin_cc_add_control">Add a Control</string>
+    <!-- One UI's notice once a control is added to the panel. [CHAR LIMIT=40] -->
+    <string name="penguin_cc_added"><xliff:g id="control" example="Search">%1$s</xliff:g> added</string>
+    <!-- One UI's panel editor: the menu of panel settings. [CHAR LIMIT=24] -->
+    <string name="penguin_oneui_panel_settings">Panel settings</string>
+    <!-- One UI's panel editor: puts every card back where it started. [CHAR LIMIT=40] -->
+    <string name="penguin_oneui_reset_layout">Reset quick panel layout</string>
+    <!-- One UI's panel editor: how to move the cards. [CHAR LIMIT=60] -->
+    <string name="penguin_oneui_edit_hint">Touch and hold to change order.</string>
+    <!-- One UI's card of toggles when every toggle is placed on its own. [CHAR LIMIT=80] -->
+    <!-- One UI's page for editing the card of toggles. [CHAR LIMIT=30] -->
+    <string name="oneui_expandable_area">Expandable area</string>
+    <string name="oneui_toggles_empty">Drag buttons here to add them to this area.</string>
     <string name="penguin_cc_search">Search Controls</string>
     <string name="penguin_cc_modules">Modules</string>
     <string name="penguin_cc_controls">Controls</string>

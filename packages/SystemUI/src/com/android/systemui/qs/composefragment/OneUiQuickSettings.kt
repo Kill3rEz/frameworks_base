@@ -18,9 +18,14 @@ package com.android.systemui.qs.composefragment
 
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.database.ContentObserver
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
+import android.os.UserHandle
+import android.provider.Settings
 import android.service.quicksettings.Tile
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -47,6 +52,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeOff
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.Vibration
@@ -60,6 +66,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +74,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -269,7 +277,16 @@ fun OneUiTogglesCard(
             }
         }
     }
-    onEdit?.let { edit ->
+    if (tiles.isEmpty()) {
+        Text(
+            text = stringResource(R.string.oneui_toggles_empty),
+            color = Color.White.copy(alpha = 0.75f),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.align(Alignment.Center).padding(horizontal = 24.dp),
+        )
+    }
+    onEdit?.takeIf { tiles.isNotEmpty() }?.let { edit ->
         Text(
             text = stringResource(R.string.oneui_edit),
             color = Color.White,
@@ -475,6 +492,64 @@ fun OneUiSoundModeButton(size: Dp) {
                             else -> AudioManager.RINGER_MODE_NORMAL
                         }
                 },
+        contentAlignment = Alignment.Center,
+    ) {
+        MaterialIcon(
+            imageVector = glyph,
+            contentDescription = null,
+            tint = if (active) Color(0xFF1C1B1F) else Color.White,
+            modifier = Modifier.size(size * 0.42f),
+        )
+    }
+}
+
+@Composable
+fun OneUiExtraDimButton(size: Dp) {
+    val context = LocalContext.current
+    val resolver = context.contentResolver
+    val key = Settings.Secure.REDUCE_BRIGHT_COLORS_ACTIVATED
+    fun read() = Settings.Secure.getIntForUser(resolver, key, 0, UserHandle.USER_CURRENT) == 1
+    var active by remember { mutableStateOf(read()) }
+    DisposableEffect(resolver) {
+        val observer =
+            object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    active = read()
+                }
+            }
+        resolver.registerContentObserver(
+            Settings.Secure.getUriFor(key),
+            false,
+            observer,
+            UserHandle.USER_ALL,
+        )
+        onDispose { resolver.unregisterContentObserver(observer) }
+    }
+    OneUiRoundButton(size, Icons.Rounded.DarkMode, active) {
+        Settings.Secure.putIntForUser(resolver, key, if (active) 0 else 1, UserHandle.USER_CURRENT)
+    }
+}
+
+@Composable
+fun OneUiVolumePanelButton(size: Dp) {
+    val (audioManager, _) = rememberAudioState()
+    OneUiRoundButton(size, Icons.AutoMirrored.Rounded.VolumeUp, active = false) {
+        audioManager.adjustStreamVolume(
+            AudioManager.STREAM_MUSIC,
+            AudioManager.ADJUST_SAME,
+            AudioManager.FLAG_SHOW_UI,
+        )
+    }
+}
+
+@Composable
+private fun OneUiRoundButton(size: Dp, glyph: ImageVector, active: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier =
+            Modifier.size(size)
+                .clip(CircleShape)
+                .background(if (active) Color.White else Color.Black.copy(alpha = 0.18f))
+                .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         MaterialIcon(

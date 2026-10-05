@@ -315,8 +315,18 @@ private fun ContentScope.QuickSettingsContainer(
             ShadeBodyState.Editing -> {
                 if (
                     containerViewModel.panelStyle == QsPanelStyle.OneUi &&
-                        !OneUiToggleEditing.active
+                        OneUiToggleEditing.active
                 ) {
+                    OneUiTogglesEditor(
+                        viewModel = containerViewModel,
+                        modifier =
+                            modifier
+                                .fillMaxWidth()
+                                .padding(vertical = QuickSettingsShade.Dimensions.VerticalPadding),
+                    )
+                    return@AnimatedContent
+                }
+                if (containerViewModel.panelStyle == QsPanelStyle.OneUi) {
                     OneUiGridEditor(
                         viewModel = containerViewModel,
                         modifier =

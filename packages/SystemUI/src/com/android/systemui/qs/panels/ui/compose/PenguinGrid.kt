@@ -43,7 +43,7 @@ object PenguinGrid {
     enum class Flavor(val setting: String, val maxRows: Int) {
         ControlCentre(SETTING, MAX_ROWS),
 
-        OneUi("qs_oneui_grid", 14);
+        OneUi("qs_oneui_grid", Int.MAX_VALUE / 2);
 
         val moduleSpecs: List<TileSpec>
             get() = if (this == OneUi) ONEUI_MODULE_SPECS else MODULE_SPECS
@@ -75,7 +75,7 @@ object PenguinGrid {
         when (spec) {
             ONEUI_TOGGLES_SPEC -> listOf(4 to 2, 4 to 3)
             BRIGHTNESS_SPEC,
-            VOLUME_SPEC -> listOf(3 to 1, 4 to 1, 2 to 1)
+            VOLUME_SPEC -> listOf(3 to 1, 4 to 1, 2 to 1, 1 to 2, 1 to 3)
             ONEUI_SOUND_SPEC -> listOf(1 to 1)
             MEDIA_SPEC -> listOf(4 to 2, 2 to 2, 4 to 4)
             else -> listOf(1 to 1, 2 to 1)
@@ -101,6 +101,17 @@ object PenguinGrid {
 
     fun rows(page: List<Item>) = page.maxOfOrNull { it.bottom } ?: 0
 
+    private fun stack(pages: List<List<Item>>): List<List<Item>> {
+        if (pages.size < 2) return pages
+        var top = 0
+        val stacked = mutableListOf<Item>()
+        for (page in pages) {
+            stacked += page.map { it.copy(y = it.y + top) }
+            top += rows(page)
+        }
+        return listOf(stacked)
+    }
+
     /**
      * first.
      */
@@ -115,7 +126,7 @@ object PenguinGrid {
         val present = tiles.toSet()
         val seen = mutableSetOf<TileSpec>()
         val out =
-            pages
+            (if (flavor == Flavor.OneUi) stack(pages) else pages)
                 .map { page ->
                     val placed = mutableListOf<Item>()
                     for (item in page) {
@@ -218,6 +229,8 @@ object PenguinGrid {
         return resolve(pages, modules, tiles, largeTiles)
     }
 
+    private const val ONEUI_DEFAULT_PILLS = 4
+
     private fun oneUiDefaults(
         modules: Set<TileSpec>,
         tiles: List<TileSpec>,
@@ -243,8 +256,8 @@ object PenguinGrid {
                 .filter { it.spec in modules || !isModule(it.spec) }
                 .toMutableList()
         val placed = page.map { it.spec }.toSet()
-        for (spec in tiles) {
-            if (spec in largeTiles && spec !in placed) page += firstFree(page, spec, 2, 1)
+        for (spec in tiles.filter { it in largeTiles && it !in placed }.take(ONEUI_DEFAULT_PILLS)) {
+            page += firstFree(page, spec, 2, 1)
         }
         return resolve(listOf(page), modules, tiles, largeTiles, flavor = Flavor.OneUi)
     }

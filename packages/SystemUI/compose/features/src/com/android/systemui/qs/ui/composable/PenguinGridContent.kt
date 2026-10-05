@@ -32,6 +32,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -84,9 +85,11 @@ import com.android.systemui.compose.modifiers.sysuiResTag
 import com.android.systemui.qs.composefragment.BrightnessLayout
 import com.android.systemui.qs.composefragment.ConnectivityFolder
 import com.android.systemui.qs.composefragment.ConnectivityFolderExpansion
+import com.android.systemui.qs.composefragment.OneUiExtraDimButton
 import com.android.systemui.qs.composefragment.OneUiSoundModeButton
 import com.android.systemui.qs.composefragment.OneUiTileControl
 import com.android.systemui.qs.composefragment.OneUiTogglesCard
+import com.android.systemui.qs.composefragment.OneUiVolumePanelButton
 import com.android.systemui.qs.composefragment.PenguinMediaCard
 import com.android.systemui.qs.composefragment.VolumeLayout
 import com.android.systemui.qs.composefragment.connectivityFolderEnabled
@@ -430,8 +433,8 @@ internal fun ContentScope.GridItemContent(
     listening: () -> Boolean,
     modifier: Modifier = Modifier,
     preview: Boolean = false,
+    height: Dp = penguinModuleHeight(item.h),
 ) {
-    val height = penguinModuleHeight(item.h)
     var bounds by remember { mutableStateOf<Rect?>(null) }
     val open = { PenguinGridOrigin.bounds = bounds }
     val oneUi = LocalPenguinGridFlavor.current == PenguinGrid.Flavor.OneUi
@@ -498,21 +501,35 @@ internal fun ContentScope.GridItemContent(
                     NotPlaying(height)
                 }
             PenguinGrid.BRIGHTNESS_SPEC ->
-                BrightnessLayout(
-                    enable = interactable && !preview,
-                    horizontal = item.w > item.h,
-                    verticalWidth = null,
-                    sliderHeight = height,
-                    capsule = true,
-                )
+                OneUiSliderWithButton(
+                    item = item,
+                    height = height,
+                    enabled = oneUi,
+                    button = { OneUiExtraDimButton(it) },
+                ) { sliderHeight ->
+                    BrightnessLayout(
+                        enable = interactable && !preview,
+                        horizontal = item.w > item.h,
+                        verticalWidth = null,
+                        sliderHeight = sliderHeight,
+                        capsule = true,
+                    )
+                }
             PenguinGrid.VOLUME_SPEC ->
-                VolumeLayout(
-                    enable = interactable && !preview,
-                    horizontal = item.w > item.h,
-                    verticalWidth = null,
-                    sliderHeight = height,
-                    capsule = true,
-                )
+                OneUiSliderWithButton(
+                    item = item,
+                    height = height,
+                    enabled = oneUi,
+                    button = { OneUiVolumePanelButton(it) },
+                ) { sliderHeight ->
+                    VolumeLayout(
+                        enable = interactable && !preview,
+                        horizontal = item.w > item.h,
+                        verticalWidth = null,
+                        sliderHeight = sliderHeight,
+                        capsule = true,
+                    )
+                }
             else ->
                 if (oneUi) {
                     viewModel.tileGridViewModel.tileViewModels
@@ -538,6 +555,29 @@ internal fun ContentScope.GridItemContent(
 }
 
 private val OneUiGridToggleSize = 52.dp
+
+@Composable
+private fun OneUiSliderWithButton(
+    item: PenguinGrid.Item,
+    height: Dp,
+    enabled: Boolean,
+    button: @Composable (Dp) -> Unit,
+    slider: @Composable (Dp) -> Unit,
+) {
+    val row = penguinModuleHeight(1)
+    when {
+        enabled && item.w == 1 && item.h >= 3 ->
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                slider((height - row - PenguinGridGap).coerceAtLeast(row))
+                Spacer(Modifier.height(PenguinGridGap))
+                button(row)
+            }
+        else -> slider(height)
+    }
+}
 
 object OneUiToggleEditing {
     var active by mutableStateOf(false)

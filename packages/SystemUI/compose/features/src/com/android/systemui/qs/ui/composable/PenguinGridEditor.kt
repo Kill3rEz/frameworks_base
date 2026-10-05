@@ -18,9 +18,36 @@ package com.android.systemui.qs.ui.composable
 
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateIntOffsetAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.material.icons.rounded.AddCircleOutline
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -116,6 +143,14 @@ private val BadgeZone = 26.dp
 private val EdgeZone = 36.dp
 private const val EdgeDwellMillis = 550L
 
+private const val LiftMillis = 280L
+
+private const val AddedNoticeMillis = 1800L
+
+private const val AutoScrollPx = 14f
+
+private val OneUiCardCorner = 36.dp
+
 private val AddButtonSpace = 60.dp
 
 private class Drag(val item: Item, val fromPage: Int, val grab: Offset) {
@@ -143,7 +178,9 @@ private fun ContentScope.PenguinGridEditorHost(
     val gridLayout by editViewModel.gridLayout.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { closeExpansions() }
     BackHandler { editViewModel.stopEditing() }
-    DisposableEffect(Unit) { onDispose { editViewModel.stopEditing() } }
+    DisposableEffect(Unit) {
+        onDispose { if (!OneUiToggleEditing.active) editViewModel.stopEditing() }
+    }
     gridLayout.TileSizing { _, resize ->
         PenguinGridTheme { PenguinGridEditorContent(viewModel, resize, modifier) }
     }
@@ -161,7 +198,9 @@ private fun ContentScope.PenguinGridEditorContent(
     val oneUi = flavor == PenguinGrid.Flavor.OneUi
     val model = rememberPenguinGridModel(viewModel)
     val latestModel by rememberUpdatedState(model)
-    val pages = model.pages
+    var optimistic by remember { mutableStateOf<List<List<Item>>?>(null) }
+    LaunchedEffect(model.pages) { optimistic = null }
+    val pages = optimistic ?: model.pages
     CompositionLocalProvider(LocalPenguinGridLoose provides model.loose) {
     val mediaShown = viewModel.showMedia && viewModel.hasMediaCards
     val editTiles by editViewModel.tiles.collectAsStateWithLifecycle(emptyList())
@@ -190,13 +229,23 @@ private fun ContentScope.PenguinGridEditorContent(
             }
         }
         val cleaned = merged.filterIndexed { index, page -> index == 0 || page.isNotEmpty() }
+        optimistic = next.map(PenguinGrid::compact)
         Settings.Secure.putString(resolver, flavor.setting, PenguinGrid.serialize(cleaned))
     }
 
     var drag by remember { mutableStateOf<Drag?>(null) }
     var resizing by remember { mutableStateOf<Pair<Int, Item>?>(null) }
     var adding by remember { mutableStateOf(false) }
-    val pageCount = pages.size + if (drag != null) 1 else 0
+    var added by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(added) {
+        if (added != null) {
+            delay(AddedNoticeMillis)
+            added = null
+        }
+    }
+    val dropFrom = remember { mutableMapOf<TileSpec, IntOffset>() }
+    val haptics = LocalHapticFeedback.current
+    val pageCount = pages.size + if (drag != null && !oneUi) 1 else 0
     val pagerState = rememberPagerState(pageCount = { pageCount })
     val scope = rememberCoroutineScope()
     val pageHeight = penguinPageHeight(pages, extraRows = 1)
@@ -205,8 +254,30 @@ private fun ContentScope.PenguinGridEditorContent(
     val gap = PenguinGridGap
     val density = LocalDensity.current
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        Row(
+    val scroll = rememberScrollState()
+    var viewport by remember { mutableStateOf(Rect.Zero) }
+    LaunchedEffect(adding) { if (adding) scroll.scrollTo(0) }
+    var pageTop by remember { mutableStateOf(0f) }
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .then(
+                    if (oneUi) {
+                        Modifier.onGloballyPositioned { viewport = it.boundsInRoot() }
+                            .verticalScroll(scroll)
+                    } else {
+                        Modifier
+                    }
+                )
+    ) {
+        if (oneUi) {
+            OneUiEditorHeader(
+                onReset = { Settings.Secure.putString(resolver, flavor.setting, null) },
+                onDone = { editViewModel.stopEditing() },
+                modifier = Modifier.padding(horizontal = horizontalMargin),
+            )
+        } else Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalMargin),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -244,15 +315,22 @@ private fun ContentScope.PenguinGridEditorContent(
                 modules = model.modules,
                 currentPage = pages.getOrNull(pagerState.currentPage).orEmpty(),
                 loose = if (oneUi) model.loose.toSet() else emptySet(),
-                onAddModule = { spec ->
+                onAddModule = { spec, label ->
                     val index = pagerState.currentPage.coerceIn(0, pages.lastIndex)
                     val (w, h) = PenguinGrid.sizes(spec, flavor).first()
                     val next = pages.map { it.toMutableList() }
                     next[index] += PenguinGrid.firstFree(next[index], spec, w, h)
                     commit(next)
                     adding = false
+                    added = label
                 },
-                onAddTile = { spec ->
+                onAddTile = { spec, label ->
+                    if (oneUi && spec !in model.loose) {
+                        editViewModel.addTile(spec)
+                        adding = false
+                        added = label
+                        return@AddControlSheet
+                    }
                     val index = pagerState.currentPage.coerceIn(0, pages.lastIndex)
                     val next = pages.map { it.toMutableList() }
                     next[index] += PenguinGrid.firstFree(next[index], spec, 1, 1)
@@ -263,6 +341,7 @@ private fun ContentScope.PenguinGridEditorContent(
                     )
                     if (spec !in model.loose) editViewModel.addTile(spec)
                     adding = false
+                    added = label
                 },
                 onDismiss = { adding = false },
             )
@@ -289,6 +368,14 @@ private fun ContentScope.PenguinGridEditorContent(
                 val currentPages by rememberUpdatedState(pages)
                 val activeDrag = drag
                 val targetPage = pagerState.currentPage
+                val overToggles =
+                    oneUi &&
+                        activeDrag != null &&
+                        !PenguinGrid.isModule(activeDrag.item.spec) &&
+                        pages.getOrNull(targetPage).orEmpty().any {
+                            it.spec == PenguinGrid.ONEUI_TOGGLES_SPEC &&
+                                metrics.contains(it, activeDrag.pointer)
+                        }
                 val preview: (Int) -> List<Item> = { index ->
                     val page = pages.getOrNull(index).orEmpty()
                     val sized = resizing?.takeIf { it.first == index }?.second
@@ -301,7 +388,7 @@ private fun ContentScope.PenguinGridEditorContent(
                         val without =
                             if (index == activeDrag.fromPage) page.filter { it != activeDrag.item }
                             else page
-                        if (index == targetPage) {
+                        if (index == targetPage && !overToggles) {
                             val (x, y) = metrics.cellFor(activeDrag.pointer - activeDrag.grab)
                             dropOnto(without, activeDrag.item, x, y)
                         } else {
@@ -312,6 +399,27 @@ private fun ContentScope.PenguinGridEditorContent(
 
                 LaunchedEffect(activeDrag) {
                     val held = activeDrag ?: return@LaunchedEffect
+                    if (!oneUi) return@LaunchedEffect
+                    var armed = false
+                    while (true) {
+                        withFrameNanos {}
+                        val y = pageTop + held.pointer.y
+                        val speed =
+                            when {
+                                y < viewport.top + edgePx * 2 -> -AutoScrollPx
+                                y > viewport.bottom - edgePx * 2 -> AutoScrollPx
+                                else -> 0f
+                            }
+                        if (speed == 0f) armed = true
+                        if (speed == 0f || !armed) continue
+                        val moved = scroll.scrollBy(speed)
+                        held.pointer += Offset(0f, moved)
+                    }
+                }
+
+                LaunchedEffect(activeDrag) {
+                    val held = activeDrag ?: return@LaunchedEffect
+                    if (oneUi) return@LaunchedEffect
                     var dwell = 0L
                     while (true) {
                         delay(50)
@@ -338,6 +446,7 @@ private fun ContentScope.PenguinGridEditorContent(
                 Box(
                     Modifier.fillMaxWidth()
                         .height(pageHeight)
+                        .onGloballyPositioned { pageTop = it.positionInRoot().y }
                         .pointerInput(Unit) {
                             awaitEachGesture {
                                 val down =
@@ -350,9 +459,39 @@ private fun ContentScope.PenguinGridEditorContent(
                                     currentMetrics.hit(
                                         currentPages.getOrNull(page).orEmpty(),
                                         down.position,
+                                        flavor,
                                     ) ?: return@awaitEachGesture
                                 try {
                                     var started: Drag? = null
+                                    if (oneUi) {
+                                        var last = down.position
+                                        val moved =
+                                            withTimeoutOrNull(LiftMillis) {
+                                                while (true) {
+                                                    val event =
+                                                        awaitPointerEvent(PointerEventPass.Initial)
+                                                    val change =
+                                                        event.changes.firstOrNull { it.id == down.id }
+                                                    if (change == null || !change.pressed) break
+                                                    last = change.position
+                                                    if (
+                                                        (last - down.position).getDistance() >
+                                                            viewConfiguration.touchSlop
+                                                    ) {
+                                                        break
+                                                    }
+                                                }
+                                                true
+                                            }
+                                        if (moved != null) return@awaitEachGesture
+                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        started =
+                                            Drag(hit, page, down.position - currentMetrics.origin(hit))
+                                                .also {
+                                                    it.pointer = last
+                                                    drag = it
+                                                }
+                                    }
                                     while (true) {
                                         val event = awaitPointerEvent(PointerEventPass.Initial)
                                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
@@ -376,9 +515,26 @@ private fun ContentScope.PenguinGridEditorContent(
                                     val held = started ?: return@awaitEachGesture
                                     val target = pagerState.currentPage
                                     val (x, y) = currentMetrics.cellFor(held.pointer - held.grab)
+                                    val letGo = held.pointer - held.grab
+                                    dropFrom[held.item.spec] =
+                                        IntOffset(letGo.x.roundToInt(), letGo.y.roundToInt())
                                     val next = currentPages.map { it.toMutableList() }.toMutableList()
                                     while (next.size <= target) next.add(mutableListOf())
                                     next[held.fromPage].remove(held.item)
+                                    val toggles =
+                                        next[target].firstOrNull {
+                                            it.spec == PenguinGrid.ONEUI_TOGGLES_SPEC
+                                        }
+                                    if (
+                                        oneUi &&
+                                            toggles != null &&
+                                            !PenguinGrid.isModule(held.item.spec) &&
+                                            currentMetrics.contains(toggles, held.pointer)
+                                    ) {
+                                        dropFrom.remove(held.item.spec)
+                                        commit(next)
+                                        return@awaitEachGesture
+                                    }
                                     next[target] =
                                         dropOnto(next[target], held.item, x, y).toMutableList()
                                     commit(next)
@@ -397,7 +553,6 @@ private fun ContentScope.PenguinGridEditorContent(
                             items = preview(index),
                             rows = PenguinGrid.rows(pages.getOrNull(index).orEmpty()) + 1,
                             metrics = metrics,
-                            horizontalMargin = horizontalMargin,
                             columnWidth = columnWidth,
                             rowHeight = rowHeight,
                             gap = gap,
@@ -405,6 +560,12 @@ private fun ContentScope.PenguinGridEditorContent(
                                 activeDrag?.item?.spec?.takeIf {
                                     index == activeDrag.fromPage || index == targetPage
                                 },
+                            active = activeDrag != null || resizing != null,
+                            highlighted =
+                                PenguinGrid.ONEUI_TOGGLES_SPEC.takeIf {
+                                    overToggles && index == targetPage
+                                },
+                            dropFrom = dropFrom,
                             onRemove = { item ->
                                 val next = pages.map { it.toMutableList() }
                                 next.getOrNull(index)?.remove(item)
@@ -429,8 +590,8 @@ private fun ContentScope.PenguinGridEditorContent(
                                     if (!PenguinGrid.isModule(spec)) resizeTile(spec, w > 1)
                                 }
                             },
-                        ) { item ->
-                            EditItem(viewModel, item, mediaShown, tilesBySpec)
+                        ) { item, height ->
+                            EditItem(viewModel, item, mediaShown, tilesBySpec, height)
                         }
                     }
 
@@ -445,6 +606,10 @@ private fun ContentScope.PenguinGridEditorContent(
 
                     activeDrag?.let { held ->
                         val topLeft = held.pointer - held.grab
+                        val lift = remember(held) { Animatable(1f) }
+                        LaunchedEffect(held) {
+                            lift.animateTo(1.06f, spring(dampingRatio = 0.6f, stiffness = 500f))
+                        }
                         Box(
                             Modifier.offset {
                                     IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt())
@@ -454,30 +619,61 @@ private fun ContentScope.PenguinGridEditorContent(
                                     rowHeight * held.item.h + gap * (held.item.h - 1),
                                 )
                                 .graphicsLayer {
-                                    scaleX = 1.06f
-                                    scaleY = 1.06f
-                                    alpha = 0.92f
+                                    scaleX = lift.value
+                                    scaleY = lift.value
+                                    alpha = 0.94f
                                 }
                                 .gesturesDisabled()
                         ) {
-                            EditItem(viewModel, held.item, mediaShown, tilesBySpec)
+                            EditItem(
+                                viewModel,
+                                held.item,
+                                mediaShown,
+                                tilesBySpec,
+                                penguinModuleHeight(held.item.h),
+                            )
                         }
                     }
                 }
             }
 
             Spacer(Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.penguin_cc_add_control),
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleSmall,
-                modifier =
-                    Modifier.align(Alignment.CenterHorizontally)
-                        .clip(CircleShape)
-                        .background(editorGlass())
-                        .clickable { adding = true }
-                        .padding(horizontal = 20.dp, vertical = 10.dp),
-            )
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                if (oneUi) {
+                    Row(
+                        modifier =
+                            Modifier.clip(CircleShape)
+                                .clickable { adding = true }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.AddCircleOutline,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.penguin_cc_add_control),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.penguin_cc_add_control),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier =
+                            Modifier.clip(CircleShape)
+                                .background(editorGlass())
+                                .clickable { adding = true }
+                                .padding(horizontal = 20.dp, vertical = 10.dp),
+                    )
+                }
+                AddedNotice(added)
+            }
 
         }
     }
@@ -490,6 +686,7 @@ private fun ContentScope.EditItem(
     item: Item,
     mediaShown: Boolean,
     tiles: Map<TileSpec, EditTileViewModel>,
+    height: Dp,
 ) {
     if (
         PenguinGrid.isModule(item.spec) ||
@@ -502,6 +699,7 @@ private fun ContentScope.EditItem(
             interactable = false,
             listening = { false },
             preview = true,
+            height = height,
         )
         return
     }
@@ -549,18 +747,31 @@ private class CellMetrics(
 ) {
     fun origin(item: Item) = Offset(left + item.x * (column + gap), item.y * (row + gap))
 
+    fun size(w: Int, h: Int) = Size(w * column + (w - 1) * gap, h * row + (h - 1) * gap)
+
+    fun contains(item: Item, position: Offset): Boolean {
+        val origin = origin(item)
+        val size = size(item.w, item.h)
+        return position.x in origin.x..origin.x + size.width &&
+            position.y in origin.y..origin.y + size.height
+    }
+
     fun cellFor(topLeft: Offset): Pair<Int, Int> =
         ((topLeft.x - left) / (column + gap)).roundToInt().coerceIn(0, PenguinGrid.COLUMNS - 1) to
             (topLeft.y / (row + gap)).roundToInt().coerceAtLeast(0)
 
-    fun hit(page: List<Item>, position: Offset): Item? {
+    fun hit(page: List<Item>, position: Offset, flavor: PenguinGrid.Flavor): Item? {
         val onControl =
             page.any {
                 val origin = origin(it)
-                val end =
-                    origin +
-                        Offset(it.w * column + (it.w - 1) * gap, it.h * row + (it.h - 1) * gap)
-                (position - origin).getDistance() < badge || (position - end).getDistance() < badge
+                val size = size(it.w, it.h)
+                val grip =
+                    when (gripFor(it, flavor)) {
+                        Grip.Side -> origin + Offset(size.width, size.height / 2)
+                        Grip.Bottom -> origin + Offset(size.width / 2, size.height)
+                        else -> origin + Offset(size.width, size.height)
+                    }
+                (position - origin).getDistance() < badge || (position - grip).getDistance() < badge
             }
         if (onControl) return null
         return page.firstOrNull {
@@ -577,17 +788,27 @@ private fun EditPage(
     items: List<Item>,
     rows: Int,
     metrics: CellMetrics,
-    horizontalMargin: Dp,
     columnWidth: Dp,
     rowHeight: Dp,
     gap: Dp,
     dragged: TileSpec?,
+    active: Boolean,
+    highlighted: TileSpec?,
+    dropFrom: MutableMap<TileSpec, IntOffset>,
     onRemove: (Item) -> Unit,
     onResizePreview: (TileSpec, Int, Int) -> Unit,
     onResize: (TileSpec, Int, Int) -> Unit,
-    content: @Composable (Item) -> Unit,
+    content: @Composable (Item, Dp) -> Unit,
 ) {
+    val flavor = LocalPenguinGridFlavor.current
+    val oneUi = flavor == PenguinGrid.Flavor.OneUi
+    val density = LocalDensity.current
+    var live by remember { mutableStateOf<Pair<TileSpec, Size>?>(null) }
     val cellColor = editorGlass(0.4f)
+    val dotColor = MaterialTheme.colorScheme.onSurface
+    val highlightColor = MaterialTheme.colorScheme.primary
+    val loose = LocalPenguinGridLoose.current
+    val dots by animateFloatAsState(if (active || live != null) 0.5f else 0f, label = "EditDots")
     Box(Modifier.fillMaxSize()) {
         val occupied =
             remember(items, dragged) {
@@ -601,6 +822,28 @@ private fun EditPage(
                 }
             }
         Canvas(Modifier.fillMaxSize()) {
+            if (oneUi) {
+                if (dots == 0f) return@Canvas
+                val dot = 1.5.dp.toPx()
+                for (y in 0..rows) {
+                    for (x in 0..PenguinGrid.COLUMNS) {
+                        val free =
+                            listOf(x - 1 to y - 1, x to y - 1, x - 1 to y, x to y).any { (cx, cy) ->
+                                cx in 0 until PenguinGrid.COLUMNS &&
+                                    cy in 0 until rows &&
+                                    (cx to cy) !in occupied
+                            }
+                        if (!free) continue
+                        val center =
+                            Offset(
+                                metrics.left + x * (metrics.column + metrics.gap) - metrics.gap / 2,
+                                y * (metrics.row + metrics.gap) - metrics.gap / 2,
+                            )
+                        drawCircle(dotColor, dot, center, alpha = dots)
+                    }
+                }
+                return@Canvas
+            }
             val radius = minOf(metrics.column, metrics.row) * 0.36f
             for (y in 0 until rows) {
                 for (x in 0 until PenguinGrid.COLUMNS) {
@@ -613,7 +856,7 @@ private fun EditPage(
                     drawRoundRect(
                         color = cellColor,
                         topLeft = center - Offset(radius, radius),
-                        size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
+                        size = Size(radius * 2, radius * 2),
                         cornerRadius = CornerRadius(radius),
                     )
                 }
@@ -622,20 +865,66 @@ private fun EditPage(
         items.forEach { item ->
             if (item.spec == dragged) return@forEach
             key(item.spec) {
-                val target =
-                    IntOffset(
-                        metrics.origin(item).x.roundToInt(),
-                        metrics.origin(item).y.roundToInt(),
+                val origin = metrics.origin(item)
+                val target = IntOffset(origin.x.roundToInt(), origin.y.roundToInt())
+                val offset = remember {
+                    Animatable(dropFrom.remove(item.spec) ?: target, IntOffset.VectorConverter)
+                }
+                LaunchedEffect(target) { offset.animateTo(target, ReflowSpring) }
+                val snapped = metrics.size(item.w, item.h)
+                val stretched = live?.takeIf { it.first == item.spec }?.second
+                val width = remember { Animatable(snapped.width) }
+                val height = remember { Animatable(snapped.height) }
+                LaunchedEffect(snapped, stretched) {
+                    if (stretched != null) {
+                        width.snapTo(stretched.width)
+                        height.snapTo(stretched.height)
+                    } else {
+                        launch { width.animateTo(snapped.width, SizeSpring) }
+                        height.animateTo(snapped.height, SizeSpring)
+                    }
+                }
+                val heightDp = with(density) { height.value.toDp() }
+                val lit by
+                    animateFloatAsState(
+                        if (item.spec == highlighted) 1f else 0f,
+                        label = "EditHighlight",
                     )
-                val offset by animateIntOffsetAsState(target, label = "PenguinGridEdit")
                 Box(
-                    Modifier.offset { offset }
-                        .size(
-                            columnWidth * item.w + gap * (item.w - 1),
-                            rowHeight * item.h + gap * (item.h - 1),
-                        )
+                    Modifier.offset { offset.value }
+                        .size(with(density) { width.value.toDp() }, heightDp)
+                        .graphicsLayer {
+                            scaleX = 1f + lit * 0.03f
+                            scaleY = 1f + lit * 0.03f
+                        }
                 ) {
-                    Box(Modifier.fillMaxSize().gesturesDisabled()) { content(item) }
+                    if (oneUi) {
+                        Box(Modifier.fillMaxSize()) { content(item, heightDp) }
+                        Box(
+                            Modifier.fillMaxSize().pointerInput(item.spec) {
+                                detectTapGestures {
+                                    if (
+                                        item.spec == PenguinGrid.ONEUI_TOGGLES_SPEC &&
+                                            loose.isNotEmpty()
+                                    ) {
+                                        OneUiToggleEditing.active = true
+                                    }
+                                }
+                            }
+                        )
+                    } else {
+                        Box(Modifier.fillMaxSize().gesturesDisabled()) { content(item, heightDp) }
+                    }
+                    if (lit > 0f) {
+                        Box(
+                            Modifier.fillMaxSize()
+                                .border(
+                                    2.dp,
+                                    highlightColor.copy(alpha = lit),
+                                    RoundedCornerShape(OneUiCardCorner),
+                                )
+                        )
+                    }
                     Badge(
                         Icons.Rounded.Remove,
                         stringResource(R.string.penguin_cc_remove),
@@ -643,14 +932,15 @@ private fun EditPage(
                     ) {
                         onRemove(item)
                     }
-                    if (PenguinGrid.sizes(item.spec, LocalPenguinGridFlavor.current).size > 1) {
+                    gripFor(item, flavor)?.let { grip ->
                         ResizeHandle(
                             item = item,
+                            grip = grip,
                             metrics = metrics,
+                            onLive = { size -> live = size?.let { item.spec to it } },
                             onPreview = onResizePreview,
                             onResize = onResize,
-                            modifier =
-                                Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 6.dp),
+                            modifier = Modifier.align(grip.alignment).offset(grip.offsetX, grip.offsetY),
                         )
                     }
                 }
@@ -659,23 +949,66 @@ private fun EditPage(
     }
 }
 
+private val ReflowSpring =
+    spring<IntOffset>(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+
+private val SizeSpring = spring<Float>(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+
+private enum class Grip(val alignment: Alignment, val offsetX: Dp, val offsetY: Dp) {
+    Corner(Alignment.BottomEnd, 6.dp, 6.dp),
+
+    Side(Alignment.CenterEnd, 14.dp, 0.dp),
+
+    Bottom(Alignment.BottomCenter, 0.dp, 14.dp),
+}
+
+private fun gripFor(item: Item, flavor: PenguinGrid.Flavor): Grip? {
+    val sizes = PenguinGrid.sizes(item.spec, flavor)
+    return when {
+        sizes.size < 2 -> null
+        flavor != PenguinGrid.Flavor.OneUi -> Grip.Corner
+        sizes.all { it.first == item.w } -> Grip.Bottom
+        sizes.all { it.second == 1 } && item.h == 1 -> Grip.Side
+        else -> Grip.Corner
+    }
+}
+
 @Composable
 private fun ResizeHandle(
     item: Item,
+    grip: Grip,
     metrics: CellMetrics,
+    onLive: (Size?) -> Unit,
     onPreview: (TileSpec, Int, Int) -> Unit,
     onResize: (TileSpec, Int, Int) -> Unit,
     modifier: Modifier,
 ) {
+    val oneUi = LocalPenguinGridFlavor.current == PenguinGrid.Flavor.OneUi
     val sizes = PenguinGrid.sizes(item.spec, LocalPenguinGridFlavor.current)
     val current by rememberUpdatedState(item)
     val currentMetrics by rememberUpdatedState(metrics)
+    val currentOnLive by rememberUpdatedState(onLive)
     val currentOnPreview by rememberUpdatedState(onPreview)
     val currentOnResize by rememberUpdatedState(onResize)
+    val haptics = LocalHapticFeedback.current
+    var coordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val gripColor = MaterialTheme.colorScheme.onSurface
     Box(
         modifier =
             modifier
-                .size(BadgeSize + 12.dp)
+                .size(
+                    when (grip) {
+                        Grip.Corner -> BadgeSize + 12.dp
+                        Grip.Side -> 28.dp
+                        Grip.Bottom -> 56.dp
+                    },
+                    when (grip) {
+                        Grip.Corner -> BadgeSize + 12.dp
+                        Grip.Side -> 44.dp
+                        Grip.Bottom -> 28.dp
+                    },
+                )
+                .onGloballyPositioned { coordinates = it }
                 .pointerInput(item.spec) {
                     detectTapGestures {
                         val next = sizes[(sizes.indexOf(current.w to current.h) + 1) % sizes.size]
@@ -684,45 +1017,203 @@ private fun ResizeHandle(
                 }
                 .pointerInput(item.spec) {
                     var start = current
-                    var total = Offset.Zero
+                    var from = Offset.Zero
                     var target = start.w to start.h
+                    val m = currentMetrics
+                    val smallest = sizes.fold(Size(Float.MAX_VALUE, Float.MAX_VALUE)) { acc, (w, h) ->
+                        val size = m.size(w, h)
+                        Size(minOf(acc.width, size.width), minOf(acc.height, size.height))
+                    }
+                    val largest = sizes.fold(Size.Zero) { acc, (w, h) ->
+                        val size = m.size(w, h)
+                        Size(maxOf(acc.width, size.width), maxOf(acc.height, size.height))
+                    }
                     detectDragGestures(
-                        onDragStart = {
+                        onDragStart = { position ->
                             start = current
-                            total = Offset.Zero
+                            from = coordinates?.localToRoot(position) ?: position
                             target = start.w to start.h
                         },
-                        onDragEnd = { currentOnResize(start.spec, target.first, target.second) },
-                        onDragCancel = { currentOnResize(start.spec, start.w, start.h) },
-                    ) { change, amount ->
+                        onDragEnd = {
+                            currentOnLive(null)
+                            currentOnResize(start.spec, target.first, target.second)
+                        },
+                        onDragCancel = {
+                            currentOnLive(null)
+                            currentOnResize(start.spec, start.w, start.h)
+                        },
+                    ) { change, _ ->
                         change.consume()
-                        total += amount
-                        val m = currentMetrics
-                        val w = start.w + total.x / (m.column + m.gap)
-                        val h = start.h + total.y / (m.row + m.gap)
+                        val now = coordinates?.localToRoot(change.position) ?: return@detectDragGestures
+                        val total = now - from
+                        val base = m.size(start.w, start.h)
+                        val stretched =
+                            Size(
+                                if (grip == Grip.Bottom) base.width
+                                else (base.width + total.x).coerceIn(smallest.width, largest.width),
+                                if (grip == Grip.Side) base.height
+                                else (base.height + total.y).coerceIn(smallest.height, largest.height),
+                            )
+                        currentOnLive(stretched)
+                        val w = (stretched.width + m.gap) / (m.column + m.gap)
+                        val h = (stretched.height + m.gap) / (m.row + m.gap)
                         val nearest =
                             sizes.minBy { (sw, sh) -> (sw - w) * (sw - w) + (sh - h) * (sh - h) }
                         if (nearest != target) {
                             target = nearest
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             currentOnPreview(start.spec, nearest.first, nearest.second)
                         }
                     }
                 },
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            Modifier.size(BadgeSize)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.OpenInFull,
-                contentDescription = stringResource(R.string.penguin_cc_resize),
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(14.dp).rotate(90f),
+        if (!oneUi) {
+            Box(
+                Modifier.size(BadgeSize)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.OpenInFull,
+                    contentDescription = stringResource(R.string.penguin_cc_resize),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(14.dp).rotate(90f),
+                )
+            }
+            return@Box
+        }
+        Canvas(Modifier.fillMaxSize()) {
+            val stroke = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+            when (grip) {
+                Grip.Corner -> {
+                    val corner = Offset(size.width - 6.dp.toPx(), size.height - 6.dp.toPx())
+                    val radius =
+                        if (item.h == 1) metrics.row / 2 else OneUiCardCorner.toPx()
+                    val ring = radius + 5.dp.toPx()
+                    drawArc(
+                        color = gripColor,
+                        startAngle = 12f,
+                        sweepAngle = 66f,
+                        useCenter = false,
+                        topLeft = corner - Offset(radius + ring, radius + ring),
+                        size = Size(ring * 2, ring * 2),
+                        style = stroke,
+                    )
+                }
+                Grip.Side -> {
+                    val edge = size.width - 14.dp.toPx()
+                    val radius = 14.dp.toPx()
+                    val center = Offset(edge + 5.dp.toPx() - radius, size.height / 2)
+                    drawArc(
+                        color = gripColor,
+                        startAngle = -48f,
+                        sweepAngle = 96f,
+                        useCenter = false,
+                        topLeft = center - Offset(radius, radius),
+                        size = Size(radius * 2, radius * 2),
+                        style = stroke,
+                    )
+                }
+                Grip.Bottom -> {
+                    val y = size.height - 14.dp.toPx() + 6.dp.toPx()
+                    drawLine(
+                        color = gripColor,
+                        start = Offset(size.width / 2 - 12.dp.toPx(), y),
+                        end = Offset(size.width / 2 + 12.dp.toPx(), y),
+                        strokeWidth = 4.dp.toPx(),
+                        cap = StrokeCap.Round,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddedNotice(added: String?) {
+    AnimatedVisibility(
+        visible = added != null,
+        enter = fadeIn() + scaleIn(initialScale = 0.9f),
+        exit = fadeOut(),
+    ) {
+        var shown by remember { mutableStateOf("") }
+        added?.let { shown = it }
+        Text(
+            text = stringResource(R.string.penguin_cc_added, shown),
+            color = MaterialTheme.colorScheme.inverseOnSurface,
+            style = MaterialTheme.typography.labelLarge,
+            modifier =
+                Modifier.clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.inverseSurface)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
+}
+
+@Composable
+private fun OneUiEditorHeader(onReset: () -> Unit, onDone: () -> Unit, modifier: Modifier) {
+    var menu by remember { mutableStateOf(false) }
+    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box {
+                Row(
+                    modifier =
+                        Modifier.clip(CircleShape)
+                            .clickable { menu = true }
+                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Settings,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.penguin_oneui_panel_settings),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.penguin_oneui_reset_layout)) },
+                        onClick = {
+                            menu = false
+                            onReset()
+                        },
+                    )
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = stringResource(R.string.penguin_cc_reset),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.titleSmall,
+                modifier =
+                    Modifier.clip(CircleShape)
+                        .clickable(onClick = onReset)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+            Text(
+                text = stringResource(R.string.quick_settings_done),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleSmall,
+                modifier =
+                    Modifier.clip(CircleShape)
+                        .clickable(onClick = onDone)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
             )
         }
+        Text(
+            text = stringResource(R.string.penguin_oneui_edit_hint),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(top = 2.dp),
+        )
     }
 }
 
@@ -781,8 +1272,8 @@ private fun AddControlSheet(
     modules: Set<TileSpec>,
     currentPage: List<Item>,
     loose: Set<TileSpec>,
-    onAddModule: (TileSpec) -> Unit,
-    onAddTile: (TileSpec) -> Unit,
+    onAddModule: (TileSpec, String) -> Unit,
+    onAddTile: (TileSpec, String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -888,7 +1379,7 @@ private fun AddControlSheet(
                             )
                         },
                         label = moduleNames.getValue(spec),
-                        onClick = { onAddModule(spec) },
+                        onClick = { onAddModule(spec, moduleNames.getValue(spec)) },
                     )
                 }
             }
@@ -904,7 +1395,7 @@ private fun AddControlSheet(
                             )
                         },
                         label = tile.label.text,
-                        onClick = { onAddTile(tile.tileSpec) },
+                        onClick = { onAddTile(tile.tileSpec, tile.label.text) },
                     )
                 }
             }
