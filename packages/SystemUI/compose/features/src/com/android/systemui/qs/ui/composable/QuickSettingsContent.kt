@@ -119,6 +119,9 @@ import com.android.systemui.qs.composefragment.ui.GridAnchor
 import com.android.systemui.qs.panels.ui.compose.TileGrid
 import com.android.systemui.qs.shared.style.LocalQsPanelStyle
 import com.android.systemui.qs.shared.style.QsPanelStyle
+import com.android.systemui.qs.shared.style.LiquidGlassSurface
+import com.android.systemui.qs.shared.style.glassRim
+import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.qs.panels.ui.compose.PanelBand
@@ -624,7 +627,11 @@ internal fun PanelElementPlaceholder(height: Dp, iconRes: Int, label: String) {
             Modifier.fillMaxWidth()
                 .height(height)
                 .clip(RoundedCornerShape(28.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .background(
+                    if (liquidGlassOn) LiquidGlassSurface
+                    else MaterialTheme.colorScheme.surfaceVariant
+                )
+                .glassRim(RoundedCornerShape(28.dp)),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

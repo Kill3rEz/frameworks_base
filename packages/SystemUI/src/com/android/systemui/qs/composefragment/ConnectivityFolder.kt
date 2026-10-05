@@ -74,8 +74,12 @@ import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toIconProvider
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.pipeline.shared.TileSpec
+import com.android.systemui.qs.shared.style.LiquidGlassSurface
 import com.android.systemui.qs.shared.style.QsPanelStyle
+import com.android.systemui.qs.shared.style.glassPress
+import com.android.systemui.qs.shared.style.glassRim
 import com.android.systemui.qs.shared.style.isStockQsStyle
+import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.res.R
 
@@ -318,6 +322,7 @@ private fun ConnectivityFolderContent(
                     modifier
                         .clip(RoundedCornerShape(32.dp))
                         .background(glassSurface())
+                        .glassRim(RoundedCornerShape(32.dp))
                         .padding(CardPadding)
                 },
         )
@@ -333,6 +338,7 @@ private fun ConnectivityFolderContent(
                 .thenIf(compactHeight != null) { Modifier.height(compactHeight!!) }
                 .clip(RoundedCornerShape(28.dp))
                 .background(glassSurface())
+                .glassRim(RoundedCornerShape(28.dp))
                 .padding(CardPadding),
         verticalArrangement = spacedBy(CellSpacing),
     ) {
@@ -422,8 +428,10 @@ private fun FolderBigCard(tile: TileViewModel) {
         modifier =
             Modifier.fillMaxWidth()
                 .height(BigCardHeight)
+                .glassPress()
                 .clip(RoundedCornerShape(26.dp))
                 .background(glassSurface())
+                .glassRim(RoundedCornerShape(26.dp))
                 .folderTileClickable(tile, uiState)
                 .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween,
@@ -524,8 +532,10 @@ private fun FolderRow(tile: TileViewModel) {
     Row(
         modifier =
             Modifier.fillMaxWidth()
+                .glassPress()
                 .clip(RoundedCornerShape(26.dp))
                 .background(glassSurface())
+                .glassRim(RoundedCornerShape(26.dp))
                 .folderTileClickable(tile, uiState)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = spacedBy(14.dp),
@@ -561,9 +571,11 @@ private fun FolderRow(tile: TileViewModel) {
 
 @Composable
 internal fun glassSurface(): Color =
-    LocalAndroidColorScheme.current.surfaceEffect1.copy(
-        alpha = if (isStockQsStyle) 1f else GlassSurfaceAlpha
-    )
+    if (liquidGlassOn && !isStockQsStyle) LiquidGlassSurface
+    else
+        LocalAndroidColorScheme.current.surfaceEffect1.copy(
+            alpha = if (isStockQsStyle) 1f else GlassSurfaceAlpha
+        )
 
 @Composable
 private fun folderBackground(active: Boolean): Color =

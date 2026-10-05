@@ -58,6 +58,8 @@ import com.android.systemui.common.ui.compose.Icon
 import com.android.systemui.common.ui.compose.PagerDots
 import com.android.systemui.qs.panels.ui.compose.TileListener
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
+import com.android.systemui.qs.shared.style.glassPress
+import com.android.systemui.qs.shared.style.glassRim
 
 internal val LocalMyUiInteractive = compositionLocalOf { true }
 
@@ -99,6 +101,7 @@ fun MyUiConnectivityCard(tiles: List<TileViewModel>, modifier: Modifier = Modifi
                 .fillMaxSize()
                 .clip(RoundedCornerShape(CardCorner))
                 .background(glassSurface())
+                .glassRim(RoundedCornerShape(CardCorner))
                 .padding(vertical = 6.dp),
         verticalArrangement = Arrangement.SpaceEvenly,
     ) {
@@ -181,10 +184,12 @@ fun MyUiTile(tile: TileViewModel, modifier: Modifier = Modifier) {
         modifier =
             modifier
                 .aspectRatio(MyUiTileAspect)
+                .glassPress()
                 .clip(RoundedCornerShape(TileCorner))
                 .background(
                     if (active) MaterialTheme.colorScheme.inverseSurface else glassSurface()
                 )
+                .glassRim(RoundedCornerShape(TileCorner))
                 .myUiClickable(
                     onClick = { tile.primaryAction(uiState) },
                     onLongClick = { tile.settingsClick(null) },

@@ -61,6 +61,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -83,6 +84,10 @@ import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.qs.panels.ui.compose.TileListener
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.SmallTileContent
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
+import com.android.systemui.qs.shared.style.LiquidGlassControl
+import com.android.systemui.qs.shared.style.glassPress
+import com.android.systemui.qs.shared.style.glassRim
+import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.res.R
 import kotlin.math.roundToInt
 
@@ -101,8 +106,13 @@ private const val BluetoothSpec = "bt"
 private const val DarkModeSpec = "dark"
 
 @Composable
+@ReadOnlyComposable
+private fun oneUiOff(): Color =
+    if (liquidGlassOn) LiquidGlassControl else Color.Black.copy(alpha = 0.18f)
+
+@Composable
 private fun Modifier.oneUiCard(corner: Dp = OneUiCardCorner): Modifier =
-    clip(RoundedCornerShape(corner)).background(glassSurface())
+    clip(RoundedCornerShape(corner)).background(glassSurface()).glassRim(RoundedCornerShape(corner))
 
 @Composable
 private fun ListenTo(tiles: List<TileViewModel>) {
@@ -169,6 +179,7 @@ private fun OneUiPill(tile: TileViewModel, modifier: Modifier = Modifier) {
     Row(
         modifier =
             modifier
+                .glassPress()
                 .oneUiCard(OneUiPillCorner)
                 .combinedClickable(
                     onClick = { tile.primaryAction(uiState) },
@@ -204,11 +215,15 @@ private fun OneUiPill(tile: TileViewModel, modifier: Modifier = Modifier) {
 private fun OneUiDisc(icon: Icon, active: Boolean, size: Dp) {
     val background by
         animateColorAsState(
-            if (active) Color.White else Color.Black.copy(alpha = 0.18f),
+            if (active) Color.White else oneUiOff(),
             label = "OneUiDisc",
         )
     Box(
-        modifier = Modifier.size(size).clip(CircleShape).background(background),
+        modifier =
+            Modifier.size(size)
+                .clip(CircleShape)
+                .background(background)
+                .glassRim(CircleShape, if (active) 0.7f else 1f),
         contentAlignment = Alignment.Center,
     ) {
         SmallTileContent(
@@ -308,6 +323,7 @@ private fun OneUiToggle(tile: TileViewModel, size: Dp, interactive: Boolean) {
     Box(
         modifier =
             Modifier.size(size)
+                .glassPress()
                 .clip(CircleShape)
                 .then(
                     if (interactive) {
@@ -343,6 +359,7 @@ fun OneUiTileControl(
             Box(
                 Modifier.fillMaxHeight()
                     .aspectRatio(1f)
+                    .glassPress()
                     .clip(CircleShape)
                     .then(
                         if (interactive) {
@@ -381,6 +398,7 @@ private fun OneUiRoundControl(tile: TileViewModel, size: Dp) {
     Box(
         modifier =
             Modifier.size(size)
+                .glassPress()
                 .clip(CircleShape)
                 .combinedClickable(
                     onClick = { tile.primaryAction(uiState) },
@@ -441,7 +459,8 @@ private fun OneUiMediaVolumeSlider(modifier: Modifier = Modifier) {
         modifier =
             modifier
                 .clip(RoundedCornerShape(OneUiPillCorner))
-                .background(Color.Black.copy(alpha = 0.18f))
+                .background(oneUiOff())
+                .glassRim(RoundedCornerShape(OneUiPillCorner))
                 .pointerInput(audio.max) { detectTapGestures { setFrom(it.x, size.width) } }
                 .pointerInput(audio.max) {
                     detectHorizontalDragGestures(
@@ -483,7 +502,7 @@ fun OneUiSoundModeButton(size: Dp) {
         modifier =
             Modifier.size(size)
                 .clip(CircleShape)
-                .background(if (active) Color.White else Color.Black.copy(alpha = 0.18f))
+                .background(if (active) Color.White else oneUiOff())
                 .clickable {
                     audioManager.ringerModeInternal =
                         when (audio.ringerMode) {
@@ -547,8 +566,10 @@ private fun OneUiRoundButton(size: Dp, glyph: ImageVector, active: Boolean, onCl
     Box(
         modifier =
             Modifier.size(size)
+                .glassPress()
                 .clip(CircleShape)
-                .background(if (active) Color.White else Color.Black.copy(alpha = 0.18f))
+                .background(if (active) Color.White else oneUiOff())
+                .glassRim(CircleShape)
                 .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

@@ -184,6 +184,7 @@ import com.android.systemui.qs.panels.shared.model.splitInRowsSequence
 import com.android.systemui.qs.panels.ui.compose.EditMode
 import com.android.systemui.qs.panels.ui.compose.QuickQuickSettings
 import com.android.systemui.qs.panels.ui.compose.TileGrid
+import com.android.systemui.qs.shared.style.glassRim
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements
 import com.android.systemui.qs.ui.composable.QuickSettingsShade
 import com.android.systemui.qs.ui.composable.QuickSettingsShade.systemGestureExclusionInShade
@@ -222,7 +223,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.UserHandle
 import android.provider.Settings
-
 import com.android.systemui.qs.shared.ui.slider.SharedSliderKey
 
 @SuppressLint("ValidFragment")
@@ -1851,10 +1851,10 @@ fun VerticalSlider(
                 if (capsule) RoundedCornerShape(percent = 50)
                 else cornerRadius?.let { RoundedCornerShape(it) } ?: RoundedCornerShape(percent = 50)
             )
-            .background(
-                LocalAndroidColorScheme.current.surfaceEffect1.copy(
-                    alpha = if (isStockQsStyle) 1f else 0.45f
-                )
+            .background(glassSurface())
+            .glassRim(
+                if (capsule) RoundedCornerShape(percent = 50)
+                else cornerRadius?.let { RoundedCornerShape(it) } ?: RoundedCornerShape(percent = 50)
             )
             .thenIf(interactive) {
                 Modifier.sliderGestures(scope, onValueChanged, onValueChangeFinished, onLongPress)
@@ -1906,11 +1906,8 @@ fun HorizontalSlider(
                 .fillMaxWidth()
                 .height(housingHeight)
                 .clip(RoundedCornerShape(percent = 50))
-                .background(
-                    LocalAndroidColorScheme.current.surfaceEffect1.copy(
-                        alpha = if (isStockQsStyle) 1f else 0.45f
-                    )
-                )
+                .background(glassSurface())
+                .glassRim(RoundedCornerShape(percent = 50))
                 .thenIf(interactive) {
                     Modifier.sliderGesturesHorizontal(
                         scope,

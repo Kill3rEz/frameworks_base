@@ -63,6 +63,10 @@ import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.qs.panels.ui.compose.TileListener
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.SmallTileContent
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
+import com.android.systemui.qs.shared.style.LiquidGlassControl
+import com.android.systemui.qs.shared.style.glassPress
+import com.android.systemui.qs.shared.style.glassRim
+import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.res.R
 
 internal val HarmonyGap = 12.dp
@@ -86,7 +90,7 @@ fun harmonyCardSpecs(tiles: List<TileViewModel>): Set<String> {
 
 @Composable
 private fun Modifier.harmonyCard(): Modifier =
-    clip(RoundedCornerShape(HarmonyCorner)).background(glassSurface())
+    clip(RoundedCornerShape(HarmonyCorner)).background(glassSurface()).glassRim(RoundedCornerShape(HarmonyCorner))
 
 @Composable
 private fun ListenTo(tiles: List<TileViewModel>) {
@@ -218,11 +222,13 @@ private fun HarmonyNetworkCard(
 private fun HarmonyCircle(icon: Icon, active: Boolean, size: Dp) {
     val background by
         animateColorAsState(
-            if (active) HarmonyAccent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+            if (active) HarmonyAccent
+            else if (liquidGlassOn) LiquidGlassControl
+            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
             label = "HarmonyCircle",
         )
     Box(
-        modifier = Modifier.size(size).clip(CircleShape).background(background),
+        modifier = Modifier.size(size).glassPress().clip(CircleShape).background(background).glassRim(CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         SmallTileContent(

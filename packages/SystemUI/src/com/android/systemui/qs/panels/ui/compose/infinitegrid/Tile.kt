@@ -104,6 +104,12 @@ import com.android.systemui.qs.panels.ui.viewmodel.toIconProvider
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.shared.style.isStockQsStyle
+import com.android.systemui.qs.shared.style.LiquidGlassControl
+import com.android.systemui.qs.shared.style.LiquidGlassSurface
+import com.android.systemui.qs.shared.style.liquidGlassEnabled
+import com.android.systemui.qs.shared.style.liquidGlassOn
+import com.android.systemui.qs.shared.style.liquidGlassPress
+import com.android.systemui.qs.shared.style.liquidGlassRim
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.qs.ui.composable.QuickSettingsShade
 import com.android.systemui.qs.ui.compose.borderOnFocus
@@ -372,17 +378,25 @@ private fun TileExpandable(
     modifier: Modifier = Modifier,
     content: @Composable (Expandable) -> Unit,
 ) {
+    val glass = liquidGlassEnabled()
     Expandable(
         expandable = expandable,
         controller = rememberExpandableController(color = color, shape = shape),
         modifier =
             modifier
+                .liquidGlassPress(glass)
                 .clip(shape)
                 .motionTestValues { squishiness() exportAs TileMotionTestKeys.Squishness }
                 .verticalSquish(squishiness),
         useModifierBasedImplementation = true,
     ) {
-        content(hapticsViewModel?.createStateAwareExpandable(it) ?: it)
+        if (glass) {
+            Box(Modifier.liquidGlassRim(shape)) {
+                content(hapticsViewModel?.createStateAwareExpandable(it) ?: it)
+            }
+        } else {
+            content(hapticsViewModel?.createStateAwareExpandable(it) ?: it)
+        }
     }
 }
 
@@ -547,6 +561,12 @@ private object TileDefaults {
     private val activeAlpha: Float
         @Composable @ReadOnlyComposable get() = if (isStockQsStyle) 1f else ActiveTileAlpha
 
+    @Composable
+    @ReadOnlyComposable
+    private fun tileSurface(): Color =
+        if (liquidGlassOn && !isStockQsStyle) LiquidGlassSurface
+        else LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = surfaceAlpha)
+
     /** An active tile uses the active color as background */
     @Composable
     @ReadOnlyComposable
@@ -565,7 +585,7 @@ private object TileDefaults {
     fun activeDualTargetTileColors(): TileColors =
         TileColors(
             background =
-                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = surfaceAlpha),
+                tileSurface(),
             iconBackground = MaterialTheme.colorScheme.primary,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
@@ -578,13 +598,14 @@ private object TileDefaults {
     fun inactiveDualTargetTileColors(): TileColors =
         TileColors(
             background =
-                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = surfaceAlpha),
+                tileSurface(),
             iconBackground = Color.Transparent,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
             icon = MaterialTheme.colorScheme.onSurface,
             circleAroundIcon =
-                LocalAndroidColorScheme.current.surfaceEffect2.copy(alpha = iconSurfaceAlpha),
+                if (liquidGlassOn && !isStockQsStyle) LiquidGlassControl
+                else LocalAndroidColorScheme.current.surfaceEffect2.copy(alpha = iconSurfaceAlpha),
         )
 
     @Composable
@@ -592,7 +613,7 @@ private object TileDefaults {
     fun inactiveTileColors(): TileColors =
         TileColors(
             background =
-                LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = surfaceAlpha),
+                tileSurface(),
             iconBackground = Color.Transparent,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
@@ -603,7 +624,7 @@ private object TileDefaults {
     @ReadOnlyComposable
     fun unavailableTileColors(): TileColors {
         val surfaceColor =
-            LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = surfaceAlpha)
+            tileSurface()
         val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .38f)
         return TileColors(
             background = surfaceColor,

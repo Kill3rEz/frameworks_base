@@ -108,6 +108,8 @@ import com.android.systemui.media.remedia.shared.model.MediaCardActionButtonLayo
 import com.android.systemui.media.remedia.shared.model.MediaSessionState
 import com.android.systemui.res.R
 import com.android.systemui.media.remedia.ui.viewmodel.MediaDeviceChipViewModel
+import com.android.systemui.qs.shared.style.glassPress
+import com.android.systemui.qs.shared.style.glassRim
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -220,6 +222,7 @@ private fun SquareMediaCard(
                 .height(moduleHeight)
                 .clip(RoundedCornerShape(ArtworkCorner))
                 .background(glassSurface())
+                .glassRim(RoundedCornerShape(ArtworkCorner))
                 .padding(14.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -382,6 +385,7 @@ private fun LargeMediaCard(
                     .height(height)
                     .clip(RoundedCornerShape(ArtworkCorner))
                     .background(glassSurface())
+                    .glassRim(RoundedCornerShape(ArtworkCorner))
                     .padding(horizontal = 20.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -422,6 +426,7 @@ private fun ControlCentreWideMediaCard(
                     .height(height)
                     .clip(RoundedCornerShape(ArtworkCorner))
                     .background(glassSurface())
+                    .glassRim(RoundedCornerShape(ArtworkCorner))
                     .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -466,6 +471,7 @@ private fun TallMediaCard(
                     .height(height)
                     .clip(RoundedCornerShape(ArtworkCorner))
                     .background(glassSurface())
+                    .glassRim(RoundedCornerShape(ArtworkCorner))
                     .padding(horizontal = 20.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -515,6 +521,7 @@ private fun ExpandedMediaPlayer(card: MediaCardViewModel, dots: @Composable () -
             Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(ExpandedCorner))
                 .background(glassSurface())
+                .glassRim(RoundedCornerShape(ExpandedCorner))
                 .padding(ExpandedPadding),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
