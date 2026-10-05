@@ -894,7 +894,8 @@ public class WallpaperManagerService extends IWallpaperManager.Stub
                     return;
                 }
 
-                if (!mWallpaper.wallpaperUpdating && mWallpaper.userId == mCurrentUserId) {
+                if (!mWallpaper.wallpaperUpdating && mWallpaper.userId == mCurrentUserId
+                        && !isSystemUiImageWallpaper()) {
                     Slog.w(TAG, "Wallpaper reconnect timed out for " + mWallpaper.getComponent()
                             + ", reverting to built-in wallpaper!");
                     clearWallpaperLocked(mWallpaper.mWhich, mWallpaper.userId, false, null);
@@ -1027,6 +1028,12 @@ public class WallpaperManagerService extends IWallpaperManager.Stub
         }
 
 
+        private boolean isSystemUiImageWallpaper() {
+            final ComponentName component = mWallpaper.getComponent();
+            return mImageWallpaper != null && component != null
+                    && mImageWallpaper.getPackageName().equals(component.getPackageName());
+        }
+
         @Override
         public void onServiceDisconnected(ComponentName name) {
             synchronized (mLock) {
@@ -1089,6 +1096,9 @@ public class WallpaperManagerService extends IWallpaperManager.Stub
                     // Bind fail without timeout, schedule rebind
                     Slog.w(TAG, "Rebind fail! Try again later");
                     mContext.getMainThreadHandler().postDelayed(mTryToRebindRunnable, 1000);
+                } else if (isSystemUiImageWallpaper()) {
+                    Slog.w(TAG, "SystemUI's image wallpaper still unbound; trying again");
+                    mContext.getMainThreadHandler().postDelayed(mTryToRebindRunnable, 1000);
                 } else {
                     // Timeout
                     Slog.w(TAG, "Reverting to built-in wallpaper!");
@@ -1149,7 +1159,8 @@ public class WallpaperManagerService extends IWallpaperManager.Stub
                             // during {@link #MIN_WALLPAPER_CRASH_TIME} millis.
                             if (mWallpaper.lastDiedTime != 0
                                     && mWallpaper.lastDiedTime + MIN_WALLPAPER_CRASH_TIME
-                                    > SystemClock.uptimeMillis()) {
+                                    > SystemClock.uptimeMillis()
+                                    && !isSystemUiImageWallpaper()) {
                                 Slog.w(TAG, "Reverting to built-in wallpaper!");
                                 clearWallpaperLocked(
                                         mWallpaper.mWhich, mWallpaper.userId, false, null);
