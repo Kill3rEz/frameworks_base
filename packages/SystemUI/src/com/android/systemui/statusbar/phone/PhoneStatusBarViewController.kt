@@ -366,7 +366,7 @@ private constructor(
             StatusBarEventForwardingModernization.assertInLegacyMode()
 
             if (event.action == MotionEvent.ACTION_DOWN) {
-                dexBar = DexStatusBar.isDex(mView.context.displayId)
+                dexBar = DexStatusBar.isDex(mView.context, mView.context.displayId)
             }
             if (dexBar) return true
 
