@@ -6173,7 +6173,16 @@ class DisplayContent extends RootDisplayArea implements WindowManagerPolicy.Disp
         if (!isWindowingModeSupported(WINDOWING_MODE_FREEFORM)) {
             return false;
         }
-        return isDefaultDisplay || allowContentModeSwitch();
+        return isDefaultDisplay || allowContentModeSwitch() || isDexDisplay();
+    }
+
+    boolean isDexDisplay() {
+        return mWmService.mDexEnabled
+                && !isDefaultDisplay
+                && !isPrivate()
+                && isTrusted()
+                && (mDisplay.getFlags() & FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS) != 0
+                && DesktopModeHelper.canEnterDesktopMode(mWmService.mContext);
     }
 
     /**

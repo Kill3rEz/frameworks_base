@@ -2951,7 +2951,8 @@ public class RootWindowContainer extends WindowContainer<DisplayContent>
         if (ENABLE_DISPLAY_CONTENT_MODE_MANAGEMENT.isTrue()) {
             displayContent.updateShouldShowSystemDecorations();
             final boolean inTopology = mWindowManager.mDisplayWindowSettings
-                    .shouldShowSystemDecorsLocked(displayContent);
+                    .shouldShowSystemDecorsLocked(displayContent)
+                    || displayContent.isDexDisplay();
             mWmService.mDisplayManagerInternal.onDisplayBelongToTopologyChanged(
                     displayContent.mDisplayId, inTopology);
         }

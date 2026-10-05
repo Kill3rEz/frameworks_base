@@ -765,6 +765,8 @@ public class WindowManagerService extends IWindowManager.Stub
      */
     boolean mForceDesktopModeOnExternalDisplays;
 
+    volatile boolean mDexEnabled;
+
     public boolean mAlwaysSeqId;
 
     boolean mDisableTransitionAnimation;
@@ -885,6 +887,8 @@ public class WindowManagerService extends IWindowManager.Stub
                 DEVELOPMENT_WM_DISPLAY_SETTINGS_PATH);
         private final Uri mMaximumObscuringOpacityForTouchUri = Settings.Global.getUriFor(
                 Settings.Global.MAXIMUM_OBSCURING_OPACITY_FOR_TOUCH);
+        private final Uri mMirrorBuiltInDisplayUri =
+                Settings.Secure.getUriFor(Settings.Secure.MIRROR_BUILT_IN_DISPLAY);
         private final Uri mDevelopmentOverrideDesktopExperienceUri = Settings.Global.getUriFor(
                 Settings.Global.DEVELOPMENT_OVERRIDE_DESKTOP_EXPERIENCE_FEATURES);
 
@@ -931,6 +935,8 @@ public class WindowManagerService extends IWindowManager.Stub
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(mDevelopmentOverrideDesktopExperienceUri, false, this,
                     UserHandle.USER_ALL);
+            resolver.registerContentObserver(mMirrorBuiltInDisplayUri, false, this,
+                    UserHandle.USER_ALL);
         }
 
         @Override
@@ -941,6 +947,11 @@ public class WindowManagerService extends IWindowManager.Stub
 
             if (mForceDesktopModeOnExternalDisplaysUri.equals(uri)) {
                 updateForceDesktopModeOnExternalDisplays();
+                return;
+            }
+
+            if (mMirrorBuiltInDisplayUri.equals(uri)) {
+                mDexEnabled = readDexEnabled(mContext.getContentResolver());
                 return;
             }
 
@@ -1553,6 +1564,7 @@ public class WindowManagerService extends IWindowManager.Stub
 
         mForceDesktopModeOnExternalDisplays = Settings.Global.getInt(resolver,
                 DEVELOPMENT_FORCE_DESKTOP_MODE_ON_EXTERNAL_DISPLAYS, 0) != 0;
+        mDexEnabled = readDexEnabled(resolver);
 
         final String displaySettingsPath = Settings.Global.getString(resolver,
                 DEVELOPMENT_WM_DISPLAY_SETTINGS_PATH);
@@ -7895,6 +7907,11 @@ public class WindowManagerService extends IWindowManager.Stub
     @Override
     public int getDockedStackSide() {
         return 0;
+    }
+
+    private static boolean readDexEnabled(ContentResolver resolver) {
+        return Settings.Secure.getIntForUser(resolver, Settings.Secure.MIRROR_BUILT_IN_DISPLAY,
+                1, UserHandle.USER_CURRENT) == 0;
     }
 
     void setForceDesktopModeOnExternalDisplays(boolean forceDesktopModeOnExternalDisplays) {

@@ -133,7 +133,8 @@ class DesktopStateImpl(context: Context) : DesktopState {
             Settings.Global.DEVELOPMENT_ENABLE_FREEFORM_WINDOWS_SUPPORT,
             0,
         ) != 0
-    override val isFreeformEnabled: Boolean = hasFreeformFeature || hasFreeformDevOption
+    override val isFreeformEnabled: Boolean =
+        hasFreeformFeature || hasFreeformDevOption || canEnterDesktopMode
 
     override val shouldShowHomeBehindDesktop: Boolean =
         Flags.showHomeBehindDesktop() &&
