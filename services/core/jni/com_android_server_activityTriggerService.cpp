@@ -28,6 +28,7 @@
 */
 
 #include "jni.h"
+#include <android-base/properties.h>
 #include <nativehelper/JNIHelp.h>
 #include "android_runtime/AndroidRuntime.h"
 #include <utils/Log.h>
@@ -51,6 +52,12 @@ static dlLibHandler handler = {
 
 static void trigger_handler_lib_init() {
     bool dlError = false;
+    // Off where the vendor qspmhal predates SnapdragonServices: the handler only reaches it
+    // through there, so it would fail on every activity start.
+    if (!android::base::GetBoolProperty("ro.activity_trigger.enable", true)) {
+        ALOGI("Activity trigger handling disabled by ro.activity_trigger.enable.");
+        return;
+    }
     handler.handle = dlopen(handler.dlname, RTLD_NOW | RTLD_LOCAL);
     /*no need to proceed if the lib isn't available*/
     if(handler.handle == NULL) {
