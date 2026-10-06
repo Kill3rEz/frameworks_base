@@ -47,6 +47,7 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.SettingsInputAntenna
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
@@ -56,6 +57,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -83,6 +85,8 @@ import com.android.compose.modifiers.thenIf
 import com.android.compose.theme.PlatformTheme
 import com.android.systemui.compose.modifiers.sysuiResTag
 import com.android.systemui.qs.composefragment.BrightnessLayout
+import com.android.systemui.qs.shared.style.LocalGlassBlurAllowed
+import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import com.android.systemui.qs.composefragment.ConnectivityFolder
 import com.android.systemui.qs.composefragment.ConnectivityFolderExpansion
 import com.android.systemui.qs.composefragment.OneUiExtraDimButton
@@ -159,17 +163,32 @@ internal fun rememberPenguinGridModel(viewModel: QuickSettingsContainerViewModel
             tileViewModels.map { it.spec }.filterNot { it.spec in folderMemberSpecs }
         }
     val raw = secureStringSetting(flavor.setting)
-    return remember(raw, modules, tiles, largeTiles, flavor) {
+    val roundTiles = !oneUi && liquidGlassEnabled()
+    return remember(raw, modules, tiles, largeTiles, flavor, roundTiles) {
         val saved = PenguinGrid.parse(raw)
+        val sizedAs = if (roundTiles) emptySet() else largeTiles
+        val layout = if (roundTiles) saved?.map { page -> page.filter { it.spec in modules } } else saved
+        val resolved =
+            layout?.let { PenguinGrid.resolve(it, modules, tiles, sizedAs, flavor = flavor) }
+                ?: PenguinGrid.defaults(modules, tiles, sizedAs, flavor)
         PenguinGridModel(
             modules = modules,
             tiles = tiles,
             largeTiles = largeTiles,
             saved = saved,
             pages =
-                saved?.let {
-                    PenguinGrid.resolve(it, modules, tiles, largeTiles, flavor = flavor)
-                } ?: PenguinGrid.defaults(modules, tiles, largeTiles, flavor),
+                if (!roundTiles) resolved
+                else
+                    resolved.map { page ->
+                        page.map { item ->
+                            val grown = item.copy(h = 6)
+                            if (
+                                item.spec == FOLDER_SPEC && item.w == 4 && item.h == 4 &&
+                                    page.none { it !== item && it.overlaps(grown) }
+                            ) grown
+                            else item
+                        }
+                    },
         )
     }
 }
@@ -262,6 +281,10 @@ private fun ContentScope.PenguinGridPages(
                 .then(if (settled) Modifier.animateContentSize() else Modifier)
                 .sysuiResTag("quick_settings_panel")
     ) {
+        val panelBlurAllowed = LocalGlassBlurAllowed.current
+        val sheetUp by rememberUpdatedState(sheetShowing)
+        val gridBlurAllowed = remember(panelBlurAllowed) { { panelBlurAllowed() && !sheetUp } }
+        CompositionLocalProvider(LocalGlassBlurAllowed provides gridBlurAllowed) {
         VerticalPager(
             state = pagerState,
             userScrollEnabled = !sheetShowing,
@@ -304,6 +327,7 @@ private fun ContentScope.PenguinGridPages(
                         },
                 )
             }
+        }
         }
 
         if (pages.size > 1) {
@@ -380,6 +404,11 @@ private fun ExpandedSheet(
                 ) {},
             contentAlignment = Alignment.TopCenter,
         ) {
+          val panelBlurAllowed = LocalGlassBlurAllowed.current
+          val settled = remember { derivedStateOf { progress() >= 0.999f } }
+          val sheetBlurAllowed =
+              remember(panelBlurAllowed) { { panelBlurAllowed() && settled.value } }
+          CompositionLocalProvider(LocalGlassBlurAllowed provides sheetBlurAllowed) {
             if (showingMedia) {
                 if (mediaShown) {
                     PenguinMediaCard(
@@ -396,6 +425,7 @@ private fun ExpandedSheet(
                     carded = false,
                 )
             }
+          }
         }
     }
 }

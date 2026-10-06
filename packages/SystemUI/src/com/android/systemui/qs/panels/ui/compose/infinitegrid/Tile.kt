@@ -103,9 +103,13 @@ import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toIconProvider
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.pipeline.shared.TileSpec
+import com.android.systemui.qs.shared.style.glassBlurRegion
 import com.android.systemui.qs.shared.style.isStockQsStyle
+import com.android.systemui.qs.shared.style.LiquidGlassBlue
 import com.android.systemui.qs.shared.style.LiquidGlassControl
+import com.android.systemui.qs.shared.style.LiquidGlassGlyphs
 import com.android.systemui.qs.shared.style.LiquidGlassSurface
+import com.android.systemui.qs.shared.style.LiquidGlassTune
 import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.qs.shared.style.liquidGlassPress
@@ -226,6 +230,7 @@ fun ContentScope.Tile(
         val expandable =
             if (dynamicTargetResolutionEnabled()) tile.expandable
             else remember { Expandable(mutableSetOf()) }
+        val glassRound = liquidGlassOn && !isStockQsStyle
         val effectiveSquishiness: () -> Float =
             if (isHeaderTile) ({ 1f }) else squishiness
         Tooltip(
@@ -247,7 +252,10 @@ fun ContentScope.Tile(
                             tileShape.topEnd,
                         )
                         .sysuiResTag("tile_expandable")
-                        .fillMaxWidth()
+                        .then(
+                            if (iconOnly && glassRound) Modifier.size(TileHeight)
+                            else Modifier.fillMaxWidth()
+                        )
                         .bounceable(
                             currentBounceableInfo.bounceable,
                             currentBounceableInfo.previousTile,
@@ -323,11 +331,22 @@ fun ContentScope.Tile(
                     isDualTarget = isDualTarget,
                     modifier = contentRevealModifier,
                 ) {
-                    val iconProvider: Context.() -> Icon = { getTileIcon(icon = icon) }
+                    val iconProvider: Context.() -> Icon =
+                        if (glassRound) {
+                            { LiquidGlassGlyphs.swap(tile.spec.spec, getTileIcon(icon = icon)) }
+                        } else {
+                            { getTileIcon(icon = icon) }
+                        }
                     if (iconOnly) {
                         SmallTileContent(
                             iconProvider = iconProvider,
                             color = colors.icon,
+                            size =
+                                if (glassRound) {
+                                    { TileHeight * LiquidGlassTune.f("icon_scale", 0.5f) }
+                                } else {
+                                    { CommonTileDefaults.SmallTileIconSize }
+                                },
                             modifier =
                                 Modifier.align(Alignment.Center).bounceScale {
                                     currentBounceableInfo.bounceable.iconBounceScale
@@ -391,7 +410,7 @@ private fun TileExpandable(
         useModifierBasedImplementation = true,
     ) {
         if (glass) {
-            Box(Modifier.liquidGlassRim(shape)) {
+            Box(Modifier.glassBlurRegion(shape).liquidGlassRim(shape)) {
                 content(hapticsViewModel?.createStateAwareExpandable(it) ?: it)
             }
         } else {
@@ -411,11 +430,14 @@ fun TileContainer(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val round = iconOnly && liquidGlassOn && !isStockQsStyle
     Box(
         modifier =
             modifier
-                .height(TileHeight)
-                .fillMaxWidth()
+                .then(
+                    if (round) Modifier.size(TileHeight)
+                    else Modifier.height(TileHeight).fillMaxWidth()
+                )
                 .tileCombinedClickable(
                     onClick = onClick ?: {},
                     onLongClick = onLongClick,
@@ -571,7 +593,8 @@ private object TileDefaults {
     @Composable
     @ReadOnlyComposable
     fun activeTileColors(): TileColors =
-        TileColors(
+        if (liquidGlassOn && !isStockQsStyle) glassActiveTileColors()
+        else TileColors(
             background = MaterialTheme.colorScheme.primary.copy(alpha = activeAlpha),
             iconBackground = MaterialTheme.colorScheme.primary.copy(alpha = activeAlpha),
             label = MaterialTheme.colorScheme.onPrimary,
@@ -583,7 +606,8 @@ private object TileDefaults {
     @Composable
     @ReadOnlyComposable
     fun activeDualTargetTileColors(): TileColors =
-        TileColors(
+        if (liquidGlassOn && !isStockQsStyle) glassActiveTileColors()
+        else TileColors(
             background =
                 tileSurface(),
             iconBackground = MaterialTheme.colorScheme.primary,
@@ -610,6 +634,18 @@ private object TileDefaults {
 
     @Composable
     @ReadOnlyComposable
+    private fun glassActiveTileColors(): TileColors =
+        TileColors(
+            background = tileSurface(),
+            iconBackground = LiquidGlassBlue,
+            label = Color.White,
+            secondaryLabel = Color.White.copy(alpha = 0.6f),
+            icon = Color.White,
+            circleAroundIcon = LiquidGlassBlue,
+        )
+
+    @Composable
+    @ReadOnlyComposable
     fun inactiveTileColors(): TileColors =
         TileColors(
             background =
@@ -617,7 +653,9 @@ private object TileDefaults {
             iconBackground = Color.Transparent,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
-            icon = MaterialTheme.colorScheme.onSurface,
+            icon = if (liquidGlassOn && !isStockQsStyle) Color.White else MaterialTheme.colorScheme.onSurface,
+            circleAroundIcon =
+                if (liquidGlassOn && !isStockQsStyle) LiquidGlassControl else Color.Transparent,
         )
 
     @Composable
@@ -640,7 +678,15 @@ private object TileDefaults {
     fun getColorForState(uiState: TileUiState, iconOnly: Boolean): TileColors {
         return when (uiState.visualState) {
             STATE_ACTIVE -> {
-                if (uiState.handlesToggleClick && !iconOnly) {
+                if (iconOnly && liquidGlassOn && !isStockQsStyle) {
+                    TileColors(
+                        background = Color.White,
+                        iconBackground = Color.White,
+                        label = Color.White,
+                        secondaryLabel = Color.White,
+                        icon = Color(0xFF1C1C1E),
+                    )
+                } else if (uiState.handlesToggleClick && !iconOnly) {
                     activeDualTargetTileColors()
                 } else {
                     activeTileColors()

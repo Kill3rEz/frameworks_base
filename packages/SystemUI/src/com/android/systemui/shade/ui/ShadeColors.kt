@@ -20,12 +20,13 @@ import android.content.Context
 import android.graphics.Color
 import com.android.internal.graphics.ColorUtils
 import com.android.systemui.qs.shared.style.LiquidGlass
+import com.android.systemui.qs.shared.style.LiquidGlassTune
 import com.android.systemui.res.R
 
 object ShadeColors {
-    private const val LIQUID_GLASS_DIM = 0x29000000
-    private const val LIQUID_GLASS_SCRIM = 0x2E000000
-    private const val LIQUID_GLASS_PANEL = 0x14000000
+    private val LIQUID_GLASS_DIM get() = LiquidGlassTune.color("dim", 0x52000000)
+    private val LIQUID_GLASS_SCRIM get() = LiquidGlassTune.color("scrim", 0x8C000000.toInt())
+    private val LIQUID_GLASS_PANEL get() = LiquidGlassTune.color("panel", 0x14000000)
 
     /**
      * Calculate notification shade panel color.

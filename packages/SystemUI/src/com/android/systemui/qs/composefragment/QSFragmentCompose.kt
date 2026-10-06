@@ -1631,7 +1631,13 @@ fun VolumeLayout(
     Box(modifier = commonModifier) {
         AlwaysDarkMode {
             val scope = rememberCoroutineScope()
-            val icon = painterResource(id = if (isMuted || currentVolume == 0) R.drawable.ic_volume_off else R.drawable.ic_volume_media)
+            val icon =
+                painterResource(
+                    id =
+                        if (isMuted || currentVolume == 0) R.drawable.ic_volume_off
+                        else if (liquidGlassOn) R.drawable.lg_glyph_speaker_2_fill
+                        else R.drawable.ic_volume_media
+                )
             if (horizontal) {
                 HorizontalSlider(
                     scope = scope,
@@ -1787,7 +1793,13 @@ fun BrightnessLayout(
     Box(modifier = commonModifier) {
         AlwaysDarkMode {
             val scope = rememberCoroutineScope()
-            val icon = painterResource(id = if (isAuto) R.drawable.ic_qs_brightness_auto_on_new else R.drawable.ic_qs_brightness_auto_off_new)
+            val icon =
+                painterResource(
+                    id =
+                        if (liquidGlassOn) R.drawable.lg_glyph_sun_max_fill
+                        else if (isAuto) R.drawable.ic_qs_brightness_auto_on_new
+                        else R.drawable.ic_qs_brightness_auto_off_new
+                )
             if (horizontal) {
                 HorizontalSlider(
                     scope = scope,

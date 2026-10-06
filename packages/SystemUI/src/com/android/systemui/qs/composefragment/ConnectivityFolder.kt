@@ -35,11 +35,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,6 +64,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.android.compose.theme.LocalAndroidColorScheme
 import com.android.systemui.common.shared.model.Icon
@@ -75,11 +79,13 @@ import com.android.systemui.qs.panels.ui.viewmodel.toIconProvider
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.pipeline.shared.TileSpec
 import com.android.systemui.qs.shared.style.LiquidGlassControl
+import com.android.systemui.qs.shared.style.LiquidGlassGlyphs
 import com.android.systemui.qs.shared.style.LiquidGlassSurface
 import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.style.glassPress
 import com.android.systemui.qs.shared.style.glassRim
 import com.android.systemui.qs.shared.style.isStockQsStyle
+import com.android.systemui.qs.shared.style.liquidGlassActive
 import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.res.R
@@ -230,6 +236,7 @@ private val HeroCircle = 64.dp
 private val SmallCircle = 30.dp
 private val CellSize = 72.dp
 private val BigCardHeight = 148.dp
+private val GlassCardHeight = 168.dp
 private const val GlassSurfaceAlpha = 0.45f
 private val CardPadding = 10.dp
 private val CellSpacing = 6.dp
@@ -316,6 +323,7 @@ private fun ConnectivityFolderContent(
             gap = gap,
             uniformGrid = secureIntSetting(SETTING_QS_FOLDER_SPAN, 1) >= 2,
             onDone = { onExpandedChange(false) }.takeIf { showHeader },
+            fitHeight = !showHeader && carded,
             modifier =
                 if (showHeader || !carded || liquidGlassOn) {
                     modifier
@@ -385,9 +393,15 @@ private fun ExpandedSheet(
     uniformGrid: Boolean,
     onDone: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    fitHeight: Boolean = false,
 ) {
     val all = large + small
-    val cards = if (uniformGrid) all else all.filter { it.spec.spec in ConnectivityFolderSpecs.ExpandedCards }
+    val cards =
+        if (uniformGrid) all
+        else if (liquidGlassOn) {
+            val order = listOf("wifi", "cast", "cell", "bt")
+            all.filter { it.spec.spec in order }.sortedBy { order.indexOf(it.spec.spec) }
+        } else all.filter { it.spec.spec in ConnectivityFolderSpecs.ExpandedCards }
     val rows = all.filterNot { it in cards }
 
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = spacedBy(gap)) {
@@ -412,8 +426,14 @@ private fun ExpandedSheet(
         }
         rows.take(1).forEach { FolderRow(it) }
         cards.chunked(2).forEach { pair ->
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = spacedBy(gap)) {
-                pair.forEach { tile -> Box(Modifier.weight(1f)) { FolderBigCard(tile) } }
+            Row(
+                modifier =
+                    Modifier.fillMaxWidth().thenIf(fitHeight) { Modifier.weight(1f) },
+                horizontalArrangement = spacedBy(gap),
+            ) {
+                pair.forEach { tile ->
+                    Box(Modifier.weight(1f)) { FolderBigCard(tile, fill = fitHeight) }
+                }
                 if (pair.size == 1) Box(Modifier.weight(1f))
             }
         }
@@ -422,44 +442,108 @@ private fun ExpandedSheet(
 }
 
 @Composable
-private fun FolderBigCard(tile: TileViewModel) {
+private fun FolderBigCard(tile: TileViewModel, fill: Boolean = false) {
     val (uiState, icon) = rememberTileState(tile)
     val active = uiState.visualState == Tile.STATE_ACTIVE
-    Column(
-        modifier =
-            Modifier.fillMaxWidth()
-                .height(BigCardHeight)
-                .glassPress()
-                .clip(RoundedCornerShape(26.dp))
-                .background(glassSurface())
-                .glassRim(RoundedCornerShape(26.dp))
-                .folderTileClickable(tile, uiState)
-                .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
-    ) {
+    val glass = liquidGlassOn
+    val shape = RoundedCornerShape(if (glass) 36.dp else 26.dp)
+    val disc = if (glass) 50.dp else 44.dp
+    val modifier =
+        Modifier.fillMaxWidth()
+            .then(
+                if (fill) Modifier.fillMaxHeight()
+                else Modifier.height(if (glass) GlassCardHeight else BigCardHeight)
+            )
+            .glassPress()
+            .clip(shape)
+            .background(glassSurface())
+            .glassRim(shape)
+            .folderTileClickable(tile, uiState)
+    val badge: @Composable () -> Unit = {
         Box(
-            modifier = Modifier.size(44.dp).clip(CircleShape).background(folderBackground(active)),
+            modifier = Modifier.size(disc).clip(CircleShape).background(folderBackground(active, tile.spec.spec)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon = icon, tint = folderForeground(active), modifier = Modifier.size(22.dp))
+            Icon(icon = icon, tint = folderForeground(active, tile.spec.spec), modifier = Modifier.size(disc / 2))
         }
-        Column {
+    }
+    if (fill) {
+        BoxWithConstraints(modifier) {
+            if (maxHeight < 120.dp) {
+                Row(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                    horizontalArrangement = spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    badge()
+                    FolderLabels(uiState, active, compact = true)
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(18.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    badge()
+                    FolderLabels(uiState, active)
+                }
+            }
+        }
+        return
+    }
+    Column(
+        modifier = modifier.padding(if (glass) 18.dp else 16.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        badge()
+        FolderLabels(uiState, active)
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun FolderLabels(
+    uiState: TileUiState,
+    active: Boolean,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
+    val glass = liquidGlassOn
+    val secondary =
+        uiState.secondaryLabel.ifBlank {
+            if (glass) stringResource(if (active) R.string.switch_bar_on else R.string.switch_bar_off)
+            else ""
+        }
+    Column(modifier = modifier) {
+        Text(
+            text = uiState.label,
+            color = if (glass) Color.White else MaterialTheme.colorScheme.onSurface,
+            style =
+                if (glass && !compact) {
+                    MaterialTheme.typography.titleSmallEmphasized.copy(
+                        fontSize = 17.sp,
+                        lineHeight = 22.sp,
+                    )
+                } else {
+                    MaterialTheme.typography.titleSmall
+                },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (secondary.isNotBlank()) {
             Text(
-                text = uiState.label,
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleSmall,
+                text = secondary,
+                color =
+                    if (glass) Color.White.copy(alpha = 0.6f)
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                style =
+                    if (glass && !compact) {
+                        MaterialTheme.typography.labelMedium.copy(fontSize = 15.sp, lineHeight = 20.sp)
+                    } else {
+                        MaterialTheme.typography.bodySmall
+                    },
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (uiState.secondaryLabel.isNotBlank()) {
-                Text(
-                    text = uiState.secondaryLabel,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
         }
     }
 }
@@ -467,7 +551,9 @@ private fun FolderBigCard(tile: TileViewModel) {
 @Composable
 private fun RowScope.Cell(height: Dp?, content: @Composable (Dp) -> Unit) {
     BoxWithConstraints(
-        modifier = Modifier.weight(1f).thenIf(height != null) { Modifier.height(height!!) },
+        modifier =
+            Modifier.weight(1f)
+                .then(if (height != null) Modifier.height(height) else Modifier.fillMaxHeight()),
         contentAlignment = Alignment.Center,
     ) {
         content(minOf(maxWidth, maxHeight))
@@ -482,11 +568,11 @@ private fun FolderCircle(tile: TileViewModel, diameter: Dp) {
         modifier =
             Modifier.size(diameter)
                 .clip(CircleShape)
-                .background(folderBackground(active))
+                .background(folderBackground(active, tile.spec.spec))
                 .folderTileClickable(tile, uiState),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon = icon, tint = folderForeground(active), modifier = Modifier.size(diameter / 2))
+        Icon(icon = icon, tint = folderForeground(active, tile.spec.spec), modifier = Modifier.size(diameter / 2))
     }
 }
 
@@ -519,10 +605,10 @@ private fun SmallDot(tile: TileViewModel, diameter: Dp) {
     val (uiState, icon) = rememberTileState(tile)
     val active = uiState.visualState == Tile.STATE_ACTIVE
     Box(
-        modifier = Modifier.size(diameter).clip(CircleShape).background(folderBackground(active)),
+        modifier = Modifier.size(diameter).clip(CircleShape).background(folderBackground(active, tile.spec.spec)),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon = icon, tint = folderForeground(active), modifier = Modifier.size(diameter / 2))
+        Icon(icon = icon, tint = folderForeground(active, tile.spec.spec), modifier = Modifier.size(diameter / 2))
     }
 }
 
@@ -530,43 +616,29 @@ private fun SmallDot(tile: TileViewModel, diameter: Dp) {
 private fun FolderRow(tile: TileViewModel) {
     val (uiState, icon) = rememberTileState(tile)
     val active = uiState.visualState == Tile.STATE_ACTIVE
+    val glass = liquidGlassOn
+    val shape = if (glass) RoundedCornerShape(50) else RoundedCornerShape(26.dp)
+    val disc = if (glass) 50.dp else 44.dp
     Row(
         modifier =
             Modifier.fillMaxWidth()
                 .glassPress()
-                .clip(RoundedCornerShape(26.dp))
+                .clip(shape)
                 .background(glassSurface())
-                .glassRim(RoundedCornerShape(26.dp))
+                .glassRim(shape)
                 .folderTileClickable(tile, uiState)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = if (glass) 12.dp else 16.dp, vertical = if (glass) 12.dp else 14.dp),
         horizontalArrangement = spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier =
-                Modifier.size(44.dp).clip(CircleShape).background(folderBackground(active)),
+                Modifier.size(disc).clip(CircleShape).background(folderBackground(active, tile.spec.spec)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon = icon, tint = folderForeground(active), modifier = Modifier.size(22.dp))
+            Icon(icon = icon, tint = folderForeground(active, tile.spec.spec), modifier = Modifier.size(disc / 2))
         }
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = uiState.label,
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (uiState.secondaryLabel.isNotBlank()) {
-                Text(
-                    text = uiState.secondaryLabel,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
+        FolderLabels(uiState, active, Modifier.fillMaxWidth())
     }
 }
 
@@ -579,15 +651,16 @@ internal fun glassSurface(): Color =
         )
 
 @Composable
-private fun folderBackground(active: Boolean): Color =
-    if (active) MaterialTheme.colorScheme.primary
+private fun folderBackground(active: Boolean, spec: String): Color =
+    if (active && liquidGlassOn) liquidGlassActive(spec)
+    else if (active) MaterialTheme.colorScheme.primary
     else if (liquidGlassOn) LiquidGlassControl
     else glassSurface()
 
 @Composable
-private fun folderForeground(active: Boolean): Color =
-    if (active) MaterialTheme.colorScheme.onPrimary
-    else if (liquidGlassOn) Color.White
+private fun folderForeground(active: Boolean, spec: String): Color =
+    if (liquidGlassOn) Color.White
+    else if (active) MaterialTheme.colorScheme.onPrimary
     else MaterialTheme.colorScheme.onSurfaceVariant
 
 @Composable
@@ -602,7 +675,8 @@ internal fun rememberTileState(tile: TileViewModel): Pair<TileUiState, Icon> {
         ) {
             tile.state.collect { value = it.toUiState(resources) to it.toIconProvider() }
         }
-    return state.first to context.folderIcon(state.second)
+    val icon = context.folderIcon(state.second)
+    return state.first to if (liquidGlassOn) LiquidGlassGlyphs.swap(tile.spec.spec, icon) else icon
 }
 
 internal fun Context.folderIcon(icon: IconProvider): Icon {

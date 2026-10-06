@@ -33,6 +33,8 @@ import androidx.compose.ui.util.fastMap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.animation.scene.ContentScope
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.qs.shared.style.isStockQsStyle
+import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.grid.ui.compose.VerticalSpannedGrid
 import com.android.systemui.haptics.msdl.qs.TileHapticsViewModel
 import com.android.systemui.lifecycle.rememberViewModel
@@ -66,6 +68,7 @@ import com.android.systemui.res.R
 import com.android.systemui.shade.shared.flag.DualShadeFlag
 import javax.inject.Inject
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -112,12 +115,16 @@ constructor(
         val largeTilesSpan = viewModel.columnsWithMediaViewModel.largeSpan
         val largeTiles by viewModel.iconTilesViewModel.largeTilesState
         // Tiles or largeTiles may be updated while this is composed, so listen to any changes
+        val roundGrid =
+            liquidGlassOn && !isStockQsStyle && !forceLargeTiles &&
+                (columnsOverride == null || columnsOverride == 1)
         val sizedTiles =
-            remember(tiles, largeTiles, largeTilesSpan, forceLargeTiles, columns) {
+            remember(tiles, largeTiles, largeTilesSpan, forceLargeTiles, columns, roundGrid) {
                 tiles.map {
                     SizedTileImpl(
                         it,
                         if (forceLargeTiles) largeTilesSpan.coerceAtMost(columns)
+                        else if (roundGrid) 1
                         else if (largeTiles.contains(it.spec)) largeTilesSpan
                         else 1
                     )
@@ -144,10 +151,15 @@ constructor(
             ) { spanIndex, column, isFirstInColumn, isLastInColumn ->
                 val it = sizedTiles[spanIndex]
 
-                Element(it.tile.spec.toElementKey(), Modifier) {
+                Element(
+                    it.tile.spec.toElementKey(),
+                    if (roundGrid) Modifier.fillMaxWidth().wrapContentWidth() else Modifier,
+                ) {
                     Tile(
                         tile = it.tile,
-                        iconOnly = if (forceLargeTiles) false else iconTilesViewModel.isIconTile(it.tile.spec),
+                        iconOnly =
+                            if (forceLargeTiles) false
+                            else roundGrid || iconTilesViewModel.isIconTile(it.tile.spec),
                         squishiness = tileSquishiness,
                         isHeaderTile = !isMainGrid,
                         tileHapticsViewModelFactory = tileHapticsViewModelFactory,

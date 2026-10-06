@@ -50,6 +50,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -109,6 +110,7 @@ import com.android.systemui.media.remedia.shared.model.MediaSessionState
 import com.android.systemui.res.R
 import com.android.systemui.media.remedia.ui.viewmodel.MediaDeviceChipViewModel
 import com.android.systemui.qs.shared.style.glassPress
+import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.qs.shared.style.glassRim
 import kotlin.math.PI
 import kotlin.math.sin
@@ -598,20 +600,36 @@ private fun Waveform(card: MediaCardViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun TrackText(card: MediaCardViewModel, titleStyle: TextStyle) {
+    val tileTitle = MaterialTheme.typography.titleSmallEmphasized
+    val tileLabel = MaterialTheme.typography.labelMedium
     Column {
         Text(
             text = card.title,
             color = MaterialTheme.colorScheme.onSurface,
-            style = titleStyle,
+            style =
+                if (liquidGlassOn) {
+                    titleStyle.copy(
+                        fontFamily = tileTitle.fontFamily,
+                        fontWeight = tileTitle.fontWeight,
+                    )
+                } else {
+                    titleStyle
+                },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = card.subtitle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            style = MaterialTheme.typography.bodyMedium,
+            style =
+                if (liquidGlassOn) {
+                    MaterialTheme.typography.bodyMedium.copy(fontFamily = tileLabel.fontFamily)
+                } else {
+                    MaterialTheme.typography.bodyMedium
+                },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -956,6 +974,18 @@ private fun MediaControl(
     iconRes: Int? = null,
 ) {
     val model = action as? MediaSecondaryActionViewModel.Action ?: return
+    val iconRes =
+        if (liquidGlassOn) {
+            when (iconRes) {
+                R.drawable.ic_penguin_media_previous -> R.drawable.lg_glyph_backward_fill
+                R.drawable.ic_penguin_media_next -> R.drawable.lg_glyph_forward_fill
+                R.drawable.ic_penguin_media_play -> R.drawable.lg_glyph_play_fill
+                R.drawable.ic_penguin_media_pause -> R.drawable.lg_glyph_pause_fill
+                else -> iconRes
+            }
+        } else {
+            iconRes
+        }
     val interactive = LocalMediaCardInteractive.current
     Box(
         modifier =
@@ -971,14 +1001,14 @@ private fun MediaControl(
         if (iconRes == null) {
             Icon(
                 icon = model.icon,
-                tint = tint ?: MaterialTheme.colorScheme.onSurface,
+                tint = tint ?: if (liquidGlassOn) Color.White else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(size * 0.6f),
             )
         } else {
             M3Icon(
                 painter = painterResource(iconRes),
                 contentDescription = null,
-                tint = tint ?: MaterialTheme.colorScheme.onSurface,
+                tint = tint ?: if (liquidGlassOn) Color.White else MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(size * 0.6f),
             )
         }
