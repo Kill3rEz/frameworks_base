@@ -64,6 +64,9 @@ import com.android.compose.ui.graphics.painter.rememberDrawablePainter
 import com.android.internal.util.custom.OmniJawsClient
 import java.util.Date
 import java.util.Locale
+import com.android.systemui.qs.shared.style.LiquidGlassSurface
+import com.android.systemui.qs.shared.style.glassRim
+import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -194,8 +197,15 @@ private fun Widget(modifier: Modifier, content: @Composable () -> Unit) {
             modifier
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(24.dp))
-                .background(WidgetColor)
-                .border(1.dp, WidgetBorder, RoundedCornerShape(24.dp))
+                .then(
+                    if (liquidGlassEnabled()) {
+                        Modifier.background(LiquidGlassSurface)
+                            .glassRim(RoundedCornerShape(24.dp))
+                    } else {
+                        Modifier.background(WidgetColor)
+                            .border(1.dp, WidgetBorder, RoundedCornerShape(24.dp))
+                    }
+                )
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         contentAlignment = Alignment.CenterStart,
     ) {

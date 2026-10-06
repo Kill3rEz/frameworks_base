@@ -6,6 +6,11 @@
 package com.android.systemui.qs.shared.style
 
 import android.content.Context
+import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Shader
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
@@ -70,6 +75,35 @@ object LiquidGlass {
                         value.also { state = it }
                     }
             }
+
+    @JvmStatic fun isEnabled(context: Context): Boolean = enabled(context).value
+
+    const val VIEW_SURFACE: Int = 0x8C55555A.toInt()
+
+    private val rimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val rimPath = android.graphics.Path()
+
+    @JvmStatic
+    fun drawRim(canvas: Canvas, rect: RectF, radii: FloatArray, density: Float) {
+        if (rect.isEmpty) return
+        rimPath.reset()
+        rimPath.addRoundRect(rect, radii, android.graphics.Path.Direction.CW)
+        rimPaint.strokeWidth = 1.4f * density
+        rimPaint.shader =
+            LinearGradient(
+                rect.left,
+                rect.top,
+                rect.right,
+                rect.bottom,
+                intArrayOf(0x8CFFFFFF.toInt(), 0x14FFFFFF, 0x00FFFFFF, 0x0DFFFFFF, 0x4DFFFFFF),
+                floatArrayOf(0f, 0.22f, 0.5f, 0.78f, 1f),
+                Shader.TileMode.CLAMP,
+            )
+        val count = canvas.save()
+        canvas.clipPath(rimPath)
+        canvas.drawPath(rimPath, rimPaint)
+        canvas.restoreToCount(count)
+    }
 }
 
 val liquidGlassOn: Boolean
