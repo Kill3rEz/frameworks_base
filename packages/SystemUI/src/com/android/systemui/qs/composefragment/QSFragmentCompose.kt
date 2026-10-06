@@ -184,7 +184,10 @@ import com.android.systemui.qs.panels.shared.model.splitInRowsSequence
 import com.android.systemui.qs.panels.ui.compose.EditMode
 import com.android.systemui.qs.panels.ui.compose.QuickQuickSettings
 import com.android.systemui.qs.panels.ui.compose.TileGrid
+import com.android.systemui.qs.shared.style.LiquidGlassBrightness
+import com.android.systemui.qs.shared.style.LiquidGlassVolume
 import com.android.systemui.qs.shared.style.glassRim
+import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.qs.shared.ui.QuickSettings.Elements
 import com.android.systemui.qs.ui.composable.QuickSettingsShade
 import com.android.systemui.qs.ui.composable.QuickSettingsShade.systemGestureExclusionInShade
@@ -1649,6 +1652,7 @@ fun VolumeLayout(
                     onValueChangeFinished = onValueChangeFinished,
                     onLongPress = toggleMute,
                     icon = icon,
+                    glassIconTint = LiquidGlassVolume,
                     modifier = Modifier,
                     housingHeight = sliderHeight,
                     cornerRadius = verticalCornerRadius,
@@ -1804,6 +1808,7 @@ fun BrightnessLayout(
                     onValueChangeFinished = onValueChangeFinished,
                     onLongPress = toggleBrightnessMode,
                     icon = icon,
+                    glassIconTint = LiquidGlassBrightness,
                     modifier = Modifier,
                     housingHeight = sliderHeight,
                     cornerRadius = verticalCornerRadius,
@@ -1830,14 +1835,18 @@ fun VerticalSlider(
     cornerRadius: Dp? = null,
     housingWidth: Dp? = 75.dp,
     capsule: Boolean = false,
+    glassIconTint: Color? = null,
 ) {
+    val glass = liquidGlassOn && !isStockQsStyle
     val iconSize = if (capsule) 28.dp else 24.dp
     val iconBottomPadding = if (capsule) housingHeight * 0.16f else 16.dp
 
     val iconCoveredFraction =
         if (housingHeight > 0.dp) (iconBottomPadding + iconSize) / housingHeight else 0f
     val iconTint =
-        if (value > iconCoveredFraction) {
+        if (glass && glassIconTint != null) {
+            glassIconTint
+        } else if (value > iconCoveredFraction) {
             MaterialTheme.colorScheme.onPrimary
         } else {
             MaterialTheme.colorScheme.onSurface
@@ -1871,7 +1880,9 @@ fun VerticalSlider(
                 .fillMaxHeight(value)
                 .clip(RoundedCornerShape(topStart = fillCapRadius, topEnd = fillCapRadius))
                 .background(
-                    color = MaterialTheme.colorScheme.primary
+                    color =
+                        if (glass) Color.White
+                        else MaterialTheme.colorScheme.primary
                 )
         )
 

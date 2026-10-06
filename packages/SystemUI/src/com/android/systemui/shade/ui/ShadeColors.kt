@@ -23,8 +23,8 @@ import com.android.systemui.qs.shared.style.LiquidGlass
 import com.android.systemui.res.R
 
 object ShadeColors {
-    private const val LIQUID_GLASS_DIM = 0x40000000
-    private const val LIQUID_GLASS_SCRIM = 0x33000000
+    private const val LIQUID_GLASS_DIM = 0x29000000
+    private const val LIQUID_GLASS_SCRIM = 0x2E000000
     private const val LIQUID_GLASS_PANEL = 0x14000000
 
     /**

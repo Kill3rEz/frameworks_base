@@ -74,6 +74,7 @@ import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toIconProvider
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.pipeline.shared.TileSpec
+import com.android.systemui.qs.shared.style.LiquidGlassControl
 import com.android.systemui.qs.shared.style.LiquidGlassSurface
 import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.style.glassPress
@@ -316,7 +317,7 @@ private fun ConnectivityFolderContent(
             uniformGrid = secureIntSetting(SETTING_QS_FOLDER_SPAN, 1) >= 2,
             onDone = { onExpandedChange(false) }.takeIf { showHeader },
             modifier =
-                if (showHeader || !carded) {
+                if (showHeader || !carded || liquidGlassOn) {
                     modifier
                 } else {
                     modifier
@@ -579,11 +580,15 @@ internal fun glassSurface(): Color =
 
 @Composable
 private fun folderBackground(active: Boolean): Color =
-    if (active) MaterialTheme.colorScheme.primary else glassSurface()
+    if (active) MaterialTheme.colorScheme.primary
+    else if (liquidGlassOn) LiquidGlassControl
+    else glassSurface()
 
 @Composable
 private fun folderForeground(active: Boolean): Color =
-    if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+    if (active) MaterialTheme.colorScheme.onPrimary
+    else if (liquidGlassOn) Color.White
+    else MaterialTheme.colorScheme.onSurfaceVariant
 
 @Composable
 internal fun rememberTileState(tile: TileViewModel): Pair<TileUiState, Icon> {

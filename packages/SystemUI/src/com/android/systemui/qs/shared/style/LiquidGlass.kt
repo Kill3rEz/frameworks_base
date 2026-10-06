@@ -75,9 +75,12 @@ object LiquidGlass {
 val liquidGlassOn: Boolean
     @Composable @ReadOnlyComposable get() = LiquidGlass.enabled(LocalContext.current).value
 
-val LiquidGlassSurface = Color.White.copy(alpha = 0.16f)
+val LiquidGlassSurface = Color(0xFFB4B4BE).copy(alpha = 0.18f)
 
-val LiquidGlassControl = Color.White.copy(alpha = 0.20f)
+val LiquidGlassControl = Color(0xFFC8C8D2).copy(alpha = 0.24f)
+
+val LiquidGlassVolume = Color(0xFF32ADE6)
+val LiquidGlassBrightness = Color(0xFFFFCC00)
 
 @Composable
 fun liquidGlassEnabled(): Boolean {
@@ -95,13 +98,14 @@ fun Modifier.liquidGlassRim(shape: Shape, strength: Float = 1f): Modifier =
                 is Outline.Rounded -> Path().apply { addRoundRect(outline.roundRect) }
                 is Outline.Rectangle -> Path().apply { addRect(outline.rect) }
             }
-        val rim = 1.2.dp.toPx()
+        val rim = 0.7.dp.toPx()
         val diagonal =
             Brush.linearGradient(
-                0f to Color.White.copy(alpha = 0.62f * strength),
-                0.32f to Color.White.copy(alpha = 0.10f * strength),
-                0.68f to Color.White.copy(alpha = 0.04f * strength),
-                1f to Color.White.copy(alpha = 0.36f * strength),
+                0f to Color.White.copy(alpha = 0.55f * strength),
+                0.22f to Color.White.copy(alpha = 0.08f * strength),
+                0.5f to Color.Transparent,
+                0.78f to Color.White.copy(alpha = 0.05f * strength),
+                1f to Color.White.copy(alpha = 0.30f * strength),
                 start = Offset.Zero,
                 end = Offset(size.width, size.height),
             )
@@ -109,8 +113,8 @@ fun Modifier.liquidGlassRim(shape: Shape, strength: Float = 1f): Modifier =
             drawPath(path, diagonal, style = Stroke(width = rim * 2))
             drawRect(
                 Brush.verticalGradient(
-                    0f to Color.White.copy(alpha = 0.14f * strength),
-                    0.45f to Color.Transparent,
+                    0f to Color.White.copy(alpha = 0.05f * strength),
+                    0.3f to Color.Transparent,
                     endY = size.height,
                 )
             )
