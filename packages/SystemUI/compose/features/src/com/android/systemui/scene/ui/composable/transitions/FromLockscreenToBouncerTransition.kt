@@ -6,6 +6,12 @@ import com.android.compose.animation.scene.TransitionBuilder
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementKeys
 import com.android.systemui.scene.ui.viewmodel.ToBouncerTransitionViewModel
 
+fun TransitionBuilder.lockscreenToBouncerGlassTransition(
+    toBouncerTransitionViewModel: ToBouncerTransitionViewModel
+) {
+    toBouncerTransition(viewModel = toBouncerTransitionViewModel)
+}
+
 fun TransitionBuilder.lockscreenToBouncerTransition(
     durationScale: Double = 1.0,
     toBouncerTransitionViewModel: ToBouncerTransitionViewModel,

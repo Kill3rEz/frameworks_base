@@ -51,6 +51,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -323,7 +326,8 @@ constructor(
                                 Modifier.weight(artWeight)
                                     .fillMaxWidth()
                                     .onGloballyPositioned {
-                                        LockscreenMediaExpansion.artSlotBounds = it.boundsInWindow()
+                                        LockscreenMediaExpansion.artSlotBounds =
+                                            Rect(it.positionInWindow(), it.size.toSize())
                                     }
                                     .then(collapseOnTap)
                             )

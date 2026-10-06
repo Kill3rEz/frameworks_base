@@ -38,6 +38,7 @@ interface SceneContainerTransitionsBuilder {
         toBouncerTransitionViewModel: ToBouncerTransitionViewModel,
         resources: Resources,
         defaultQsStyle: Boolean = false,
+        liquidGlass: Boolean = false,
     ): SceneTransitions
 }
 
@@ -55,5 +56,6 @@ class ConstantSceneContainerTransitionsBuilder(
         toBouncerTransitionViewModel: ToBouncerTransitionViewModel,
         resources: Resources,
         defaultQsStyle: Boolean,
+        liquidGlass: Boolean,
     ): SceneTransitions = transitions
 }

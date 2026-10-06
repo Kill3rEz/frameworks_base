@@ -155,7 +155,10 @@ object SceneWindowRootViewBinder {
                                     bouncerSceneTransitionCoordinator
                                         ?.onMainContainerTransitionStart(transition, animationScope)
                                     val isLockscreen = transition.toContent == Scenes.Lockscreen
-                                    val isBouncerShowing = transition.currentOverlays.contains(Overlays.Bouncer)
+                                    val isBouncerShowing =
+                                        transition.currentOverlays.isNotEmpty() ||
+                                            transition.fromContent is OverlayKey ||
+                                            transition.toContent is OverlayKey
                                     val isUnlockSwipe =
                                         transition.fromContent == Scenes.Lockscreen &&
                                             transition.toContent == Scenes.Gone &&
@@ -168,12 +171,13 @@ object SceneWindowRootViewBinder {
                                     val isBouncerShowing = idle.currentOverlays.contains(Overlays.Bouncer)
                                     bouncerSceneTransitionCoordinator?.onMainContainerSnap(isBouncerShowing)
                                     val isLockscreen = idle.currentScene == Scenes.Lockscreen
-                                    WallpaperDepthUtils.get()?.onBouncerShowingChanged(!isLockscreen || isBouncerShowing)
+                                    WallpaperDepthUtils.get()
+                                        ?.onBouncerShowingChanged(!isLockscreen || idle.currentOverlays.isNotEmpty())
                                 },
                                 onTransitionEnd = { transition ->
                                     val isLockscreen = transition.currentScene == Scenes.Lockscreen
-                                    val isBouncerShowing = transition.currentOverlays.contains(Overlays.Bouncer)
-                                    WallpaperDepthUtils.get()?.onBouncerShowingChanged(!isLockscreen || isBouncerShowing)
+                                    val isCovered = transition.currentOverlays.isNotEmpty()
+                                    WallpaperDepthUtils.get()?.onBouncerShowingChanged(!isLockscreen || isCovered)
                                 },
                             )
                             .also { it.id = R.id.scene_container_root_composable }

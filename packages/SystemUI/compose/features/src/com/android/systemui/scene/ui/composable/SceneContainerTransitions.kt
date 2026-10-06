@@ -45,6 +45,9 @@ import com.android.systemui.scene.ui.composable.transitions.lockscreenToCommunal
 import com.android.systemui.scene.ui.composable.transitions.lockscreenToCommunalUserTransition
 import com.android.systemui.scene.ui.composable.transitions.lockscreenToDreamTransition
 import com.android.systemui.scene.ui.composable.transitions.lockscreenToGoneTransition
+import com.android.systemui.scene.ui.composable.transitions.lockscreenToGoneGlassTransition
+import com.android.systemui.scene.ui.composable.transitions.bouncerToLockscreenGlassTransition
+import com.android.systemui.scene.ui.composable.transitions.lockscreenToBouncerGlassTransition
 import com.android.systemui.scene.ui.composable.transitions.lockscreenToGoneWithAnimationOverLockscreenTransition
 import com.android.systemui.scene.ui.composable.transitions.lockscreenToNotificationsShadeTransition
 import com.android.systemui.scene.ui.composable.transitions.lockscreenToOccludedTransition
@@ -85,6 +88,7 @@ class SceneContainerTransitions : SceneContainerTransitionsBuilder {
         toBouncerTransitionViewModel: ToBouncerTransitionViewModel,
         resources: Resources,
         defaultQsStyle: Boolean,
+        liquidGlass: Boolean,
     ): SceneTransitions {
         return transitions {
             interruptionHandler = DefaultInterruptionHandler
@@ -228,7 +232,9 @@ class SceneContainerTransitions : SceneContainerTransitionsBuilder {
             ) {
                 lockscreenToQuickSettingsSceneTransition()
             }
-            from(Scenes.Lockscreen, to = Scenes.Gone) { lockscreenToGoneTransition() }
+            from(Scenes.Lockscreen, to = Scenes.Gone) {
+                if (liquidGlass) lockscreenToGoneGlassTransition() else lockscreenToGoneTransition()
+            }
             from(
                 Scenes.Lockscreen,
                 to = Scenes.Gone,
@@ -478,11 +484,17 @@ class SceneContainerTransitions : SceneContainerTransitionsBuilder {
                 fromBouncerTransition()
             }
             from(Scenes.Lockscreen, to = Overlays.Bouncer) {
-                lockscreenToBouncerTransition(
-                    toBouncerTransitionViewModel = toBouncerTransitionViewModel
-                )
+                if (liquidGlass) {
+                    lockscreenToBouncerGlassTransition(toBouncerTransitionViewModel)
+                } else {
+                    lockscreenToBouncerTransition(
+                        toBouncerTransitionViewModel = toBouncerTransitionViewModel
+                    )
+                }
             }
-            from(Overlays.Bouncer, to = Scenes.Lockscreen) { bouncerToLockscreenTransition() }
+            from(Overlays.Bouncer, to = Scenes.Lockscreen) {
+                if (liquidGlass) bouncerToLockscreenGlassTransition() else bouncerToLockscreenTransition()
+            }
             from(
                 Overlays.Bouncer,
                 to = Scenes.Lockscreen,

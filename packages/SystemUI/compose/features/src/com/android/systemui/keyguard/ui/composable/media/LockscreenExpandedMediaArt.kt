@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -41,9 +40,11 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
@@ -57,16 +58,21 @@ import java.io.File
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.distinctUntilChanged
 
+private val CoveredBlur = 40.dp
+
 private val CoverGap = 10.dp
 
 private val CoverMin = 96.dp
 
 private const val TallArtAspect = 3f / 4f
-private const val TallArtWidth = 0.84f
-private val TallArtTop = 96.dp
 
 @Composable
-fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier) {
+fun LockscreenExpandedMediaArt(
+    alpha: () -> Float,
+    modifier: Modifier = Modifier,
+    covered: () -> Float = { 0f },
+    unlocking: () -> Float = { 0f },
+) {
     val state = LockscreenMediaExpansion
     LaunchedEffect(Unit) {
         snapshotFlow { state.target }
@@ -109,11 +115,19 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
     val coverAlpha by animateFloatAsState(if (tallRendering) 0f else 1f, label = "cover")
 
     var origin by remember { mutableStateOf(Offset.Zero) }
+    var height by remember { mutableStateOf(0f) }
     Box(
         modifier
             .fillMaxSize()
-            .onGloballyPositioned { origin = it.positionInWindow() }
-            .graphicsLayer { this.alpha = alpha() }
+            .onGloballyPositioned {
+                origin = it.positionInWindow()
+                height = it.size.height.toFloat()
+            }
+            .graphicsLayer {
+                this.alpha = alpha()
+                val radius = CoveredBlur.toPx() * covered()
+                renderEffect = if (radius > 0f) BlurEffect(radius, radius, TileMode.Clamp) else null
+            }
     ) {
         val f = state.fraction
         val artwork = state.artwork
@@ -131,26 +145,14 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
                 MotionArtVideo(
                     it,
                     Modifier.align(Alignment.TopCenter)
-                        .padding(top = TallArtTop)
-                        .fillMaxWidth(TallArtWidth)
+                        .fillMaxWidth()
                         .aspectRatio(TallArtAspect)
                         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
                             drawRect(
                                 Brush.verticalGradient(
-                                    0f to Color.Transparent,
-                                    0.1f to Color.Black,
-                                    0.7f to Color.Black,
-                                    1f to Color.Transparent,
-                                ),
-                                blendMode = BlendMode.DstIn,
-                            )
-                            drawRect(
-                                Brush.horizontalGradient(
-                                    0f to Color.Transparent,
-                                    0.08f to Color.Black,
-                                    0.92f to Color.Black,
+                                    0.6f to Color.Black,
                                     1f to Color.Transparent,
                                 ),
                                 blendMode = BlendMode.DstIn,
@@ -164,7 +166,8 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
         }
 
         val gap = with(density) { CoverGap.toPx() }
-        val slot = state.artSlotBounds.translate(-origin)
+        val rise = Offset(0f, unlocking() * height)
+        val slot = state.artSlotBounds.translate(-origin + rise)
         val side = minOf(slot.width, slot.height - gap).coerceAtLeast(0f)
         val to =
             Rect(
@@ -173,7 +176,7 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
                 right = slot.left + (slot.width + side) / 2f,
                 bottom = slot.bottom - gap,
             )
-        val from = state.thumbnailBounds.translate(-origin)
+        val from = state.thumbnailBounds.translate(-origin + rise)
         if (slot.isEmpty || from.isEmpty) return@Box
         val rect =
             Rect(

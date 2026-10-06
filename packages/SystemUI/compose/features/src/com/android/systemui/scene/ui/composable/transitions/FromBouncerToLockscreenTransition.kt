@@ -33,4 +33,10 @@ fun TransitionBuilder.bouncerToLockscreenTransition(durationScale: Double = 1.0)
     translate(LockscreenElementKeys.Notifications.Stack, y = 0.dp)
 }
 
+fun TransitionBuilder.bouncerToLockscreenGlassTransition() {
+    spec = tween(durationMillis = DefaultDuration.inWholeMilliseconds.toInt())
+
+    fromBouncerTransition()
+}
+
 private val DefaultDuration = 500.milliseconds

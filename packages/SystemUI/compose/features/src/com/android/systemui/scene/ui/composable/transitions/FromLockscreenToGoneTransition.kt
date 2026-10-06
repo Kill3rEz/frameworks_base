@@ -45,6 +45,15 @@ fun TransitionBuilder.lockscreenToGoneTransition() {
     }
 }
 
+fun TransitionBuilder.lockscreenToGoneGlassTransition() {
+    spec = tween(durationMillis = 450, easing = Easings.Emphasized)
+
+    fractionRange(end = 0.3f) {
+        fade(LockscreenElementKeys.LockIcon)
+        fade(LockscreenElementKeys.SettingsMenu)
+    }
+}
+
 fun TransitionBuilder.aodToGoneTransition() {
     spec = tween(durationMillis = 500)
 

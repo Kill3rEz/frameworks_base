@@ -63,6 +63,7 @@ import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.qs.composefragment.effectiveQsPanelStyle
 import com.android.systemui.qs.composefragment.secureIntSetting
 import com.android.systemui.qs.shared.style.QsPanelStyle
+import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import com.android.systemui.ribbon.ui.composable.BottomRightCornerRibbon
 import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.scene.shared.model.SceneDataSourceDelegator
@@ -164,6 +165,7 @@ private fun InternalSceneContainer(
 
     val resources = LocalResources.current
     val defaultQsStyle = effectiveQsPanelStyle() == QsPanelStyle.Default
+    val liquidGlass = liquidGlassEnabled()
     val sceneTransitions =
         remember(
             hapticFeedback,
@@ -172,6 +174,7 @@ private fun InternalSceneContainer(
             resources,
             viewModel.toBouncerTransitionViewModel,
             defaultQsStyle,
+            liquidGlass,
         ) {
             transitionsBuilder.build(
                 shadeExpansionMotion,
@@ -180,6 +183,7 @@ private fun InternalSceneContainer(
                 viewModel.toBouncerTransitionViewModel,
                 resources,
                 defaultQsStyle,
+                liquidGlass,
             )
         }
 
