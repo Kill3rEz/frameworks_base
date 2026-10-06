@@ -91,6 +91,7 @@ import com.android.internal.widget.CallLayout;
 import com.android.internal.widget.ConversationLayout;
 import com.android.internal.widget.MessagingLayout;
 import com.android.systemui.Flags;
+import com.android.systemui.qs.shared.style.LiquidGlass;
 import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.plugins.PluginListener;
 import com.android.systemui.plugins.statusbar.NotificationMenuRowPlugin;
@@ -948,6 +949,9 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
         int intrinsicBefore = getIntrinsicHeight();
         mIsHeadsUp = isHeadsUp;
         mPrivateLayout.setHeadsUp(isHeadsUp);
+        if (mBackgroundNormal != null) {
+            mBackgroundNormal.setHeadsUpGlass(isHeadsUp);
+        }
         if (mIsSummaryWithChildren) {
             // The overflow might change since we allow more lines as HUN.
             mChildrenContainer.updateGroupOverflow();
@@ -4016,7 +4020,8 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
             mShowNoBackground = true;
             mChildrenContainer.updateHeaderForExpansion(mShowNoBackground);
         } else if (mIsSummaryWithChildren) {
-            mShowNoBackground = !mShowGroupBackgroundWhenExpanded && isGroupExpanded()
+            final boolean ownCards = LiquidGlass.isEnabled(mContext);
+            mShowNoBackground = (!mShowGroupBackgroundWhenExpanded || ownCards) && isGroupExpanded()
                     && !isGroupExpansionChanging() && !isUserSwipingToExpandRow();
             mChildrenContainer.updateHeaderForExpansion(mShowNoBackground);
             List<ExpandableNotificationRow> children = mChildrenContainer.getAttachedChildren();

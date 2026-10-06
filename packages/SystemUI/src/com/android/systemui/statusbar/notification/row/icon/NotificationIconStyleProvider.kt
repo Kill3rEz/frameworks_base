@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.service.notification.StatusBarNotification
 import com.android.systemui.Dumpable
+import com.android.systemui.qs.shared.style.LiquidGlass
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dump.DumpManager
 import com.android.systemui.statusbar.notification.collection.NotifCollectionCache
@@ -58,7 +59,8 @@ interface NotificationIconStyleProvider {
  */
 abstract class NotificationIconStyleProviderBase : NotificationIconStyleProvider {
     override fun shouldShowAppIcon(notification: StatusBarNotification, context: Context): Boolean {
-        return !prefersSmallIcon(notification.notification) &&
+        val glass = LiquidGlass.isEnabled(context)
+        return (glass || !prefersSmallIcon(notification.notification)) &&
             packageHasAppIcon(notification, context)
     }
 

@@ -23,6 +23,7 @@ import static com.android.systemui.util.ColorUtilKt.hexColorString;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
@@ -370,8 +371,7 @@ public class NotificationBackgroundView extends View implements Dumpable,
                                 mBackgroundBlurDrawable.setXfermode(null);
                                 mBackgroundBlurDrawable.setCallback(
                                         NotificationBackgroundView.this);
-                                mBackgroundBlurDrawable.setColor(
-                                        lockscreenSurfaceFor(mNormalColor));
+                                setTint(mTintColor != 0 ? mTintColor : mNormalColor);
                                 if (mBlurRegionSuppressed) {
                                     mBackgroundBlurDrawable.setAlpha(0);
                                 }
@@ -412,18 +412,26 @@ public class NotificationBackgroundView extends View implements Dumpable,
     }
 
     private int surfaceFor(int tintColor) {
-        return tintColor == mNormalColor && LiquidGlass.isEnabled(getContext())
-                ? LiquidGlass.VIEW_SURFACE : tintColor;
+        if (tintColor != mNormalColor || !LiquidGlass.isEnabled(getContext())) return tintColor;
+        return mHeadsUpGlass ? LiquidGlass.headsUpSurface() : LiquidGlass.viewSurface();
     }
 
-    private int lockscreenSurfaceFor(int tintColor) {
-        return tintColor == mNormalColor && LiquidGlass.isEnabled(getContext())
-                ? LiquidGlass.LOCKSCREEN_SURFACE : tintColor;
+    private boolean glassOnBlur() {
+        return mBackgroundBlurDrawable != null && LiquidGlass.isEnabled(getContext());
+    }
+
+    private boolean mHeadsUpGlass;
+
+    public void setHeadsUpGlass(boolean headsUp) {
+        if (mHeadsUpGlass == headsUp) return;
+        mHeadsUpGlass = headsUp;
+        setTint(mTintColor);
     }
 
     public void setTint(int tintColor) {
         Drawable baseLayer = getBaseBackgroundLayer();
-        final int surface = surfaceFor(tintColor);
+        final int surface = glassOnBlur() && tintColor == mNormalColor
+                ? Color.TRANSPARENT : surfaceFor(tintColor);
         if (notificationRowTransparency()) {
             ((GradientDrawable) baseLayer.mutate()).setColor(surface);
         } else {
@@ -431,7 +439,7 @@ public class NotificationBackgroundView extends View implements Dumpable,
             baseLayer.setTint(surface);
         }
         if (mBackgroundBlurDrawable != null) {
-            mBackgroundBlurDrawable.setColor(lockscreenSurfaceFor(tintColor));
+            mBackgroundBlurDrawable.setColor(surfaceFor(tintColor));
         }
         mTintColor = tintColor;
         setStatefulColors();
