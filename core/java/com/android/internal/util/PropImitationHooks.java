@@ -208,6 +208,7 @@ public class PropImitationHooks {
 
     private static final Boolean sDisableKeyAttestationBlock = SystemProperties.getBoolean(
             "persist.sys.pihooks.disable.gms_key_attestation_block", false);
+    private static volatile boolean sTeeSimulatorEnabled = false;
     private static final String DATA_FILE = "gms_certified_props.json";
 
     private static final String PACKAGE_ARCORE = "com.google.ar.core";
@@ -325,6 +326,13 @@ public class PropImitationHooks {
                     Settings.Secure.PI_TENSOR_SPOOF, 0) == 1;
         } catch (Exception e) {
             sForceTensor = false;
+        }
+
+        try {
+            sTeeSimulatorEnabled = !Process.isIsolated() && Settings.Secure.getInt(context.getContentResolver(),
+                    "tee_simulator_enabled", 0) == 1;
+        } catch (Exception e) {
+            sTeeSimulatorEnabled = false;
         }
 
         try {
@@ -515,7 +523,8 @@ public class PropImitationHooks {
                 .anyMatch(elem -> elem.getClassName().contains("DroidGuard"));
     }
     private static boolean isAttestationCompatActive() {
-        return SystemProperties.getBoolean("sys.keystore_compat.active", false)
+        return sTeeSimulatorEnabled
+                || SystemProperties.getBoolean("sys.keystore_compat.active", false)
                 || SystemProperties.getBoolean("sys.tee_simulator.active", false);
     }
 
