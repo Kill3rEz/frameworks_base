@@ -80,6 +80,8 @@ object LiquidGlass {
 
     const val VIEW_SURFACE: Int = 0x8C55555A.toInt()
 
+    const val LOCKSCREEN_SURFACE: Int = 0xC71C1C1E.toInt()
+
     private val rimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val rimPath = android.graphics.Path()
 

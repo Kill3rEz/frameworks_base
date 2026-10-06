@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -61,6 +62,8 @@ private val CoverGap = 10.dp
 private val CoverMin = 96.dp
 
 private const val TallArtAspect = 3f / 4f
+private const val TallArtWidth = 0.84f
+private val TallArtTop = 96.dp
 
 @Composable
 fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier) {
@@ -118,20 +121,36 @@ fun LockscreenExpandedMediaArt(alpha: () -> Float, modifier: Modifier = Modifier
         val density = LocalDensity.current
 
         Box(Modifier.fillMaxSize().graphicsLayer { this.alpha = f }) {
-            Artwork(artwork, Modifier.fillMaxSize().blur(60.dp))
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+            if (tallArt == null) {
+                Artwork(artwork, Modifier.fillMaxSize().blur(60.dp))
+                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f)))
+            } else {
+                Box(Modifier.fillMaxSize().background(Color.Black))
+            }
             tallArt?.let {
                 MotionArtVideo(
                     it,
                     Modifier.align(Alignment.TopCenter)
-                        .fillMaxWidth()
+                        .padding(top = TallArtTop)
+                        .fillMaxWidth(TallArtWidth)
                         .aspectRatio(TallArtAspect)
                         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
                             drawRect(
                                 Brush.verticalGradient(
+                                    0f to Color.Transparent,
+                                    0.1f to Color.Black,
                                     0.7f to Color.Black,
+                                    1f to Color.Transparent,
+                                ),
+                                blendMode = BlendMode.DstIn,
+                            )
+                            drawRect(
+                                Brush.horizontalGradient(
+                                    0f to Color.Transparent,
+                                    0.08f to Color.Black,
+                                    0.92f to Color.Black,
                                     1f to Color.Transparent,
                                 ),
                                 blendMode = BlendMode.DstIn,

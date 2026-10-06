@@ -75,7 +75,6 @@ import com.android.systemui.clocks.ClockStyle
 import com.android.systemui.keyguard.shared.model.ClockSize
 import com.android.systemui.keyguard.ui.composable.media.LockscreenExpandedClock
 import com.android.systemui.keyguard.ui.composable.media.LockscreenMediaExpansion
-import com.android.systemui.keyguard.ui.composable.media.LockscreenMediaWidgets
 import com.android.systemui.keyguard.ui.composable.media.collapsible
 import com.android.systemui.keyguard.ui.composable.media.within
 import com.android.systemui.keyguard.ui.viewmodel.LockscreenUpperRegionViewModel
@@ -293,7 +292,7 @@ constructor(
                             animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                             label = "ExpandedMediaNotifications",
                         )
-                    val artWeight = expansion * (1f - 0.45f * notifications)
+                    val artWeight = expansion * (1f - 0.22f * notifications)
                     val collapseOnTap =
                         Modifier.pointerInput(Unit) {
                             detectTapGestures { LockscreenMediaExpansion.collapse() }
@@ -330,15 +329,6 @@ constructor(
                             )
                         }
                         MediaCarousel(Modifier.align(Alignment.Start))
-                        if (expansion > 0f && notifications < 1f) {
-                            LockscreenMediaWidgets(
-                                Modifier.collapsible {
-                                        LockscreenMediaExpansion.fraction.within(0.4f, 1f) *
-                                            (1f - notifications)
-                                    }
-                                    .padding(bottom = 12.dp)
-                            )
-                        }
                         Notifications(
                             aodAlignment = Alignment.TopStart,
                             modifier = Modifier.weight(maxOf(1f - artWeight, 0.001f)),

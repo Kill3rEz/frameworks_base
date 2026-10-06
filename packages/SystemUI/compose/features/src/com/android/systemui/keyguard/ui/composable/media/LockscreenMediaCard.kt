@@ -95,7 +95,7 @@ private val ThumbnailCorner = 10.dp
 private val ControlSize = 44.dp
 private val TrackHeight = 6.dp
 private val CompactGlass = Color(0xFF3A3A3C).copy(alpha = 0.45f)
-private val ExpandedGlass = Color.White.copy(alpha = 0.14f)
+private val SmokyGlass = Color(0xFF1C1C1E).copy(alpha = 0.78f)
 private val CardBorder = Color.White.copy(alpha = 0.18f)
 private val Secondary = Color.White.copy(alpha = 0.6f)
 
@@ -166,7 +166,7 @@ private fun MediaCard(card: MediaCardViewModel, isSelected: Boolean) {
         Box(
             Modifier.matchParentSize()
                 .background(
-                    if (glass) LiquidGlassSurface else lerpColor(CompactGlass, ExpandedGlass, f)
+                    lerpColor(if (glass) LiquidGlassSurface else CompactGlass, SmokyGlass, f)
                 )
                 .glassRim(RoundedCornerShape(CardCorner))
         )

@@ -370,7 +370,8 @@ public class NotificationBackgroundView extends View implements Dumpable,
                                 mBackgroundBlurDrawable.setXfermode(null);
                                 mBackgroundBlurDrawable.setCallback(
                                         NotificationBackgroundView.this);
-                                mBackgroundBlurDrawable.setColor(surfaceFor(mNormalColor));
+                                mBackgroundBlurDrawable.setColor(
+                                        lockscreenSurfaceFor(mNormalColor));
                                 if (mBlurRegionSuppressed) {
                                     mBackgroundBlurDrawable.setAlpha(0);
                                 }
@@ -415,6 +416,11 @@ public class NotificationBackgroundView extends View implements Dumpable,
                 ? LiquidGlass.VIEW_SURFACE : tintColor;
     }
 
+    private int lockscreenSurfaceFor(int tintColor) {
+        return tintColor == mNormalColor && LiquidGlass.isEnabled(getContext())
+                ? LiquidGlass.LOCKSCREEN_SURFACE : tintColor;
+    }
+
     public void setTint(int tintColor) {
         Drawable baseLayer = getBaseBackgroundLayer();
         final int surface = surfaceFor(tintColor);
@@ -425,7 +431,7 @@ public class NotificationBackgroundView extends View implements Dumpable,
             baseLayer.setTint(surface);
         }
         if (mBackgroundBlurDrawable != null) {
-            mBackgroundBlurDrawable.setColor(surface);
+            mBackgroundBlurDrawable.setColor(lockscreenSurfaceFor(tintColor));
         }
         mTintColor = tintColor;
         setStatefulColors();
