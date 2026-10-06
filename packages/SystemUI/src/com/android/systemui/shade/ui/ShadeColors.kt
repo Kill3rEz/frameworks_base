@@ -19,9 +19,14 @@ package com.android.systemui.shade.ui
 import android.content.Context
 import android.graphics.Color
 import com.android.internal.graphics.ColorUtils
+import com.android.systemui.qs.shared.style.LiquidGlass
 import com.android.systemui.res.R
 
 object ShadeColors {
+    private const val LIQUID_GLASS_DIM = 0x40000000
+    private const val LIQUID_GLASS_SCRIM = 0x33000000
+    private const val LIQUID_GLASS_PANEL = 0x14000000
+
     /**
      * Calculate notification shade panel color.
      *
@@ -33,7 +38,11 @@ object ShadeColors {
     @JvmStatic
     fun shadePanel(context: Context, blurSupported: Boolean, withScrim: Boolean): Int {
         return if (blurSupported) {
-            if (withScrim) {
+            if (withScrim && LiquidGlass.enabled(context).value) {
+                LIQUID_GLASS_DIM
+            } else if (LiquidGlass.enabled(context).value) {
+                LIQUID_GLASS_PANEL
+            } else if (withScrim) {
                 ColorUtils.compositeColors(
                     shadePanelStandard(context),
                     shadePanelScrimBehind(context),
@@ -57,6 +66,7 @@ object ShadeColors {
 
     @JvmStatic
     fun shadePanelScrimBehind(context: Context): Int {
+        if (LiquidGlass.enabled(context).value) return LIQUID_GLASS_SCRIM
         return context.resources.getColor(
             com.android.internal.R.color.shade_panel_scrim,
             context.theme,

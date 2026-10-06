@@ -3853,6 +3853,7 @@ class DisplayContent extends RootDisplayArea implements WindowManagerPolicy.Disp
 
     @Override
     void removeImmediately() {
+        mWmService.updateDexGlassDisplays();
         mDeferredRemoval = false;
         try {
             if (DesktopExperienceFlags.ENABLE_DISPLAY_CONTENT_MODE_MANAGEMENT.isTrue()

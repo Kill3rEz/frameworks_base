@@ -959,6 +959,7 @@ public class WindowManagerService extends IWindowManager.Stub
 
             if (mMirrorBuiltInDisplayUri.equals(uri)) {
                 mDexEnabled = readDexEnabled(mContext.getContentResolver());
+                updateDexGlassDisplays();
                 return;
             }
 
@@ -7924,6 +7925,36 @@ public class WindowManagerService extends IWindowManager.Stub
         final boolean on = Settings.Secure.getIntForUser(resolver, LIQUID_GLASS_SETTING, 0,
                 UserHandle.USER_CURRENT) != 0;
         SystemProperties.set(LIQUID_GLASS_PROPERTY, on ? "1" : "0");
+    }
+
+    private static final String DEX_GLASS_PROPERTY = "sys.penguin.liquid_glass.dex";
+    private String mDexGlassDisplays;
+
+    void updateDexGlassDisplays() {
+        mH.post(() -> {
+            final StringBuilder names = new StringBuilder();
+            synchronized (mGlobalLock) {
+                mRoot.forAllDisplays(dc -> {
+                    final String name = dc.getDisplayInfo().name;
+                    if (!dc.isDexDisplay() || dc.isRemoving() || dc.isRemoved()
+                            || name == null || name.isEmpty()
+                            || name.indexOf('|') >= 0
+                            || names.length() + name.length() + 1
+                                    >= SystemProperties.PROP_VALUE_MAX) {
+                        return;
+                    }
+                    if (names.length() > 0) {
+                        names.append('|');
+                    }
+                    names.append(name);
+                });
+            }
+            final String value = names.toString();
+            if (!value.equals(mDexGlassDisplays)) {
+                mDexGlassDisplays = value;
+                SystemProperties.set(DEX_GLASS_PROPERTY, value);
+            }
+        });
     }
 
     private static boolean readDexEnabled(ContentResolver resolver) {

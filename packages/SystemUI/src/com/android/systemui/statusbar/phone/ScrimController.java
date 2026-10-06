@@ -479,6 +479,16 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
                     }
                 },
                 UserHandle.USER_ALL);
+        mContext.getContentResolver().registerContentObserver(
+                Settings.Secure.getUriFor("penguin_liquid_glass"),
+                false,
+                new ContentObserver(mHandler) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        mHandler.post(() -> handleLiquidGlassChanged());
+                    }
+                },
+                UserHandle.USER_ALL);
         updateThemeColors();
         mNotificationsScrim.setScrimName(getScrimName(mNotificationsScrim));
         mScrimBehind.setScrimName(getScrimName(mScrimBehind));
@@ -589,6 +599,15 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
         return mWindowRootViewBlurInteractor.get()
                 .isBlurCurrentlySupported()
                 .getValue();
+    }
+
+    private void handleLiquidGlassChanged() {
+        if (Flags.notificationShadeBlur()) {
+            for (ScrimState state : ScrimState.values()) {
+                state.setShadePanelColor(getShadePanelColor());
+            }
+        }
+        applyAndDispatchState();
     }
 
     private void handleBlurSupportedChanged(boolean isBlurSupported) {
