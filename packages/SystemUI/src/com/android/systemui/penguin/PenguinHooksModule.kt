@@ -14,5 +14,7 @@ interface PenguinHooksModule {
 
     @BindsOptionalOf fun powerMenuLayout(): PowerMenuLayout
 
+    @BindsOptionalOf fun statusBarIsland(): StatusBarIsland
+
     @BindsOptionalOf fun volumePanelLooks(): VolumePanelLooks
 }

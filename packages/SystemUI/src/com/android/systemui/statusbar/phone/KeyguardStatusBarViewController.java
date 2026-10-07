@@ -63,6 +63,7 @@ import com.android.systemui.keyguard.ui.viewmodel.GoneToGlanceableHubTransitionV
 import com.android.systemui.keyguard.ui.viewmodel.LockscreenToGlanceableHubTransitionViewModel;
 import com.android.systemui.keyguard.ui.viewmodel.OccludedToLockscreenTransitionViewModel;
 import com.android.systemui.log.core.LogLevel;
+import com.android.systemui.penguin.StatusBarIsland;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
@@ -91,7 +92,6 @@ import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.statusbar.policy.UserInfoController;
 import com.android.systemui.statusbar.systemstatusicons.SystemStatusIconsInCompose;
-import com.android.systemui.statusbar.quickactions.popups.ui.binder.KeyguardDynamicIslandViewBinder;
 import com.android.systemui.tuner.TunerService;
 import com.android.systemui.user.ui.viewmodel.StatusBarUserChipViewModel;
 import com.android.systemui.util.ViewController;
@@ -106,6 +106,7 @@ import kotlinx.coroutines.CoroutineDispatcher;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
@@ -161,7 +162,8 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
     private final OccludedToLockscreenTransitionViewModel mOccludedToLockscreenTransitionViewModel;
     private final DreamViewModel mDreamViewModel;
     private final KeyguardInteractor mKeyguardInteractor;
-    private final KeyguardDynamicIslandViewBinder mDynamicIslandViewBinder;
+    @Nullable
+    private final StatusBarIsland mIsland;
     private final TunerService mTunerService;
 
     @Nullable private ComposeView mBatteryComposeView;
@@ -384,10 +386,10 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
             DreamViewModel dreamViewModel,
             KeyguardInteractor keyguardInteractor,
             TunerService tunerService,
-            KeyguardDynamicIslandViewBinder dynamicIslandViewBinder) {
+            Optional<StatusBarIsland> island) {
         super(view);
         mTunerService = tunerService;
-        mDynamicIslandViewBinder = dynamicIslandViewBinder;
+        mIsland = island.orElse(null);
         mCoroutineDispatcher = dispatcher;
         mContext = context;
         mCarrierTextController = carrierTextController;
@@ -464,7 +466,9 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
 
     @Override
     protected void onViewAttached() {
-        mDynamicIslandViewBinder.bind(mView);
+        if (mIsland != null) {
+            mIsland.attachKeyguard(mView);
+        }
         if (SceneContainerFlag.isEnabled()) {
             mKeyguardStateControllerCallback.onKeyguardFadingAwayChanged();
             mKeyguardStateController.addCallback(mKeyguardStateControllerCallback);
