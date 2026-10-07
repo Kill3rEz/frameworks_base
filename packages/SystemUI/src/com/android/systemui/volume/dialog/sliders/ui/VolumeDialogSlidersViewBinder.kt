@@ -16,28 +16,20 @@
 
 package com.android.systemui.volume.dialog.sliders.ui
 
-import android.animation.LayoutTransition
-import android.animation.ObjectAnimator
-import android.animation.PropertyValuesHolder
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
-import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
 import androidx.annotation.LayoutRes
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.view.updateLayoutParams
 import androidx.compose.ui.util.fastForEachIndexed
-import com.android.app.animation.Interpolators
 import com.android.app.tracing.coroutines.launchInTraced
 import com.android.app.tracing.coroutines.launchTraced
 import com.android.internal.graphics.drawable.BackgroundBlurDrawable
 import com.android.systemui.res.R
 import com.android.systemui.util.children
-import com.android.systemui.volume.VolumePanelStyle
+import com.android.systemui.penguin.VolumePanelLook
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.sliders.dagger.VolumeDialogSliderComponent
@@ -59,15 +51,6 @@ constructor(
     private val windowRootViewBlurInteractor: WindowRootViewBlurInteractor,
 ) : ViewBinder {
 
-    private val isExpandableStyle: Boolean
-        get() = expansionInteractor.isExpandable
-
-    private val isOneUiStyle: Boolean
-        get() = expansionInteractor.style.isCard
-
-    private val isMyUiStyle: Boolean
-        get() = expansionInteractor.style == VolumePanelStyle.MYUI
-
     override fun CoroutineScope.bind(view: View) {
 
         val floatingSlidersContainer: ViewGroup =
@@ -82,62 +65,29 @@ constructor(
             dialogViewModel.addTouchableBounds(mainSliderContainer, floatingSlidersContainer)
         }
 
-        if (isOneUiStyle) {
-            launchTraced("VDSVB#addCardTouchableBounds") { dialogViewModel.addTouchableBounds(view) }
-            val cardView: View =
-                if (isMyUiStyle) view.requireViewById(R.id.volume_dialog_myui_card) else view
-            val card: Drawable? =
-                cardView.background?.let {
-                    if (viewModel.showBlur) cardView.frostedCard(it) else it
-                }
-            if (viewModel.showBlur && card != null) {
-                launchTraced("VDSVB#cardBlur") {
-                    windowRootViewBlurInteractor.isBlurCurrentlySupported.collect { supported ->
-                        cardView.applyCardBlurSupport(card, supported)
+        val look = expansionInteractor.look
+        if (look != null) {
+            val host =
+                object : VolumePanelLook.PanelHost {
+                    override val mainSliderContainer = mainSliderContainer
+                    override val floatingSlidersContainer = floatingSlidersContainer
+                    override val showBlur = viewModel.showBlur
+                    override val isBlurSupported =
+                        windowRootViewBlurInteractor.isBlurCurrentlySupported
+                    override val isExpanded = expansionInteractor.isExpanded
+
+                    override fun toggleExpanded() {
+                        expansionInteractor.toggle()
+                        dialogViewModel.resetDialogTimeout()
+                    }
+
+                    override fun addTouchableBounds(vararg views: View) {
+                        launchTraced("VDSVB#lookTouchableBounds") {
+                            dialogViewModel.addTouchableBounds(*views)
+                        }
                     }
                 }
-            }
-            if (isMyUiStyle) {
-                cardView.background = card
-                launchTraced("VDSVB#cardCorners") {
-                    expansionInteractor.isExpanded.collect { isExpanded ->
-                        card?.setCornerRadius(
-                            cardView.context.resources
-                                .getDimensionPixelSize(
-                                    if (isExpanded) {
-                                        R.dimen.volume_panel_myui_background_corner_radius
-                                    } else {
-                                        R.dimen.volume_panel_myui_collapsed_corner_radius
-                                    }
-                                )
-                                .toFloat()
-                        )
-                    }
-                }
-            } else {
-                launchTraced("VDSVB#cardVisibility") {
-                    expansionInteractor.isExpanded.collect { isExpanded ->
-                        cardView.background = if (isExpanded) card else null
-                    }
-                }
-            }
-        } else if (isExpandableStyle) {
-            background.visibility = View.INVISIBLE
-            mainSliderContainer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                height =
-                    view.context.resources.getDimensionPixelSize(
-                        R.dimen.volume_panel_expandable_slider_height
-                    )
-            }
-            (floatingSlidersContainer as? LinearLayout)?.showDividers =
-                LinearLayout.SHOW_DIVIDER_NONE
-            (floatingSlidersContainer.layoutParams as? ViewGroup.MarginLayoutParams)?.let {
-                it.topMargin = 0
-                it.bottomMargin = 0
-                floatingSlidersContainer.layoutParams = it
-            }
-            (floatingSlidersContainer as? ViewGroup)?.layoutTransition =
-                expandTransition(view)
+            with(look) { bindPanel(view, host) }
         }
 
         viewModel.sliders
@@ -153,7 +103,7 @@ constructor(
                     when {
                         !viewModel.isVolumeDialogVertical ->
                             R.layout.volume_dialog_slider_floating_horizontal
-                        isExpandableStyle -> R.layout.volume_dialog_slider
+                        look != null -> look.floatingSliderLayout
                         else -> R.layout.volume_dialog_slider_floating
                     }
                 floatingSlidersContainer.ensureChildCount(
@@ -162,15 +112,9 @@ constructor(
                 )
                 floatingSliderViewBinders.fastForEachIndexed { index, sliderComponent ->
                     val sliderContainer = floatingSlidersContainer.getChildAt(index)
-                    if (isMyUiStyle) {
-                        sliderContainer.updateLayoutParams<ViewGroup.LayoutParams> {
-                            width =
-                                view.context.resources.getDimensionPixelSize(
-                                    R.dimen.volume_panel_myui_slider_width
-                                )
-                        }
-                    }
-                    if (viewModel.showBlur && !isExpandableStyle) {
+                    if (look != null) {
+                        look.onFloatingSliderAdded(sliderContainer)
+                    } else if (viewModel.showBlur) {
                         sliderContainer.updateBackground()
                     }
                     bindSlider(sliderComponent, sliderContainer, arrayOf(sliderContainer))
@@ -178,7 +122,7 @@ constructor(
             }
             .launchInTraced("VDSVB#sliders", this)
 
-        if (viewModel.showBlur && !isExpandableStyle) {
+        if (viewModel.showBlur && look == null) {
             launchTraced("VDSVB#isBlurCurrentlySupported") {
                 windowRootViewBlurInteractor.isBlurCurrentlySupported.collect { supported ->
                     for (child in floatingSlidersContainer.children) {
@@ -187,90 +131,6 @@ constructor(
                 }
             }
         }
-    }
-
-    private fun View.frostedCard(card: Drawable): Drawable {
-        if (card is LayerDrawable) {
-            return card
-        }
-        val blurDrawable = viewRootImpl.createBackgroundBlurDrawable()
-        blurDrawable.setCornerRadius(
-            context.resources
-                .getDimensionPixelSize(
-                    if (isMyUiStyle) {
-                        R.dimen.volume_panel_myui_background_corner_radius
-                    } else {
-                        R.dimen.volume_panel_oneui_background_corner_radius
-                    }
-                )
-                .toFloat()
-        )
-        blurDrawable.setBlurRadius(0)
-        return LayerDrawable(arrayOf<Drawable>(blurDrawable, card.mutate())).also {
-            applyCardBlurSupport(it, windowRootViewBlurInteractor.isBlurCurrentlySupported.value)
-        }
-    }
-
-    /**
-     * in.
-     */
-    private fun expandTransition(view: View): LayoutTransition {
-        val onLeft =
-            Settings.Secure.getInt(
-                view.context.contentResolver,
-                Settings.Secure.VOLUME_PANEL_ON_LEFT,
-                0,
-            ) == 1
-        val shift = view.resources.displayMetrics.density * 32f * (if (onLeft) -1 else 1)
-        return LayoutTransition().apply {
-            setAnimator(
-                LayoutTransition.APPEARING,
-                ObjectAnimator.ofPropertyValuesHolder(
-                    null as Any?,
-                    PropertyValuesHolder.ofFloat(View.ALPHA, 0f, 1f),
-                    PropertyValuesHolder.ofFloat(View.TRANSLATION_X, shift, 0f),
-                    PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.85f, 1f),
-                ),
-            )
-            setInterpolator(LayoutTransition.APPEARING, Interpolators.EMPHASIZED_DECELERATE)
-            setDuration(LayoutTransition.APPEARING, 300)
-            setStartDelay(LayoutTransition.APPEARING, 0)
-            disableTransitionType(LayoutTransition.DISAPPEARING)
-            disableTransitionType(LayoutTransition.CHANGE_APPEARING)
-            disableTransitionType(LayoutTransition.CHANGE_DISAPPEARING)
-        }
-    }
-
-    private fun Drawable.setCornerRadius(radius: Float) {
-        when (this) {
-            is LayerDrawable ->
-                (0 until numberOfLayers).forEach { getDrawable(it).setCornerRadius(radius) }
-            is BackgroundBlurDrawable -> setCornerRadius(radius)
-            is GradientDrawable -> cornerRadius = radius
-        }
-    }
-
-    private fun View.applyCardBlurSupport(card: Drawable, supported: Boolean) {
-        val layers = card as? LayerDrawable ?: return
-        (layers.getDrawable(0) as BackgroundBlurDrawable).setBlurRadius(
-            if (supported) {
-                context.resources.getDimensionPixelSize(
-                    R.dimen.volume_dialog_background_surface_blur_radius
-                )
-            } else {
-                0
-            }
-        )
-        (layers.getDrawable(1) as GradientDrawable).setColor(
-            context.getColor(
-                when {
-                    isMyUiStyle && supported -> R.color.volume_panel_myui_background_blur
-                    isMyUiStyle -> R.color.volume_panel_myui_background_fallback
-                    supported -> R.color.volume_panel_oneui_background_blur
-                    else -> R.color.volume_panel_oneui_background_fallback
-                }
-            )
-        )
     }
 
     private fun View.updateBackground() {

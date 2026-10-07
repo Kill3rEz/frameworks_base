@@ -83,8 +83,8 @@ constructor(
     @VolumeDialog private val viewBinders: List<@JvmSuppressWildcards ViewBinder>,
 ) {
 
-    private val isOneUiStyle: Boolean
-        get() = expansionInteractor.style.isCard
+    private val isCard: Boolean
+        get() = expansionInteractor.look?.cardLayout != null
 
     private val halfOpenedOffsetPx: Float =
         context.resources.getDimensionPixelSize(R.dimen.volume_dialog_half_opened_offset).toFloat()
@@ -155,15 +155,14 @@ constructor(
 
             constraintSet.applyTo(root)
         }
-        if (isOneUiStyle) {
-            launchTraced("VDVB#oneUiGravity") {
+        if (isCard) {
+            launchTraced("VDVB#cardGravity") {
                 expansionInteractor.isExpanded.collect { isExpanded ->
                     dialog.window?.setGravity(
                         if (isExpanded) {
                             Gravity.CENTER
                         } else {
-                            (if (isLeft) Gravity.START else Gravity.END) or
-                                Gravity.CENTER_VERTICAL
+                            (if (isLeft) Gravity.START else Gravity.END) or Gravity.CENTER_VERTICAL
                         }
                     )
                 }
@@ -209,7 +208,7 @@ constructor(
                                 WindowInsets.Type.navigationBars() or
                                 WindowInsets.Type.statusBars()
                         )
-                    if (isOneUiStyle) {
+                    if (isCard) {
                         return@onApplyWindowInsets WindowInsets.CONSUMED
                     }
                     view.updatePadding(
@@ -293,7 +292,7 @@ constructor(
      * @param fraction in range [0, 1]. 0 corresponds to the dialog being hidden and 1 - visible.
      */
     private fun View.applyAnimationProgress(fraction: Float) {
-        if (isOneUiStyle) {
+        if (isCard) {
             alpha = fraction
             return
         }

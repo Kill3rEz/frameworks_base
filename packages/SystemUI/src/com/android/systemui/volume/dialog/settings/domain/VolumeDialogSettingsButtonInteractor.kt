@@ -17,8 +17,6 @@
 package com.android.systemui.volume.dialog.settings.domain
 
 import android.app.ActivityManager
-import android.content.Intent
-import android.provider.Settings
 import com.android.app.tracing.coroutines.flow.flowName
 import com.android.systemui.plugins.ActivityStarter
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
@@ -68,14 +66,15 @@ constructor(
     }
 
     fun onButtonClicked() {
-        if (expansionInteractor.style.isCard) {
+        val lookIntent = expansionInteractor.look?.settingsIntent()
+        if (lookIntent != null) {
             activityStarter.startActivityDismissingKeyguard(
-                /* intent = */ Intent(Settings.ACTION_SOUND_SETTINGS),
+                lookIntent,
                 /* onlyProvisioned = */ false,
                 /* dismissShade = */ true,
                 /* disallowEnterPictureInPictureWhileLaunching = */ false,
                 null,
-                /* flags = */ Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
+                android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
                 /* animationController = */ null,
                 /* userHandle = */ null,
             )

@@ -18,9 +18,11 @@ package com.android.systemui.volume.dialog.settings.domain
 
 import com.android.systemui.kosmos.Kosmos
 import com.android.systemui.kosmos.applicationCoroutineScope
+import com.android.systemui.plugins.activityStarter
 import com.android.systemui.shade.domain.interactor.shadeInteractor
 import com.android.systemui.statusbar.policy.deviceProvisionedController
 import com.android.systemui.volume.dialog.domain.interactor.expandedAudioTileDetailsFeatureInteractor
+import com.android.systemui.volume.dialog.domain.interactor.volumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.domain.interactor.volumeDialogVisibilityInteractor
 import com.android.systemui.volume.panel.domain.interactor.volumePanelGlobalStateInteractor
 
@@ -33,5 +35,7 @@ val Kosmos.volumeDialogSettingsButtonInteractor by
             volumeDialogVisibilityInteractor,
             shadeInteractor,
             expandedAudioTileDetailsFeatureInteractor,
+            volumeDialogExpansionInteractor,
+            activityStarter,
         )
     }

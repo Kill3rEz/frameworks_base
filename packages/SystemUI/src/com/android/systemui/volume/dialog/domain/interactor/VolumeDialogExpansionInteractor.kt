@@ -17,8 +17,10 @@
 package com.android.systemui.volume.dialog.domain.interactor
 
 import android.content.Context
-import com.android.systemui.volume.VolumePanelStyle
+import com.android.systemui.penguin.VolumePanelLook
+import com.android.systemui.penguin.VolumePanelLooks
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
+import java.util.Optional
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,23 +32,22 @@ class VolumeDialogExpansionInteractor
 constructor(
     context: Context,
     expandedAudioTileDetailsFeatureInteractor: ExpandedAudioTileDetailsFeatureInteractor,
+    looks: Optional<VolumePanelLooks>,
 ) {
 
-    val style: VolumePanelStyle =
+    val look: VolumePanelLook? =
         if (expandedAudioTileDetailsFeatureInteractor.isEnabled()) {
-            VolumePanelStyle.DEFAULT
+            null
         } else {
-            VolumePanelStyle.current(context)
+            looks.orElse(null)?.current(context)
         }
-
-    val isExpandable: Boolean = style != VolumePanelStyle.DEFAULT
 
     private val mutableIsExpanded = MutableStateFlow(false)
 
     val isExpanded: StateFlow<Boolean> = mutableIsExpanded.asStateFlow()
 
     fun toggle() {
-        if (isExpandable) {
+        if (look != null) {
             mutableIsExpanded.value = !mutableIsExpanded.value
         }
     }

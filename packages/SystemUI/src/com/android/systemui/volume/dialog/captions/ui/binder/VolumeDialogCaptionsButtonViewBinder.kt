@@ -26,7 +26,6 @@ import com.android.systemui.dagger.qualifiers.Background
 import com.android.systemui.res.R
 import com.android.systemui.volume.CaptionsToggleImageButton
 import com.android.systemui.volume.Events
-import com.android.systemui.volume.VolumePanelStyle
 import com.android.systemui.volume.dialog.captions.ui.viewmodel.VolumeDialogCaptionsButtonViewModel
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogExpansionInteractor
@@ -53,22 +52,8 @@ constructor(
         }
 
         val captionsButton = view.requireViewById<CaptionsToggleImageButton>(R.id.odi_captions_icon)
-        val panelStyle = expansionInteractor.style
-        when (panelStyle) {
-            VolumePanelStyle.EXPANDABLE ->
-                captionsButton.setBackgroundResource(
-                    R.drawable.volume_panel_expandable_captions_background
-                )
-            VolumePanelStyle.ONE_UI ->
-                captionsButton.setBackgroundResource(
-                    R.drawable.volume_panel_oneui_captions_background
-                )
-            VolumePanelStyle.MYUI ->
-                captionsButton.setBackgroundResource(
-                    R.drawable.volume_panel_myui_captions_background
-                )
-            VolumePanelStyle.DEFAULT -> {}
-        }
+        val look = expansionInteractor.look
+        look?.bindCaptionsButton(captionsButton)
 
         launchTraced("VDCBVB#addTouchableBounds") {
             dialogViewModel.addTouchableBounds(captionsButton)
@@ -99,18 +84,12 @@ constructor(
 
                     setColorFilter(
                         captionsButton.context.getColor(
-                            when {
-                                panelStyle == VolumePanelStyle.ONE_UI ->
-                                    R.color.volume_panel_oneui_icon
-                                panelStyle == VolumePanelStyle.MYUI ->
-                                    R.color.volume_panel_myui_icon
-                                panelStyle == VolumePanelStyle.EXPANDABLE && isEnabled ->
-                                    R.color.volume_panel_expandable_icon_on_active
-                                panelStyle == VolumePanelStyle.EXPANDABLE ->
-                                    R.color.volume_panel_expandable_icon_on_inactive
-                                isEnabled -> com.android.internal.R.color.materialColorOnPrimary
-                                else -> com.android.internal.R.color.materialColorOnSurface
-                            }
+                            look?.captionsIconColor(isEnabled)
+                                ?: if (isEnabled) {
+                                    com.android.internal.R.color.materialColorOnPrimary
+                                } else {
+                                    com.android.internal.R.color.materialColorOnSurface
+                                }
                         )
                     )
 

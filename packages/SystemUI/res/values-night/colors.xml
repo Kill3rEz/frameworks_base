@@ -140,12 +140,4 @@
     <!-- Keyboard shortcut helper dialog -->
     <color name="ksh_key_item_color">@*android:color/system_on_surface_variant_dark</color>
 
-    <!-- MyUI volume panel style, dark theme. -->
-    <color name="volume_panel_myui_background_blur">#B31E2126</color>
-    <color name="volume_panel_myui_background_fallback">#F21E2126</color>
-    <color name="volume_panel_myui_track_active">#FFA8C7FA</color>
-    <color name="volume_panel_myui_track_inactive">#FF060708</color>
-    <color name="volume_panel_myui_icon">#FFFFFFFF</color>
-    <color name="volume_panel_myui_divider">#33FFFFFF</color>
-    <color name="volume_panel_myui_button">#33FFFFFF</color>
 </resources>

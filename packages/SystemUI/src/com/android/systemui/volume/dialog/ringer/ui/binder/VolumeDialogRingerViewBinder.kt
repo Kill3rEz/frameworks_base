@@ -40,7 +40,6 @@ import com.android.app.tracing.coroutines.launchTraced
 import com.android.internal.R as internalR
 import com.android.internal.graphics.drawable.BackgroundBlurDrawable
 import com.android.systemui.res.R
-import com.android.systemui.volume.VolumePanelStyle
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.ringer.ui.util.VolumeDialogRingerDrawerTransitionListener
@@ -79,8 +78,7 @@ constructor(
     private val windowRootViewBlurInteractor: WindowRootViewBlurInteractor,
 ) : ViewBinder {
 
-    private val isExpandableStyle: Boolean
-        get() = expansionInteractor.style == VolumePanelStyle.EXPANDABLE
+    private val lookColors = expansionInteractor.look?.ringerColors
 
     private val roundnessSpringForce =
         SpringForce(1F).apply {
@@ -117,8 +115,7 @@ constructor(
         }
 
     override fun CoroutineScope.bind(view: View) {
-        if (expansionInteractor.style.isCard) {
-            // go.
+        if (expansionInteractor.look?.cardLayout != null) {
             return
         }
         val volumeDialogBackgroundView = view.requireViewById<View>(R.id.volume_dialog_background)
@@ -126,9 +123,23 @@ constructor(
         val drawerContainer = view.requireViewById<MotionLayout>(R.id.volume_ringer_drawer)
 
         val unselectedButtonUiModel =
-            RingerButtonUiModel.getUnselectedButton(view.context, isExpandableStyle)
+            RingerButtonUiModel.getUnselectedButton(view.context).let { model ->
+                lookColors?.let {
+                    model.copy(
+                        tintColor = view.context.getColor(it.icon),
+                        backgroundColor = view.context.getColor(it.background),
+                    )
+                } ?: model
+            }
         val selectedButtonUiModel =
-            RingerButtonUiModel.getSelectedButton(view.context, isExpandableStyle)
+            RingerButtonUiModel.getSelectedButton(view.context).let { model ->
+                lookColors?.let {
+                    model.copy(
+                        tintColor = view.context.getColor(it.selectedIcon),
+                        backgroundColor = view.context.getColor(it.selectedBackground),
+                    )
+                } ?: model
+            }
         val volumeDialogBgSmallRadius =
             view.context.resources.getDimensionPixelSize(
                 R.dimen.volume_dialog_background_square_corner_radius
@@ -164,9 +175,7 @@ constructor(
 
         volumeDialogBackgroundView.updateBackground()
         ringerBackgroundView.updateBackground()
-        if (isExpandableStyle) {
-            ringerBackgroundView.hideExpandableCard()
-        }
+        ringerBackgroundView.hideLookCard()
         launchTraced("VDRVB#addTouchableBounds") {
             dialogViewModel.addTouchableBounds(ringerBackgroundView)
         }
@@ -310,7 +319,7 @@ constructor(
                                 )
                                 ringerBackgroundView.background =
                                     ringerBackgroundView.background.mutate()
-                                ringerBackgroundView.hideExpandableCard()
+                                ringerBackgroundView.hideLookCard()
                             }
                         }
                     }
@@ -473,7 +482,7 @@ constructor(
     ) {
         // id = buttonViewModel.viewId
         setSelected(isSelected)
-        if (isExpandableStyle) {
+        if (lookColors?.hideCard == true) {
             alpha = if (isOpen || isSelected) 1f else 0f
         }
         val ringerContentDesc = context.getString(buttonViewModel.contentDescriptionResId)
@@ -489,47 +498,18 @@ constructor(
             }
         if (isSelected && !isAnimated) {
             setBackgroundResource(R.drawable.volume_drawer_selection_bg)
+            setColorFilter(context.getColor(internalR.color.materialColorOnPrimary))
             background = background.mutate()
-            if (isExpandableStyle) {
-                applyExpandableColors(isSelected = true)
-            } else {
-                setColorFilter(context.getColor(internalR.color.materialColorOnPrimary))
-            }
+            lookColors?.let { applyLookColors(it.selectedBackground, it.selectedIcon) }
         } else if (!isAnimated) {
             setBackgroundResource(R.drawable.volume_ringer_item_bg)
+            setColorFilter(context.getColor(internalR.color.materialColorOnSurface))
             background = background.mutate()
-            if (isExpandableStyle) {
-                applyExpandableColors(isSelected = false)
-            } else {
-                setColorFilter(context.getColor(internalR.color.materialColorOnSurface))
-            }
+            lookColors?.let { applyLookColors(it.background, it.icon) }
         }
         setOnClickListener {
             viewModel.onRingerButtonClicked(buttonViewModel.ringerMode, isSelected)
         }
-    }
-
-    private fun ImageButton.applyExpandableColors(isSelected: Boolean) {
-        backgroundShape()
-            .setColor(
-                context.getColor(
-                    if (isSelected) {
-                        R.color.volume_panel_expandable_track_active
-                    } else {
-                        R.color.volume_panel_expandable_button_background
-                    }
-                )
-            )
-        background.invalidateSelf()
-        setColorFilter(
-            context.getColor(
-                if (isSelected) {
-                    R.color.volume_panel_expandable_icon_on_active
-                } else {
-                    R.color.volume_panel_expandable_icon_on_inactive
-                }
-            )
-        )
     }
 
     private fun MotionLayout.ensureChildCount(@LayoutRes viewLayoutId: Int, count: Int) {
@@ -614,12 +594,18 @@ constructor(
         } else {
             (background as GradientDrawable).cornerRadius = radius
         }
-        hideExpandableCard()
+        hideLookCard()
         background.invalidateSelf()
     }
 
-    private fun View.hideExpandableCard() {
-        if (!isExpandableStyle) return
+    private fun ImageButton.applyLookColors(background: Int, icon: Int) {
+        backgroundShape().setColor(context.getColor(background))
+        this.background.invalidateSelf()
+        setColorFilter(context.getColor(icon))
+    }
+
+    private fun View.hideLookCard() {
+        if (lookColors?.hideCard != true) return
         alpha = 0f
         background?.alpha = 0
     }

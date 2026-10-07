@@ -27,14 +27,15 @@ import androidx.activity.ComponentDialog
 import com.android.app.tracing.coroutines.coroutineScopeTraced
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.lifecycle.repeatWhenAttached
+import com.android.systemui.penguin.VolumePanelLooks
 import com.android.systemui.res.R
 import com.android.systemui.volume.Events
-import com.android.systemui.volume.VolumePanelStyle
 import com.android.systemui.volume.dialog.dagger.factory.VolumeDialogComponentFactory
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogVisibilityInteractor
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
+import java.util.Optional
 import kotlinx.coroutines.awaitCancellation
 
 class VolumeDialog
@@ -43,6 +44,7 @@ constructor(
     @Application context: Context,
     private val componentFactory: VolumeDialogComponentFactory,
     private val visibilityInteractor: VolumeDialogVisibilityInteractor,
+    looks: Optional<VolumePanelLooks>,
     @Assisted private val isVolumeDialogVertical: Boolean,
 ) : ComponentDialog(context, R.style.Theme_SystemUI_Dialog_Volume) {
 
@@ -51,8 +53,8 @@ constructor(
         fun create(isVolumeDialogVertical: Boolean): VolumeDialog
     }
 
-    private val panelStyle = VolumePanelStyle.current(context)
-    private val isOneUiStyle = isVolumeDialogVertical && panelStyle.isCard
+    private val cardLayout: Int? =
+        looks.orElse(null)?.current(context)?.cardLayout?.takeIf { isVolumeDialogVertical }
 
     init {
         with(window!!) {
@@ -75,7 +77,7 @@ constructor(
                 android.provider.Settings.Secure.VOLUME_PANEL_ON_LEFT,
                 0
             ) == 1
-            if (isOneUiStyle) {
+            if (cardLayout != null) {
                 setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 setGravity(
                     (if (isLeft) Gravity.START else Gravity.END) or Gravity.CENTER_VERTICAL
@@ -94,14 +96,8 @@ constructor(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (isOneUiStyle) {
-            setContentView(
-                if (panelStyle == VolumePanelStyle.MYUI) {
-                    R.layout.volume_dialog_myui
-                } else {
-                    R.layout.volume_dialog_oneui
-                }
-            )
+        if (cardLayout != null) {
+            setContentView(cardLayout)
         } else if (isVolumeDialogVertical) {
             setContentView(R.layout.volume_dialog)
         } else {

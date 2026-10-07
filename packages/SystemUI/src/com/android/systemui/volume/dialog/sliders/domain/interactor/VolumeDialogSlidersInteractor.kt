@@ -21,7 +21,6 @@ import android.media.AudioManager
 import android.media.AudioSystem
 import com.android.systemui.volume.VolumeDialogControllerImpl
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialog
-import com.android.systemui.volume.VolumePanelStyle
 import com.android.systemui.volume.dialog.dagger.scope.VolumeDialogScope
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogExpansionInteractor
 import com.android.systemui.volume.dialog.domain.interactor.VolumeDialogStateInteractor
@@ -41,16 +40,6 @@ import kotlinx.coroutines.flow.runningReduce
 import kotlinx.coroutines.flow.stateIn
 
 private const val DEFAULT_STREAM = AudioManager.STREAM_MUSIC
-
-private val EXPANDABLE_STREAMS =
-    setOf(
-        AudioManager.STREAM_MUSIC,
-        AudioManager.STREAM_RING,
-        AudioManager.STREAM_ALARM,
-        AudioManager.STREAM_VOICE_CALL,
-    )
-
-private val MYUI_STREAMS = EXPANDABLE_STREAMS + AudioManager.STREAM_NOTIFICATION
 
 /** Provides a state for the Sliders section of the Volume Dialog. */
 @VolumeDialogScope
@@ -86,14 +75,11 @@ constructor(
                 primarySlider ?: return@combine null
                 val floatingSliders =
                     when {
-                        !expansionInteractor.isExpandable -> sliderTypes.drop(1)
+                        expansionInteractor.look == null -> sliderTypes.drop(1)
                         isExpanded -> sliderTypes.drop(1).reversed()
                         else -> emptyList()
                     }
-                VolumeDialogSlidersModel(
-                    slider = primarySlider,
-                    floatingSliders = floatingSliders,
-                )
+                VolumeDialogSlidersModel(slider = primarySlider, floatingSliders = floatingSliders)
             }
             .stateIn(coroutineScope, SharingStarted.Eagerly, null)
             .filterNotNull()
@@ -107,13 +93,7 @@ constructor(
         }
 
         if (!packageManager.isTv()) {
-            val expandableStreams =
-                if (expansionInteractor.style == VolumePanelStyle.MYUI) {
-                    MYUI_STREAMS
-                } else {
-                    EXPANDABLE_STREAMS
-                }
-            if (expansionInteractor.isExpandable && streamModel.stream in expandableStreams) {
+            if (expansionInteractor.look?.streams?.contains(streamModel.stream) == true) {
                 return true
             }
 

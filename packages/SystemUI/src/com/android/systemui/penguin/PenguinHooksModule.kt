@@ -11,4 +11,6 @@ import dagger.Module
 @Module
 interface PenguinHooksModule {
     @BindsOptionalOf fun powerMenuLayout(): PowerMenuLayout
+
+    @BindsOptionalOf fun volumePanelLooks(): VolumePanelLooks
 }

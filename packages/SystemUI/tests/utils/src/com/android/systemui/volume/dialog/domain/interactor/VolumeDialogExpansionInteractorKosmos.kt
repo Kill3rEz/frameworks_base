@@ -24,5 +24,6 @@ val Kosmos.volumeDialogExpansionInteractor by
         VolumeDialogExpansionInteractor(
             applicationContext,
             expandedAudioTileDetailsFeatureInteractor,
+            java.util.Optional.empty(),
         )
     }
