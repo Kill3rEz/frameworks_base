@@ -75,20 +75,6 @@
 
     <color name="global_actions_shutdown_ui_text">@color/control_primary_text</color>
 
-    <!-- Colors for the iOS style power menu. It always draws over a black scrim, so these do not
-         follow the light/dark theme. -->
-    <color name="power_menu_ios_track">#1FF8F8F8</color>
-    <color name="power_menu_ios_thumb">#14F8F8F8</color>
-    <color name="power_menu_ios_foreground">#FFFFFFFF</color>
-    <color name="power_menu_ios_emergency_track">#33FF3B30</color>
-    <color name="power_menu_ios_emergency_thumb">#4DFF3B30</color>
-    <color name="power_menu_ios_emergency_foreground">#FFFF453A</color>
-    <color name="power_menu_ios_hint">#99EBEBF5</color>
-    <color name="power_menu_ios_close_background">#29F8F8F8</color>
-    <!-- Backdrop used when window blur is unavailable, see power_menu_ios_backdrop.xml. -->
-    <color name="power_menu_ios_backdrop_center">#FF1C1B1F</color>
-    <color name="power_menu_ios_backdrop_edge">#FF000000</color>
-
     <!-- Colors for the expandable volume panel style. The pills are drawn straight on top of the
          wallpaper with no card behind them, so these are fixed instead of following the theme: the
          wallpaper is whatever the user picked, and a themed pill would disappear into half of them. -->

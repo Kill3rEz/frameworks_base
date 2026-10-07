@@ -137,6 +137,7 @@ import com.android.systemui.globalactions.domain.interactor.GlobalActionsInterac
 import com.android.systemui.globalactions.shared.model.GlobalActionType;
 import com.android.systemui.globalactions.shared.model.RestartActionType;
 import com.android.systemui.globalactions.shared.model.GlobalActionsEvent;
+import com.android.systemui.penguin.PowerMenuLayout;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryInteractor;
 import com.android.systemui.plugins.GlobalActions.GlobalActionsManager;
@@ -173,6 +174,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
@@ -2800,7 +2802,9 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
         @Nullable
         private View mAnimatedContent;
         @Nullable
-        private Drawable mIosBackdrop;
+        private Drawable mBackdrop;
+        @NonNull
+        private final Optional<PowerMenuLayout> mPowerMenuLayout;
         @Nullable
         private ScrimDrawable mBackgroundDrawable;
         @Nullable
@@ -2887,7 +2891,8 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
                 @NonNull AccessibilityManager accessibilityManager,
                 @NonNull DialogTransitionAnimator dialogTransitionAnimator,
                 @NonNull SystemUIDialog.Factory systemUIDialogFactory,
-                @NonNull DeviceEntryInteractor deviceEntryInteractor) {
+                @NonNull DeviceEntryInteractor deviceEntryInteractor,
+                @NonNull Optional<PowerMenuLayout> powerMenuLayout) {
             mContext = context;
             mAdapter = adapter;
             mOverflowAdapter = overflowAdapter;
@@ -2911,6 +2916,12 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
             mSystemUIDialogFactory = systemUIDialogFactory;
             mGestureDetector = new GestureDetector(context, mGestureListener);
             mDeviceEntryInteractor = deviceEntryInteractor;
+            mPowerMenuLayout = powerMenuLayout;
+        }
+
+        @Nullable
+        private PowerMenuLayout activeLayout(@NonNull Context context) {
+            return mPowerMenuLayout.filter(layout -> layout.isActive(context)).orElse(null);
         }
 
         @NonNull
@@ -2998,8 +3009,9 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
         @NonNull
         private Dialog createSubMenu(@NonNull ListAdapter adapter) {
             boolean blurSupported = mAdapter.isBlurSupported();
-            if (PowerMenuStyle.current(mContext) == PowerMenuStyle.IOS) {
-                return GlobalActionsIosPowerDialog.create(mContext, adapter, blurSupported);
+            PowerMenuLayout layout = activeLayout(mContext);
+            if (layout != null) {
+                return layout.createSubMenu(mContext, adapter, blurSupported);
             }
             return GlobalActionsPowerDialog.create(mContext, adapter, blurSupported);
         }
@@ -3020,8 +3032,9 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
         }
 
         private void initializeLayout(@NonNull SystemUIDialog dialog) {
-            if (PowerMenuStyle.current(dialog.getContext()) == PowerMenuStyle.IOS) {
-                initializeIosLayout(dialog);
+            PowerMenuLayout powerMenuLayout = activeLayout(dialog.getContext());
+            if (powerMenuLayout != null) {
+                powerMenuLayout.inflate(dialog, mLayoutHost);
                 return;
             }
 
@@ -3077,7 +3090,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
             }
 
             mAnimatedContent = mGlobalActionsLayout;
-            mIosBackdrop = null;
+            mBackdrop = null;
 
             if (mBackgroundDrawable == null) {
                 mBackgroundDrawable = new ScrimDrawable();
@@ -3091,125 +3104,76 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
             }
         }
 
-        private void initializeIosLayout(@NonNull SystemUIDialog dialog) {
-            dialog.setContentView(com.android.systemui.res.R.layout.global_actions_ios);
-            fixNavBarClipping(dialog);
-
-            final Context context = dialog.getContext();
-            final Resources res = context.getResources();
-
-            ViewGroup container =
-                    dialog.findViewById(com.android.systemui.res.R.id.global_actions_container);
-            container.setOnTouchListener((v, event) -> {
-                mGestureDetector.onTouchEvent(event);
-                return v.onTouchEvent(event);
-            });
-
-            final boolean translucentMenu = res.getBoolean(
-                    com.android.systemui.res.R.bool.config_translucentStandalonePowerMenu);
-            final WindowRootViewBlurInteractor blurInteractor = dialog.getBlurInteractor();
-            final Consumer<Boolean> applyBlurSupported = supported -> {
-                mAdapter.setBlurSupported(supported);
-                if (isVolumeAndPowerBlurEnabled() && translucentMenu && supported) {
-                    container.setBackground(null);
-                    mIosBackdrop = null;
-                    return;
+        private final PowerMenuLayout.Host mLayoutHost = new PowerMenuLayout.Host() {
+            @Nullable
+            @Override
+            public PowerMenuLayout.Option findOption(int kind) {
+                Action action = findAction(switch (kind) {
+                    case POWER_OFF -> ShutDownAction.class;
+                    case RESTART -> RestartAction.class;
+                    case EMERGENCY -> EmergencyAction.class;
+                    default -> throw new IllegalArgumentException("Unknown option " + kind);
+                });
+                if (action == null) {
+                    return null;
                 }
-                Drawable backdrop = res.getDrawable(
-                        com.android.systemui.res.R.drawable.power_menu_ios_backdrop,
-                        context.getTheme()).mutate();
-                container.setBackground(backdrop);
-                mIosBackdrop = backdrop;
-            };
-            collectFlow(container, blurInteractor.isBlurCurrentlySupported(), applyBlurSupported);
-            applyBlurSupported.accept(blurInteractor.isBlurCurrentlySupported().getValue());
+                return new PowerMenuLayout.Option() {
+                    @NonNull
+                    @Override
+                    public Drawable getIcon(@NonNull Context context) {
+                        return action.getIcon(context);
+                    }
 
-            final int track = res.getColor(
-                    com.android.systemui.res.R.color.power_menu_ios_track, null);
-            final int thumb = res.getColor(
-                    com.android.systemui.res.R.color.power_menu_ios_thumb, null);
-            final int foreground = res.getColor(
-                    com.android.systemui.res.R.color.power_menu_ios_foreground, null);
+                    @Override
+                    public void trigger() {
+                        if (!mAdapter.opensSubMenu(action)) {
+                            dismissWithoutAnimation();
+                        }
+                        action.onPress();
+                    }
+                };
+            }
 
-            SlideToActView powerOffRow =
-                    dialog.findViewById(com.android.systemui.res.R.id.power_menu_ios_power_off);
-            powerOffRow.setColors(track, thumb, foreground);
-            powerOffRow.setLabel(
-                    context.getText(com.android.systemui.res.R.string.power_menu_ios_power_off));
-            bindSlideRow(context, powerOffRow, findAction(ShutDownAction.class), true);
+            @Override
+            public void onContainerTouch(@NonNull MotionEvent event) {
+                mGestureDetector.onTouchEvent(event);
+            }
 
-            SlideToActView restartRow =
-                    dialog.findViewById(com.android.systemui.res.R.id.power_menu_ios_restart);
-            restartRow.setColors(track, thumb, foreground);
-            restartRow.setLabel(
-                    context.getText(com.android.systemui.res.R.string.power_menu_ios_restart));
-            bindSlideRow(context, restartRow, findAction(RestartAction.class), true);
+            @Override
+            public boolean isBlurBackdropAllowed() {
+                return isVolumeAndPowerBlurEnabled() && mContext.getResources().getBoolean(
+                        com.android.systemui.res.R.bool.config_translucentStandalonePowerMenu);
+            }
 
-            SlideToActView emergencyRow =
-                    dialog.findViewById(com.android.systemui.res.R.id.power_menu_ios_emergency);
-            emergencyRow.setColors(
-                    res.getColor(
-                            com.android.systemui.res.R.color.power_menu_ios_emergency_track, null),
-                    res.getColor(
-                            com.android.systemui.res.R.color.power_menu_ios_emergency_thumb, null),
-                    res.getColor(
-                            com.android.systemui.res.R.color.power_menu_ios_emergency_foreground,
-                            null));
-            emergencyRow.setLabel(
-                    context.getText(com.android.systemui.res.R.string.power_menu_ios_emergency));
-            emergencyRow.setThumbText(context.getText(
-                    com.android.systemui.res.R.string.power_menu_ios_emergency_thumb_label));
-            bindSlideRow(context, emergencyRow, findAction(EmergencyAction.class),
-                    false);
+            @Override
+            public void setBlurSupported(boolean supported) {
+                mAdapter.setBlurSupported(supported);
+            }
 
-            View emergencyHint =
-                    dialog.findViewById(
-                            com.android.systemui.res.R.id.power_menu_ios_emergency_hint);
-            emergencyHint.setVisibility(emergencyRow.getVisibility());
-            dialog.findViewById(com.android.systemui.res.R.id.power_menu_ios_restart_gap)
-                    .setVisibility(
-                            restartRow.getVisibility() == View.VISIBLE
-                                    && emergencyRow.getVisibility() == View.VISIBLE
-                                    ? View.VISIBLE : View.GONE);
-
-            View closeButton =
-                    dialog.findViewById(com.android.systemui.res.R.id.power_menu_ios_close);
-            closeButton.setOnClickListener(v -> {
+            @Override
+            public void close() {
                 mUiEventLogger.log(GlobalActionsEvent.GA_CLOSE_TAP_OUTSIDE);
                 dismiss();
-            });
+            }
 
-            mAnimatedContent =
-                    dialog.findViewById(com.android.systemui.res.R.id.power_menu_ios_content);
+            @Override
+            public void setAnimatedContent(@NonNull View content, @Nullable Drawable backdrop) {
+                mAnimatedContent = content;
+                mBackdrop = backdrop;
+            }
 
-            if (mBackgroundDrawable == null) {
-                mBackgroundDrawable = new ScrimDrawable();
+            @Override
+            public void onLayoutInflated(@NonNull Context context, @NonNull ViewGroup container) {
+                if (mBackgroundDrawable == null) {
+                    mBackgroundDrawable = new ScrimDrawable();
+                }
+                int user = mSelectedUserInteractor.getSelectedUserId();
+                if (mKeyguardShowing && mKeyguardUpdateMonitor.getUserHasTrust(user)) {
+                    mLockPatternUtils.requireCredentialEntry(user);
+                    showSmartLockDisabledMessage(context, container);
+                }
             }
-            int user = mSelectedUserInteractor.getSelectedUserId();
-            if (mKeyguardShowing && mKeyguardUpdateMonitor.getUserHasTrust(user)) {
-                mLockPatternUtils.requireCredentialEntry(user);
-                showSmartLockDisabledMessage(context, container);
-            }
-        }
-
-        private void bindSlideRow(@NonNull Context context, @NonNull SlideToActView row,
-                @Nullable Action action, boolean useIcon) {
-            if (action == null) {
-                row.setVisibility(View.GONE);
-                return;
-            }
-            if (useIcon) {
-                row.setThumbIcon(action.getIcon(context));
-            }
-            row.setOnSlideCompleteListener(v -> onIosActionTriggered(action));
-        }
-
-        private void onIosActionTriggered(@NonNull Action action) {
-            if (!mAdapter.opensSubMenu(action)) {
-                dismissWithoutAnimation();
-            }
-            action.onPress();
-        }
+        };
 
         @Nullable
         private Action findAction(@NonNull Class<? extends Action> type) {
@@ -3345,8 +3309,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
             if (mCurrentDialog == null) {
                 return;
             }
-            boolean animateFromExpandable =
-                    expandable != null && PowerMenuStyle.current(mContext) != PowerMenuStyle.IOS;
+            boolean animateFromExpandable = expandable != null && activeLayout(mContext) == null;
             DialogTransitionAnimator.Controller controller =
                     animateFromExpandable ? expandable.dialogTransitionController(
                             new DialogCuj(InteractionJankMonitor.CUJ_SHADE_DIALOG_OPEN,
@@ -3396,7 +3359,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
         private void startAnimation(@NonNull SystemUIDialog dialog, boolean isEnter,
                 @Nullable Runnable then) {
             final View content = mAnimatedContent;
-            final Drawable backdrop = mIosBackdrop;
+            final Drawable backdrop = mBackdrop;
             if (content == null) {
                 if (then != null) {
                     then.run();
