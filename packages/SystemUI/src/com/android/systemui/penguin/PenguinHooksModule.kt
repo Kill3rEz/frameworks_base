@@ -10,6 +10,8 @@ import dagger.Module
 
 @Module
 interface PenguinHooksModule {
+    @BindsOptionalOf fun depthSubject(): DepthSubject
+
     @BindsOptionalOf fun powerMenuLayout(): PowerMenuLayout
 
     @BindsOptionalOf fun volumePanelLooks(): VolumePanelLooks

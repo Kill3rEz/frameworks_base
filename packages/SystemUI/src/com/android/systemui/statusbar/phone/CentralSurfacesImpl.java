@@ -151,6 +151,7 @@ import com.android.systemui.media.NotificationMediaManager;
 import com.android.systemui.navigationbar.NavigationBarController;
 import com.android.systemui.navigationbar.views.NavigationBarView;
 import com.android.systemui.notetask.NoteTaskController;
+import com.android.systemui.penguin.DepthSubject;
 import com.android.systemui.plugins.ActivityStarter;
 import com.android.systemui.plugins.ActivityStarter.OnDismissAction;
 import com.android.systemui.plugins.FalsingManager;
@@ -219,7 +220,6 @@ import com.android.systemui.topui.TopUiController;
 import com.android.systemui.util.DumpUtilsKt;
 import com.android.systemui.util.ScrimUtils;
 import com.android.systemui.util.WallpaperController;
-import com.android.systemui.util.WallpaperDepthUtils;
 import com.android.systemui.util.concurrency.DelayableExecutor;
 import com.android.systemui.util.concurrency.MessageRouter;
 import com.android.systemui.util.kotlin.JavaAdapter;
@@ -454,7 +454,8 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
     private boolean mJustPeeked;
     private float mCurrentBrightness;
 
-    private WallpaperDepthUtils mWallpaperDepthUtils;
+    @Nullable
+    private DepthSubject mWallpaperDepthUtils;
 
     private final DisplayMetrics mDisplayMetrics;
 
@@ -672,7 +673,7 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
             Lazy<NotificationPanelViewController> notificationPanelViewControllerLazy,
             MediaViewController mediaViewController,
             PulseViewController pulseViewController,
-            WallpaperDepthUtils wallpaperDepthUtils
+            Optional<DepthSubject> wallpaperDepthUtils
     ) {
         mContext = context;
         mNotificationsController = notificationsController;
@@ -800,7 +801,7 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
         mSessionTracker = sessionTracker;
         mMediaViewController = mediaViewController;
         mPulseViewController = pulseViewController;
-        mWallpaperDepthUtils = wallpaperDepthUtils;
+        mWallpaperDepthUtils = wallpaperDepthUtils.orElse(null);
     }
 
     private void initBubbles(Bubbles bubbles) {
@@ -1243,26 +1244,28 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
             mScrimController.attachViews(scrimBehind, notificationsScrim, scrimInFront);
         }
 
-        View depthWallpaperView = mWallpaperDepthUtils.getDepthWallpaperView();
-        if (!SceneContainerFlag.isEnabled()) {
-            // Setup depth wallpaper view - insert between clock and notifications
-            // Z-order: wallpaper -> clock -> depth image -> notifications
-            ViewGroup root = getNotificationShadeWindowView();
-            if (depthWallpaperView.getParent() == null) {
-                root.setClipChildren(false);
-                root.setClipToPadding(false);
-                // Insert after KeyguardRootView (clock) but before SharedNotificationContainer
-                View keyguardRootView = root.findViewById(R.id.keyguard_root_view);
-                int insertIndex = root.indexOfChild(keyguardRootView) + 1;
-                root.addView(depthWallpaperView, insertIndex);
+        if (mWallpaperDepthUtils != null) {
+            View depthWallpaperView = mWallpaperDepthUtils.getView();
+            if (!SceneContainerFlag.isEnabled()) {
+                // Setup depth wallpaper view - insert between clock and notifications
+                // Z-order: wallpaper -> clock -> depth image -> notifications
+                ViewGroup root = getNotificationShadeWindowView();
+                if (depthWallpaperView.getParent() == null) {
+                    root.setClipChildren(false);
+                    root.setClipToPadding(false);
+                    // Insert after KeyguardRootView (clock) but before SharedNotificationContainer
+                    View keyguardRootView = root.findViewById(R.id.keyguard_root_view);
+                    int insertIndex = root.indexOfChild(keyguardRootView) + 1;
+                    root.addView(depthWallpaperView, insertIndex);
+                }
             }
-        }
-        ScrimUtils.get(mContext).setWallpaperDepthUtils(mWallpaperDepthUtils);
-        mWallpaperDepthUtils.updateDepthWallpaper();
-        mWallpaperDepthUtils.updateDepthWallpaperVisibility();
-        depthWallpaperView.postDelayed(() -> {
+            ScrimUtils.get(mContext).setWallpaperDepthUtils(mWallpaperDepthUtils);
+            mWallpaperDepthUtils.updateDepthWallpaper();
             mWallpaperDepthUtils.updateDepthWallpaperVisibility();
-        }, 500);
+            depthWallpaperView.postDelayed(() -> {
+                mWallpaperDepthUtils.updateDepthWallpaperVisibility();
+            }, 500);
+        }
 
         mLightRevealScrim.setScrimOpaqueChangedListener((opaque) -> {
             Runnable updateOpaqueness = () -> {

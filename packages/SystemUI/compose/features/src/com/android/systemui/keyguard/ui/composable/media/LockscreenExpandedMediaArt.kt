@@ -53,7 +53,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.android.systemui.util.WallpaperDepthUtils
+import com.android.systemui.penguin.DepthSubject
 import java.io.File
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -90,7 +90,7 @@ fun LockscreenExpandedMediaArt(
     LaunchedEffect(Unit) {
         snapshotFlow { state.fraction > 0f || (state.enabled && state.mediaVisible) }
             .distinctUntilChanged()
-            .collect { WallpaperDepthUtils.setExpandedMediaArtVisible(it) }
+            .collect { DepthSubject.get()?.setExpandedMediaArtVisible(it) }
     }
 
     LaunchedEffect(Unit) { snapshotFlow { alpha() }.collect { state.lockscreenAlpha = it } }

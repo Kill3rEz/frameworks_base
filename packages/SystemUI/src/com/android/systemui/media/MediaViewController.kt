@@ -98,7 +98,7 @@ class MediaViewController @Inject constructor(
         set(value) {
             if (field != value) {
                 field = value
-                com.android.systemui.util.WallpaperDepthUtils.get()?.updateDepthWallpaperVisibility()
+                com.android.systemui.penguin.DepthSubject.get()?.updateDepthWallpaperVisibility()
             }
         }
     private var dismissingKeyguard = false

@@ -23,6 +23,7 @@ import android.service.notification.StatusBarNotification
 import android.view.View
 import android.view.ViewTreeObserver
 import com.android.systemui.Dependency
+import com.android.systemui.penguin.DepthSubject
 import com.android.systemui.scene.shared.flag.SceneContainerFlag
 import com.android.systemui.statusbar.StatusBarState.KEYGUARD
 import com.android.systemui.statusbar.StatusBarState.SHADE_LOCKED
@@ -68,9 +69,9 @@ class ScrimUtils private constructor(context: Context?) {
         }
     }
 
-    private var mWallpaperDepthUtils: WallpaperDepthUtils? = null
+    private var mWallpaperDepthUtils: DepthSubject? = null
 
-    fun setWallpaperDepthUtils(utils: WallpaperDepthUtils) {
+    fun setWallpaperDepthUtils(utils: DepthSubject) {
         mWallpaperDepthUtils = utils
     }
 
@@ -302,13 +303,13 @@ class ScrimUtils private constructor(context: Context?) {
     fun setQsExpansion(expansion: Float) {
         val fullyCollapsed = expansion <= 0f
         if (fullyCollapsed) {
-            mWallpaperDepthUtils?.getDepthWallpaperView()?.translationZ = 0f
+            mWallpaperDepthUtils?.view?.translationZ = 0f
             if (mStateIsKeyguard) {
                 mWallpaperDepthUtils?.updateDepthWallpaper()
                 mWallpaperDepthUtils?.updateDepthWallpaperVisibility()
             }
         } else {
-            mWallpaperDepthUtils?.getDepthWallpaperView()?.translationZ = -100f
+            mWallpaperDepthUtils?.view?.translationZ = -100f
         }
     }
 
