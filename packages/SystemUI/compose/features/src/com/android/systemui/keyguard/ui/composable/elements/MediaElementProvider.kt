@@ -29,9 +29,8 @@ import com.android.compose.animation.scene.ElementContentScope
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardMediaViewModel
 import com.android.systemui.lifecycle.rememberViewModel
-import com.android.systemui.keyguard.ui.composable.media.LockscreenMediaCard
-import com.android.systemui.keyguard.ui.composable.media.LockscreenMediaExpansion
 import com.android.systemui.media.remedia.ui.compose.Media
+import com.android.systemui.penguin.LockscreenPlayer
 import com.android.systemui.media.remedia.ui.compose.MediaPresentationStyle
 import com.android.systemui.plugins.keyguard.ui.composable.elements.BaseLockscreenElement.ElementSource
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElement
@@ -39,6 +38,7 @@ import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenEl
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementProvider
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenScope
 import com.android.systemui.shade.ShadeDisplayAware
+import java.util.Optional
 import javax.inject.Inject
 import kotlin.collections.List
 
@@ -48,7 +48,10 @@ class MediaElementProvider
 constructor(
     @ShadeDisplayAware private val context: Context,
     private val mediaViewModelFactory: KeyguardMediaViewModel.Factory,
+    player: Optional<LockscreenPlayer>,
 ) : LockscreenElementProvider {
+    private val player = player.orElse(null)
+
     override val elements: List<LockscreenElement> by lazy { listOf(MediaCarouselElement()) }
 
     private inner class MediaCarouselElement : LockscreenElement {
@@ -61,16 +64,16 @@ constructor(
             val viewModel =
                 rememberViewModel("MediaCarouselElement") { mediaViewModelFactory.create() }
 
-            LockscreenMediaExpansion.ObserveSettings()
+            player?.ObserveSettings()
             val visible = viewModel.isMediaVisible && !viewModel.isDozing
-            SideEffect { LockscreenMediaExpansion.mediaVisible = visible }
+            SideEffect { player?.setMediaVisible(visible) }
             AnimatedVisibility(
                 visible,
                 enter = expandVertically(expandFrom = Alignment.Top),
                 exit = fadeOut(),
             ) {
-                if (LockscreenMediaExpansion.enabled) {
-                    LockscreenMediaCard(
+                if (player?.isEnabled == true) {
+                    player.Card(
                         viewModelFactory = viewModel.mediaViewModelFactory,
                         behavior = viewModel.mediaUiBehavior,
                         modifier = Modifier.fillMaxWidth(),

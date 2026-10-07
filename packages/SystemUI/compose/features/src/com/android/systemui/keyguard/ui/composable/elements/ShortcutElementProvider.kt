@@ -81,7 +81,7 @@ import com.android.systemui.keyguard.ui.binder.KeyguardBottomAreaVibrations
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordanceHapticViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordanceViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordancesCombinedViewModel
-import com.android.systemui.keyguard.ui.composable.media.LockscreenMediaExpansion
+import com.android.systemui.penguin.LockscreenPlayer
 import com.android.systemui.plugins.FalsingManager
 import com.android.systemui.plugins.keyguard.ui.composable.elements.BaseLockscreenElement.ElementSource
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElement
@@ -93,6 +93,7 @@ import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.KeyguardIndicationController
 import com.android.systemui.statusbar.VibratorHelper
 import com.android.systemui.window.domain.interactor.WindowRootViewBlurInteractor
+import java.util.Optional
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import org.xmlpull.v1.XmlPullParser
@@ -110,7 +111,9 @@ constructor(
     private val hapticsViewModelFactory: KeyguardQuickAffordanceHapticViewModel.Factory,
     private val windowRootViewBlurInteractor: WindowRootViewBlurInteractor,
     private val logger: KeyguardQuickAffordancesLogger,
+    player: Optional<LockscreenPlayer>,
 ) : LockscreenElementProvider {
+    private val player = player.orElse(null)
 
     override val elements: List<LockscreenElement> by lazy {
         listOf(
@@ -175,7 +178,7 @@ constructor(
                 lerp(
                     MaterialTheme.colorScheme.onSurface,
                     Color.White,
-                    LockscreenMediaExpansion.fraction,
+                    player?.expansion ?: 0f,
                 )
             }
 
@@ -347,7 +350,7 @@ constructor(
             return this.background(
                 color =
                     if (viewModel.isActivated) color
-                    else lerp(color, ExpandedMediaShortcutColor, LockscreenMediaExpansion.fraction),
+                    else lerp(color, ExpandedMediaShortcutColor, player?.expansion ?: 0f),
                 shape = CircleShape,
             )
         }

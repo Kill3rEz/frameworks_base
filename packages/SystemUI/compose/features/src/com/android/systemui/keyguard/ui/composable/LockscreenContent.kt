@@ -59,13 +59,13 @@ import com.android.systemui.keyguard.domain.interactor.KeyguardClockInteractor
 import com.android.systemui.keyguard.shared.model.KeyguardState
 import com.android.systemui.keyguard.shared.transition.KeyguardTransitionAnimationCallback
 import com.android.systemui.keyguard.ui.composable.elements.LockscreenElements
-import com.android.systemui.keyguard.ui.composable.media.LockscreenExpandedMediaArt
 import com.android.systemui.keyguard.ui.composable.modifier.nonAuthUI
 import com.android.systemui.keyguard.ui.viewmodel.LockscreenBehindScrimViewModel
 import com.android.systemui.keyguard.ui.viewmodel.LockscreenContentViewModel
 import com.android.systemui.keyguard.ui.viewmodel.LockscreenFrontScrimViewModel
 import com.android.systemui.keyguard.ui.viewmodel.ViewStateAccessor
 import com.android.systemui.lifecycle.rememberViewModel
+import com.android.systemui.penguin.LockscreenPlayer
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementContext
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementKeys
 import com.android.systemui.qs.shared.style.liquidGlassEnabled
@@ -89,6 +89,7 @@ class LockscreenContent(
     private val lockscreenElements: LockscreenElements,
     private val clockInteractor: KeyguardClockInteractor,
     private val interactionJankMonitor: InteractionJankMonitor,
+    private val player: LockscreenPlayer? = null,
 ) {
     @Composable
     fun ContentScope.Content(modifier: Modifier = Modifier) {
@@ -192,7 +193,7 @@ class LockscreenContent(
                     ?.progress
             (toGone ?: overlaid { it == Overlays.Bouncer }).coerceIn(0f, 1f)
         }
-        LockscreenExpandedMediaArt(
+        player?.ExpandedArt(
             alpha = {
                 val transition = layoutState.currentTransition as? TransitionState.Transition.ChangeScene
                 val sceneAlpha =

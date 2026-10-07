@@ -17,6 +17,8 @@
 package com.android.systemui.scene
 
 import android.view.View
+import com.android.systemui.penguin.LockscreenPlayer
+import java.util.Optional
 import com.android.internal.jank.InteractionJankMonitor
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.KeyguardViewConfigurator
@@ -57,6 +59,7 @@ interface LockscreenSceneModule {
             lockscreenElements: LockscreenElements,
             clockInteractor: KeyguardClockInteractor,
             interactionJankMonitor: InteractionJankMonitor,
+            player: Optional<LockscreenPlayer>,
         ): LockscreenContent {
             return LockscreenContent(
                 viewModelFactory,
@@ -65,6 +68,7 @@ interface LockscreenSceneModule {
                 lockscreenElements,
                 clockInteractor,
                 interactionJankMonitor,
+                player.orElse(null),
             )
         }
     }

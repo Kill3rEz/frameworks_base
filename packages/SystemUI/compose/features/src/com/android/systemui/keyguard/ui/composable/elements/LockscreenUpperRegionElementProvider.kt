@@ -24,16 +24,11 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateStartPadding
@@ -46,21 +41,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.unit.toSize
-import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.unit.Dp
@@ -76,13 +64,10 @@ import com.android.compose.windowsizeclass.LocalWindowSizeClass
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.clocks.ClockStyle
 import com.android.systemui.keyguard.shared.model.ClockSize
-import com.android.systemui.keyguard.ui.composable.media.LockscreenExpandedClock
-import com.android.systemui.keyguard.ui.composable.media.LockscreenMediaExpansion
-import com.android.systemui.keyguard.ui.composable.media.collapsible
-import com.android.systemui.keyguard.ui.composable.media.within
 import com.android.systemui.keyguard.ui.viewmodel.LockscreenUpperRegionViewModel
 import com.android.systemui.keyguard.ui.viewmodel.LockscreenUpperRegionViewModel.Decision
 import com.android.systemui.lifecycle.rememberViewModel
+import com.android.systemui.penguin.LockscreenPlayer
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.core.Logger
 import com.android.systemui.log.dagger.KeyguardBlueprintLog
@@ -103,6 +88,7 @@ import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shade.shared.model.ShadeMode
 import com.google.errorprone.annotations.CompileTimeConstant
+import java.util.Optional
 import javax.inject.Inject
 
 @SysUISingleton
@@ -113,7 +99,9 @@ constructor(
     @ShadeDisplayAware private val context: Context,
     @KeyguardBlueprintLog private val blueprintLog: LogBuffer,
     private val viewModelFactory: LockscreenUpperRegionViewModel.Factory,
+    player: Optional<LockscreenPlayer>,
 ) : LockscreenElementProvider {
+    private val player = player.orElse(null)
     private val logger = Logger(blueprintLog, "LockscreenUpperRegionElementProvider")
     override val elements: List<LockscreenElement> by lazy { listOf(UpperRegionElement()) }
 
@@ -282,61 +270,36 @@ constructor(
                     }
                 }
                 scene(NarrowScenes.SmallClock) {
-                    DisposableEffect(Unit) {
-                        LockscreenMediaExpansion.supported = true
-                        onDispose { LockscreenMediaExpansion.supported = false }
+                    val clock: @Composable () -> Unit = {
+                        when {
+                            customStyle != 0 -> CustomClockView()
+                            clockHidden -> { /* no clock */ }
+                            else -> LockscreenElement(Region.Clock.Small)
+                        }
                     }
-                    val notificationsActive = viewModel.isNotificationStackActive
-                    SideEffect { LockscreenMediaExpansion.notificationsShowing = notificationsActive }
-                    val expansion = LockscreenMediaExpansion.fraction
-                    val notifications by
-                        animateFloatAsState(
-                            if (notificationsActive) 1f else 0f,
-                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                            label = "ExpandedMediaNotifications",
-                        )
-                    val artWeight = expansion * (1f - 0.22f * notifications)
-                    val collapseOnTap =
-                        Modifier.pointerInput(Unit) {
-                            detectTapGestures { LockscreenMediaExpansion.collapse() }
-                        }
-                    Column(Modifier.fillMaxSize()) {
-                        Box(
-                            Modifier.collapsible {
-                                1f - LockscreenMediaExpansion.fraction.within(0f, 0.6f)
-                            }
-                        ) {
-                            when {
-                                customStyle != 0 -> CustomClockView()
-                                clockHidden -> { /* no clock */ }
-                                else -> LockscreenElement(Region.Clock.Small)
+                    val player = this@LockscreenUpperRegionElementProvider.player
+                    if (player != null) {
+                        Column(Modifier.fillMaxSize()) {
+                            with(player) {
+                                SmallClockColumn(
+                                    notificationsActive = viewModel.isNotificationStackActive,
+                                    clock = clock,
+                                    media = { MediaCarousel(Modifier.align(Alignment.Start)) },
+                                    notifications = { notificationsModifier ->
+                                        Notifications(
+                                            aodAlignment = Alignment.TopStart,
+                                            modifier = notificationsModifier,
+                                        )
+                                    },
+                                )
                             }
                         }
-                        if (expansion > 0f) {
-                            LockscreenExpandedClock(
-                                Modifier.collapsible {
-                                        LockscreenMediaExpansion.fraction.within(0.3f, 1f)
-                                    }
-                                    .then(collapseOnTap)
-                                    .padding(top = 8.dp, bottom = 16.dp)
-                            )
+                    } else {
+                        Column {
+                            clock()
+                            MediaCarousel(Modifier.align(Alignment.Start))
+                            Notifications(aodAlignment = Alignment.TopStart)
                         }
-                        if (artWeight > 0.001f) {
-                            Spacer(
-                                Modifier.weight(artWeight)
-                                    .fillMaxWidth()
-                                    .onGloballyPositioned {
-                                        LockscreenMediaExpansion.artSlotBounds =
-                                            Rect(it.positionInWindow(), it.size.toSize())
-                                    }
-                                    .then(collapseOnTap)
-                            )
-                        }
-                        MediaCarousel(Modifier.align(Alignment.Start))
-                        Notifications(
-                            aodAlignment = Alignment.TopStart,
-                            modifier = Modifier.weight(maxOf(1f - artWeight, 0.001f)),
-                        )
                     }
                 }
             }
