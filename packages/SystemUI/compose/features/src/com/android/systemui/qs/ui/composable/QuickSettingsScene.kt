@@ -17,7 +17,6 @@
 package com.android.systemui.qs.ui.composable
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.OverscrollEffect
 import androidx.compose.foundation.clipScrollableContainer
@@ -89,6 +88,7 @@ import com.android.systemui.qs.panels.ui.compose.EditMode
 import com.android.systemui.qs.shared.ui.QuickSettings
 import com.android.systemui.qs.ui.composable.QuickSettingsScene.Companion.InternalScenes.Edit
 import com.android.systemui.qs.ui.composable.QuickSettingsScene.Companion.InternalScenes.QS
+import com.android.systemui.penguin.QsPanelsHostScope
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsSceneContentViewModel
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsUserActionsViewModel
 import com.android.systemui.res.R
@@ -265,7 +265,7 @@ private fun ContentScope.QuickSettingsScene(
             }
         }
 
-        CompositionLocalProvider(LocalQsHostTransition provides qsHostTransition()) {
+        QsPanelsHostScope(viewModel.qsContainerViewModel) {
             NestedSceneTransitionLayout(
                 state = sceneState,
                 debugName = "QuickSettingsScene",
@@ -285,24 +285,29 @@ private fun ContentScope.QuickSettingsScene(
                 scene(Edit) {
                     Element(Edit.rootElementKey, Modifier) {
                         GridAnchor()
-                        EditMode(
-                            viewModel.qsContainerViewModel.editModeViewModel,
-                            modifier =
-                                Modifier.testTag("edit_mode_scene")
-                                    .padding(
-                                        horizontal = QuickSettingsShade.Dimensions.HorizontalPadding
-                                    )
-                                    .padding(
+                        val penguinEditor =
+                            viewModel.qsContainerViewModel.penguin?.run {
+                                OverlayEditor(
+                                    viewModel.qsContainerViewModel,
+                                    Modifier.padding(
                                         top =
                                             headerViewModel.statusBarHeightPx
                                                 .toDp(LocalContext.current)
                                                 .dp
                                     ),
-                            previews = panelElementPreviews(viewModel.qsContainerViewModel),
-                            previewHeights = panelElementPreviewHeights(),
-                            headerPreview =
-                                qsHeaderPreview(viewModel.qsContainerViewModel),
-                        )
+                                )
+                            } == true
+                        if (!penguinEditor) {
+                            EditMode(
+                                viewModel.qsContainerViewModel.editModeViewModel,
+                                Modifier.testTag("edit_mode_scene")
+                                    .padding(horizontal = QuickSettingsShade.Dimensions.HorizontalPadding)
+                                    .padding(
+                                        top =
+                                            headerViewModel.statusBarHeightPx.toDp(LocalContext.current).dp
+                                    ),
+                            )
+                        }
                     }
                 }
             }
@@ -452,6 +457,7 @@ private fun ContentScope.QuickSettingsContent(
                 viewModel = footerActionsViewModel,
                 isCustomizing = false,
                 customizingAnimationDuration = 0,
+                extraAction = { viewModel.qsContainerViewModel.penguin?.FooterAction(viewModel.qsContainerViewModel) },
                 modifier =
                     Modifier.align(Alignment.CenterHorizontally)
                         .sysuiResTag("qs_footer_actions")

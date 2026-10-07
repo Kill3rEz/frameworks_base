@@ -16,11 +16,6 @@
 
 package com.android.systemui.qs.ui.composable
 
-import androidx.compose.foundation.layout.Arrangement
-import com.android.systemui.qs.composefragment.BrightnessLayout
-import com.android.systemui.qs.shared.style.LocalGlassBlurAllowed
-import com.android.systemui.qs.composefragment.VolumeLayout
-import com.android.systemui.qs.shared.ui.QuickSettings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -45,15 +40,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -77,7 +71,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.PlatformSliderDefaults
 import com.android.compose.animation.scene.ContentScope
@@ -108,9 +101,10 @@ import com.android.systemui.qs.panels.ui.compose.TileGrid
 import com.android.systemui.qs.panels.ui.compose.toolbar.Toolbar
 import com.android.systemui.qs.panels.ui.viewmodel.toolbar.ToolbarViewModel
 import com.android.systemui.qs.tiles.dialog.AudioDetailsViewModel
-import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.ui.composable.QuickSettingsShade.systemGestureExclusionInShade
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
+import com.android.systemui.penguin.QsPanelsHost
+import com.android.systemui.penguin.LocalQsPanels
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsShadeOverlayActionsViewModel
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsShadeOverlayContentViewModel
 import com.android.systemui.res.R
@@ -212,9 +206,17 @@ constructor(
             OverlayShade(
                 panelElement = QuickSettingsShade.Elements.Panel,
                 alignmentOnWideScreens = Alignment.End,
+                wide =
+                    quickSettingsContainerViewModel.penguin?.wideOverlay(
+                        quickSettingsContainerViewModel
+                    ) == true,
                 statusBarHeightPx = contentViewModel.statusBarHeightPx,
                 enableTransparency = contentViewModel.isTransparencyEnabled,
-                onScrimClicked = contentViewModel::onScrimClicked,
+                onScrimClicked = {
+                    if (quickSettingsContainerViewModel.penguin?.onScrimClicked() != true) {
+                        contentViewModel.onScrimClicked()
+                    }
+                },
                 onBackgroundPlaced = { bounds, topCornerRadius, bottomCornerRadius ->
                     contentViewModel.onShadeOverlayBoundsChanged(bounds)
                     contentViewModel.onPanelShapeInWindowChanged(
@@ -226,7 +228,11 @@ constructor(
                     )
                 },
                 header = {
-                    if (contentViewModel.showHeader) {
+                    val penguinStatusBar =
+                        quickSettingsContainerViewModel.penguin?.showsOverlayStatusBar(
+                            quickSettingsContainerViewModel
+                        ) != false
+                    if (contentViewModel.showHeader && penguinStatusBar) {
                         val headerViewModel = quickSettingsContainerViewModel.shadeHeaderViewModel
                         OverlayShadeHeader(
                             viewModel = headerViewModel,
@@ -238,12 +244,22 @@ constructor(
                     }
                 },
             ) {
-                val mirrorShowing by rememberUpdatedState(showBrightnessMirror)
-                val settled =
-                    remember(layoutState) {
-                        { layoutState.isIdle(contentKey) && !mirrorShowing }
+                val penguin = quickSettingsContainerViewModel.penguin
+                if (penguin != null) {
+                    CompositionLocalProvider(
+                        LocalQsPanels provides
+                            QsPanelsHost(penguin, quickSettingsContainerViewModel)
+                    ) {
+                        with(penguin) {
+                            OverlayHost {
+                                QuickSettingsContainer(
+                                    contentViewModel = contentViewModel,
+                                    containerViewModel = quickSettingsContainerViewModel,
+                                )
+                            }
+                        }
                     }
-                CompositionLocalProvider(LocalGlassBlurAllowed provides settled) {
+                } else {
                     QuickSettingsContainer(
                         contentViewModel = contentViewModel,
                         containerViewModel = quickSettingsContainerViewModel,
@@ -283,7 +299,6 @@ private fun ContentScope.QuickSettingsContainer(
     modifier: Modifier = Modifier,
 ) {
     val isEditing by containerViewModel.editModeViewModel.isEditing.collectAsStateWithLifecycle()
-    LaunchedEffect(isEditing) { if (!isEditing) OneUiToggleEditing.active = false }
     val tileDetails =
         if (QsDetailedView.isEnabled) containerViewModel.detailsViewModel.activeTileDetails
         else null
@@ -323,40 +338,13 @@ private fun ContentScope.QuickSettingsContainer(
     ) { state ->
         when (state) {
             ShadeBodyState.Editing -> {
-                if (
-                    containerViewModel.panelStyle == QsPanelStyle.OneUi &&
-                        OneUiToggleEditing.active
-                ) {
-                    OneUiTogglesEditor(
-                        viewModel = containerViewModel,
-                        modifier =
-                            modifier
-                                .fillMaxWidth()
-                                .padding(vertical = QuickSettingsShade.Dimensions.VerticalPadding),
-                    )
-                    return@AnimatedContent
-                }
-                if (containerViewModel.panelStyle == QsPanelStyle.OneUi) {
-                    OneUiGridEditor(
-                        viewModel = containerViewModel,
-                        modifier =
-                            modifier
-                                .fillMaxWidth()
-                                .padding(vertical = QuickSettingsShade.Dimensions.VerticalPadding),
-                    )
-                    return@AnimatedContent
-                }
-                if (containerViewModel.panelStyle == QsPanelStyle.Penguin) {
-                    PenguinGridEditor(
-                        viewModel = containerViewModel,
-                        modifier =
-                            modifier
-                                .fillMaxWidth()
-                                .padding(vertical = QuickSettingsShade.Dimensions.VerticalPadding),
-                    )
-                    return@AnimatedContent
-                }
-                EditMode(
+                val penguin = containerViewModel.penguin
+                val ownEditor =
+                    penguin != null &&
+                        with(penguin) {
+                            this@QuickSettingsContainer.OverlayEditor(containerViewModel, modifier)
+                        }
+                if (!ownEditor) EditMode(
                     viewModel = containerViewModel.editModeViewModel,
                     modifier =
                         modifier
@@ -365,9 +353,6 @@ private fun ContentScope.QuickSettingsContainer(
                                 horizontal = QuickSettingsShade.Dimensions.HorizontalPadding,
                                 vertical = QuickSettingsShade.Dimensions.VerticalPadding,
                             ),
-                    previews = panelElementPreviews(containerViewModel),
-                    previewHeights = panelElementPreviewHeights(),
-                    headerPreview = qsHeaderPreview(containerViewModel),
                 )
             }
 
@@ -409,7 +394,12 @@ private fun ContentScope.QuickSettingsLayout(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.padding(horizontal = QuickSettingsShade.Dimensions.HorizontalPadding),
     ) {
-        if (LocalSceneContainerPreloadedResources.current.isFullWidthShade) {
+        val toolbarViewModel =
+            rememberViewModel("QuickSettingsLayout") { toolbarViewModelFactory.create() }
+        val penguinTop =
+            qsContainerViewModel.penguin?.run { OverlayTop(qsContainerViewModel, toolbarViewModel) } ==
+                true
+        if (!penguinTop && LocalSceneContainerPreloadedResources.current.isFullWidthShade) {
             QuickSettingsOverlayPrivacyChip(qsContainerViewModel.shadeHeaderViewModel)
             VerticalSeparator(QuickSettingsShade.Dimensions.ShortPadding)
             QuickSettingsOverlayHeader(
@@ -418,7 +408,7 @@ private fun ContentScope.QuickSettingsLayout(
             )
 
             VerticalSeparator(QuickSettingsShade.Dimensions.ShortPadding)
-        } else {
+        } else if (!penguinTop) {
             VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
             QuickSettingsOverlayPrivacyChip(
                 qsContainerViewModel.shadeHeaderViewModel,
@@ -426,128 +416,147 @@ private fun ContentScope.QuickSettingsLayout(
             )
         }
 
-        val toolbarViewModel =
-            rememberViewModel("QuickSettingsLayout") { toolbarViewModelFactory.create() }
+        if (!penguinTop) {
+            Toolbar(
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .requiredHeight(QuickSettingsShade.Dimensions.ToolbarHeight)
+                        .sysuiResTag("quick_settings_toolbar"),
+                viewModel = toolbarViewModel,
+                isFullyVisible = { layoutState.isIdle(contentKey) },
+            )
 
-        Toolbar(
-            modifier =
-                Modifier.fillMaxWidth()
-                    .requiredHeight(QuickSettingsShade.Dimensions.ToolbarHeight)
-                    .sysuiResTag("quick_settings_toolbar"),
-            viewModel = toolbarViewModel,
-            isFullyVisible = { layoutState.isIdle(contentKey) },
-        )
+            VerticalSeparator(QuickSettingsShade.Dimensions.ToolbarBottomPadding)
+        }
 
-        VerticalSeparator(QuickSettingsShade.Dimensions.ToolbarBottomPadding)
-
-        if (qsContainerViewModel.panelStyle == QsPanelStyle.Penguin) {
-            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                PenguinGridQuickSettings(viewModel = qsContainerViewModel)
-                VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
-            }
-        } else if (qsContainerViewModel.panelStyle == QsPanelStyle.OneUi) {
-            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                OneUiGridQuickSettings(viewModel = qsContainerViewModel)
-                VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
-            }
-        } else if (qsContainerViewModel.panelStyle != QsPanelStyle.Default) {
-            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                QuickSettingsContent(
-                    viewModel = qsContainerViewModel,
-                    mediaInRow = false,
-                )
-                VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
+        val penguin = qsContainerViewModel.penguin
+        if (penguin != null) {
+            with(penguin) {
+                OverlayBody(qsContainerViewModel) { OverlayBuildNumber(buildNumberViewModelFactory) }
             }
         } else {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                val isIdle = layoutState.transitionState is TransitionState.Idle
-                val horizontalSpacing = dimensionResource(id = R.dimen.qs_tile_margin_horizontal)
-                val showMedia = qsContainerViewModel.showMedia
-                val top2Specs = remember(qsContainerViewModel.tileGridViewModel.tileViewModels) {
-                    qsContainerViewModel.tileGridViewModel.tileViewModels.take(2).map { it.spec }
+                Media(
+                    viewModelFactory = qsContainerViewModel.mediaViewModelFactory,
+                    presentationStyle = MediaPresentationStyle.Compact,
+                    behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
+                    onDismissed = qsContainerViewModel::onMediaSwipeToDismiss,
+                    modifier = Modifier,
+                    location = Media.Location.QS,
+                )
+
+                if (qsContainerViewModel.showMedia) {
+                    VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
-                    verticalAlignment = Alignment.Top,
-                ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        if (showMedia) {
-                            Media(
-                                viewModelFactory = qsContainerViewModel.mediaViewModelFactory,
-                                presentationStyle = MediaPresentationStyle.Default,
-                                behavior = QuickSettingsContainerViewModel.mediaUiBehavior,
-                                onDismissed = qsContainerViewModel::onMediaSwipeToDismiss,
-                                modifier = Modifier.fillMaxWidth(),
-                                location = Media.Location.QS,
-                            )
-                        } else {
-                            var listening by remember { mutableStateOf(false) }
-                            LifecycleStartEffect(Unit) {
-                                listening = true
-                                onStopOrDispose { listening = false }
-                            }
-                            TileGrid(
-                                viewModel = qsContainerViewModel.tileGridViewModel,
-                                includeSpecs = top2Specs,
-                                columnsOverride = 1,
-                                forceLargeTiles = true,
-                                listening = { listening },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        Element(key = QuickSettings.Elements.BrightnessSlider, modifier = Modifier) {
-                            val tileHeight = dimensionResource(id = R.dimen.common_tile_default_tile_height)
-                            val tileSpacing = dimensionResource(id = R.dimen.qs_tile_margin_vertical)
-                            val headerHeight = tileHeight * 2 + tileSpacing
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(
-                                    horizontalSpacing,
-                                    Alignment.CenterHorizontally
+                if (qsContainerViewModel.isBrightnessSliderVisible) {
+                    Box(
+                        Modifier.systemGestureExclusionInShade(
+                            enabled = { layoutState.transitionState is TransitionState.Idle }
+                        )
+                    ) {
+                        BrightnessSliderContainer(
+                            viewModel = qsContainerViewModel.brightnessSliderViewModel,
+                            containerColors =
+                                ContainerColors(
+                                    idleColor = Color.Transparent,
+                                    mirrorColor =
+                                        OverlayShade.Colors.panelBackground(isTransparencyEnabled),
                                 ),
-                                verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth(),
+                            dimensions = QuickSettingsShade.Dimensions.brightnessSliderDimensions,
+                        )
+                    }
+                }
+
+                if (volumeSliderViewModel != null) {
+                    val volumeSliderState by volumeSliderViewModel.slider.collectAsStateWithLifecycle()
+
+                    VerticalSeparator(QuickSettingsShade.Dimensions.VolumeSliderExtraPadding)
+                    Box(
+                        Modifier.systemGestureExclusionInShade(
+                            enabled = { layoutState.transitionState is TransitionState.Idle }
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            VolumeSlider(
+                                modifier = Modifier.weight(1f),
+                                showLabel = false,
+                                state = volumeSliderState,
+                                onValueChange = { newValue: Float ->
+                                    volumeSliderViewModel.onValueChanged(volumeSliderState, newValue)
+                                },
+                                onValueChangeFinished = {
+                                    volumeSliderViewModel.onValueChangeFinished()
+                                },
+                                onIconTapped = { volumeSliderViewModel.toggleMuted(volumeSliderState) },
+                                sliderColors = PlatformSliderDefaults.defaultPlatformSliderColors(),
+                                hapticsViewModelFactory =
+                                    volumeSliderViewModel.getSliderHapticsViewModelFactory(),
+                                dimensions = QuickSettingsShade.Dimensions.VolumeSliderDimensions,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            IconButton(
+                                modifier =
+                                    Modifier.size(
+                                        QuickSettingsShade.Dimensions.VolumeSliderDimensions.trackHeight
+                                    ),
+                                colors =
+                                    IconButtonDefaults.iconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    ),
+                                onClick = {
+                                    qsContainerViewModel.detailsViewModel.onVolumeSettingsButtonClicked(
+                                        audioDetailsViewModelFactory.create()
+                                    )
+                                },
                             ) {
-                                BrightnessLayout(enable = isIdle, sliderHeight = headerHeight)
-                                VolumeLayout(enable = isIdle, sliderHeight = headerHeight)
+                                Icon(
+                                    painterResource(R.drawable.ic_more_vert),
+                                    // TODO(b/378513663): Update the placeholder content description
+                                    contentDescription = "Volume settings",
+                                )
                             }
                         }
                     }
                 }
 
-                VerticalSeparator(dimensionResource(R.dimen.qs_tile_margin_vertical))
-
-                val excludeSpecs = top2Specs
+                VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
 
                 GridAnchor()
                 TileGrid(
                     viewModel = qsContainerViewModel.tileGridViewModel,
-                    excludeSpecs = excludeSpecs,
                     modifier = Modifier.fillMaxWidth(),
                     enableRevealEffect = TileRevealFlag.isEnabled,
                 )
 
-                val buildNumberViewModel =
-                    rememberViewModel("QuickSettingsShadeOverlay.BuildNumber") {
-                        buildNumberViewModelFactory.create()
-                    }
-
-                if (buildNumberViewModel.buildNumber != null) {
-                    VerticalSeparator(QuickSettingsShade.Dimensions.ShortPadding)
-                    BuildNumber(
-                        viewModel = buildNumberViewModel,
-                        modifier =
-                            Modifier.align(Alignment.Start)
-                                .padding(start = QuickSettingsShade.Dimensions.HorizontalPadding),
-                    )
-                }
+                OverlayBuildNumber(buildNumberViewModelFactory)
 
                 VerticalSeparator(QuickSettingsShade.Dimensions.VerticalPadding)
             }
         }
+    }
+}
+
+@Composable
+private fun ColumnScope.OverlayBuildNumber(buildNumberViewModelFactory: BuildNumberViewModel.Factory) {
+    val buildNumberViewModel =
+        rememberViewModel("QuickSettingsShadeOverlay.BuildNumber") {
+            buildNumberViewModelFactory.create()
+        }
+
+    if (buildNumberViewModel.buildNumber != null) {
+        VerticalSeparator(QuickSettingsShade.Dimensions.ShortPadding)
+        BuildNumber(
+            viewModel = buildNumberViewModel,
+            modifier =
+                Modifier.align(Alignment.Start)
+                    .padding(start = QuickSettingsShade.Dimensions.HorizontalPadding),
+        )
     }
 }
 

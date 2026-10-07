@@ -171,10 +171,6 @@ import com.android.systemui.qs.panels.shared.model.SizedTileImpl
 import com.android.systemui.qs.panels.ui.compose.DragAndDropState
 import com.android.systemui.qs.panels.ui.compose.DragType
 import com.android.systemui.qs.panels.ui.compose.EditTileListState
-import com.android.systemui.qs.panels.ui.compose.LocalPanelElementHeight
-import com.android.systemui.qs.panels.ui.compose.LocalPanelElementPreview
-import com.android.systemui.qs.panels.ui.compose.LocalQsHeaderPreview
-import com.android.systemui.qs.panels.ui.compose.PANEL_ELEMENT_SPECS
 import com.android.systemui.qs.panels.ui.compose.EditTileListState.Companion.INVALID_INDEX
 import com.android.systemui.qs.panels.ui.compose.dragAndDropRemoveZone
 import com.android.systemui.qs.panels.ui.compose.dragAndDropTileList
@@ -193,7 +189,7 @@ import com.android.systemui.qs.panels.ui.compose.infinitegrid.EditModeTileDefaul
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.EditModeTileDefaults.GridBackgroundCornerRadius
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.EditModeTileDefaults.TilePlacementSpec
 import com.android.systemui.qs.panels.ui.compose.selection.InteractiveTileContainer
-import com.android.systemui.qs.shared.style.isStockQsStyle
+import com.android.systemui.penguin.LocalQsPanels
 import com.android.systemui.qs.panels.ui.compose.selection.MutableSelectionState
 import com.android.systemui.qs.panels.ui.compose.selection.QSDragAnchorsData
 import com.android.systemui.qs.panels.ui.compose.selection.ResizingState
@@ -412,8 +408,8 @@ private fun EditModeScrollableColumn(
                     }
                 },
     ) {
-        LocalQsHeaderPreview.current?.let { header ->
-            Box(Modifier.fillMaxWidth()) { header() }
+        LocalQsPanels.current?.panels?.editMode?.let { edit ->
+            Box(Modifier.fillMaxWidth()) { edit.HeaderPreview() }
         }
 
         content()
@@ -617,12 +613,14 @@ private fun CurrentTilesGrid(
 ) {
     val currentListState by rememberUpdatedState(listState)
     val totalRows = listState.tiles.lastOrNull()?.row ?: 0
-    val panelHeights = LocalPanelElementHeight.current
+    val edit = LocalQsPanels.current?.panels?.editMode
+    val elementSpecs = edit?.elementSpecs ?: emptySet()
+    val panelHeights = elementSpecs.associateWith { edit?.previewHeight(it) }
     val defaultPanelHeight = tileHeight() * 2 + TileArrangementPadding
     val panelRowsExtra =
         listState.tiles
             .filterIsInstance<TileGridCell>()
-            .filter { it.tile.tileSpec in PANEL_ELEMENT_SPECS && it.rows <= 1 }
+            .filter { it.tile.tileSpec in elementSpecs && it.rows <= 1 }
             .groupBy { it.row }
             .values
             .fold(0.dp) { acc, cells ->
@@ -691,7 +689,7 @@ private fun CurrentTilesGrid(
                         // Commit the new size of the tile IF the size changed. Do this check before
                         // a snapshot is taken to avoid saving an unnecessary snapshot
                         val isIcon =
-                            if (spec in PANEL_ELEMENT_SPECS) spec !in listState.fullWidthSpecs
+                            if (spec in elementSpecs) spec !in listState.fullWidthSpecs
                             else spec !in listState.largeTilesSpecs
                         if (isIcon != toIcon) {
                             onEditAction(EditAction.ResizeTile(spec, toIcon))
@@ -870,13 +868,13 @@ private fun gridHeight(rows: Int, tileHeight: Dp, tilePadding: Dp, gridPadding: 
 @Composable
 private fun cellHeightOf(cell: TileGridCell): Dp {
     val rowHeight = tileHeight()
-    return if (cell.tile.tileSpec !in PANEL_ELEMENT_SPECS) {
+    val edit = LocalQsPanels.current?.panels?.editMode
+    return if (edit == null || cell.tile.tileSpec !in edit.elementSpecs) {
         rowHeight
     } else if (cell.rows > 1) {
         rowHeight * cell.rows + TileArrangementPadding * (cell.rows - 1)
     } else {
-        LocalPanelElementHeight.current[cell.tile.tileSpec]
-            ?: (rowHeight * 2 + TileArrangementPadding)
+        edit.previewHeight(cell.tile.tileSpec) ?: (rowHeight * 2 + TileArrangementPadding)
     }
 }
 
@@ -984,7 +982,8 @@ private fun LazyGridItemScope.TileGridCell(
 ) {
     val stateDescription = stringResource(id = R.string.accessibility_qs_edit_position, index + 1)
     val tileState by rememberTileState(cell.tile, selectionState)
-    val isPanelElement = cell.tile.tileSpec in PANEL_ELEMENT_SPECS
+    val isPanelElement =
+        LocalQsPanels.current?.panels?.editMode?.elementSpecs?.contains(cell.tile.tileSpec) == true
     val smallSpan = if (isPanelElement) largeTilesSpan else 1
     val isSmall = cell.width <= smallSpan
     val resizingState = rememberResizingState(cell.tile.tileSpec, isSmall)
@@ -1341,14 +1340,15 @@ fun EditTile(
     progress: () -> Float,
     colors: TileColors = EditModeTileDefaults.editTileColors(),
 ) {
-    val preview = LocalPanelElementPreview.current[tile.tileSpec]
+    val preview = LocalQsPanels.current?.panels?.editMode?.preview(tile.tileSpec)
     if (preview != null) {
         Box(Modifier.fillMaxSize()) { preview() }
         return
     }
     val defaultStartPadding = CommonTileDefaults.StartPadding
     val iconSizeDiff = CommonTileDefaults.SmallTileIconSize - CommonTileDefaults.LargeTileIconSize
-    val toggleTargetSize = ToggleTargetSize + if (isStockQsStyle) 0.dp else 16.dp
+    val toggleInset = LocalQsPanels.current?.panels?.tileStyle()?.editToggleInset ?: 0.dp
+    val toggleTargetSize = ToggleTargetSize + toggleInset
     Row(
         horizontalArrangement = spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1395,7 +1395,7 @@ fun EditTile(
     ) {
         // Icon
         Box(
-            Modifier.thenIf(!isStockQsStyle) { Modifier.padding(8.dp) }
+            Modifier.thenIf(toggleInset > 0.dp) { Modifier.padding(toggleInset / 2) }
                 .thenIf(tile.isDualTarget) {
                     Modifier.drawBehind { drawCircle(colors.iconBackground, alpha = progress()) }
                 },

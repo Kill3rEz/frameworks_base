@@ -16,25 +16,28 @@
 
 package com.android.systemui.scene.ui.composable.transitions
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.ui.unit.dp
-import com.android.compose.animation.scene.FixedDistance
+import androidx.compose.animation.core.tween
 import com.android.compose.animation.scene.TransitionBuilder
 import com.android.compose.animation.scene.reveal.ContainerRevealHaptics
+import com.android.compose.animation.scene.reveal.verticalContainerReveal
 import com.android.mechanics.behavior.VerticalExpandContainerSpec
 import com.android.systemui.qs.ui.composable.QuickSettingsShade
 import com.android.systemui.shade.ui.composable.OverlayShade
+import kotlin.time.Duration.Companion.milliseconds
 
 fun TransitionBuilder.toQuickSettingsShadeTransition(
     durationScale: Double = 1.0,
     shadeExpansionMotion: VerticalExpandContainerSpec,
     revealHaptics: ContainerRevealHaptics,
 ) {
-    spec = controlCentreSpring(durationScale)
-    distance = FixedDistance(200.dp)
+    spec = tween(durationMillis = (DefaultDuration * durationScale).inWholeMilliseconds.toInt())
 
-    controlCentreReveal(QuickSettingsShade.Elements.Panel)
+    verticalContainerReveal(
+        container = QuickSettingsShade.Elements.Panel,
+        motionSpec = shadeExpansionMotion,
+        haptics = revealHaptics,
+        useMechanics = true,
+    )
 
     fractionRange(end = .5f) { fade(OverlayShade.Elements.Scrim) }
     fractionRange(start = .5f) {
@@ -43,21 +46,4 @@ fun TransitionBuilder.toQuickSettingsShadeTransition(
     }
 }
 
-fun TransitionBuilder.fromQuickSettingsShadeTransition(durationScale: Double = 1.0) {
-    spec =
-        spring(
-            dampingRatio = 1f,
-            stiffness = (800.0 / (durationScale * durationScale)).toFloat(),
-            visibilityThreshold = Spring.DefaultDisplacementThreshold,
-        )
-
-    fractionRange(end = .5f) { fade(QuickSettingsShade.Elements.Panel) }
-    scaleDraw(QuickSettingsShade.Elements.Panel, scaleX = 0.94f, scaleY = 0.94f)
-    translate(QuickSettingsShade.Elements.Panel, y = (-24).dp)
-
-    fractionRange(end = .5f) {
-        fade(QuickSettingsShade.Elements.StatusBar)
-        fade(QuickSettingsShade.Elements.Header)
-    }
-    fade(OverlayShade.Elements.Scrim)
-}
+private val DefaultDuration = 300.milliseconds

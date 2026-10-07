@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
@@ -77,14 +78,16 @@ fun ContentScope.OverlayShade(
         { _, _, _ ->
         },
     header: @Composable () -> Unit,
+    wide: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val isFullWidth = LocalSceneContainerPreloadedResources.current.isFullWidthShade
+    val spanWide = wide && !isFullWidth
     val panelSpec = rememberShadeExpansionMotion(isFullWidth)
     val panelCornerRadiusPx = with(LocalDensity.current) { panelSpec.radius.toPx() }
     val panelAlignment =
         when {
-            isFullWidth -> Alignment.TopCenter
+            isFullWidth || spanWide -> Alignment.TopCenter
             alignmentOnWideScreens == Alignment.End -> Alignment.TopEnd
             else -> Alignment.TopStart
         }
@@ -95,7 +98,11 @@ fun ContentScope.OverlayShade(
         Box(
             modifier =
                 Modifier.fillMaxSize()
-                    .panelContainerPadding(isFullWidth, alignmentOnWideScreens, statusBarHeightPx),
+                    .panelContainerPadding(
+                        isFullWidth,
+                        if (spanWide) Alignment.CenterHorizontally else alignmentOnWideScreens,
+                        statusBarHeightPx,
+                    ),
             contentAlignment = panelAlignment,
         ) {
             Panel(
@@ -110,7 +117,10 @@ fun ContentScope.OverlayShade(
                                 label = "OverlayShade",
                             )
                         }
-                        .width(Dimensions.PanelWidth)
+                        .then(
+                            if (spanWide) Modifier.fillMaxWidth()
+                            else Modifier.width(Dimensions.PanelWidth)
+                        )
                         .thenIf(isFullWidth) {
                             Modifier.fillMaxHeight().clickable(
                                 interactionSource = null,

@@ -116,6 +116,7 @@ fun ContentScope.FooterActionsWithAnimatedVisibility(
     isCustomizing: Boolean,
     customizingAnimationDuration: Int,
     modifier: Modifier = Modifier,
+    extraAction: @Composable () -> Unit = {},
 ) {
     AnimatedVisibility(
         visible = !isCustomizing,
@@ -135,7 +136,7 @@ fun ContentScope.FooterActionsWithAnimatedVisibility(
             // This view has its own horizontal padding
             // TODO(b/321716470) This should use a lifecycle tied to the scene.
             Element(QuickSettings.Elements.FooterActions, Modifier) {
-                FooterActions(viewModel = viewModel)
+                FooterActions(viewModel = viewModel, extraAction = extraAction)
             }
         }
     }
@@ -143,7 +144,11 @@ fun ContentScope.FooterActionsWithAnimatedVisibility(
 
 /** The Quick Settings footer actions row. */
 @Composable
-fun FooterActions(viewModel: FooterActionsViewModel, modifier: Modifier = Modifier) {
+fun FooterActions(
+    viewModel: FooterActionsViewModel,
+    modifier: Modifier = Modifier,
+    extraAction: @Composable () -> Unit = {},
+) {
     val context = LocalContext.current
 
     // Collect alphas as soon as we are composed, even when not visible.
@@ -248,6 +253,8 @@ fun FooterActions(viewModel: FooterActionsViewModel, modifier: Modifier = Modifi
                 { foregroundServices.takeIf { it?.model?.displayText == false } },
                 useModifierBasedExpandable,
             )
+
+            extraAction()
 
             IconButton(
                 { userSwitcher },

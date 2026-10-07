@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.geometry.Offset
+import com.android.systemui.penguin.QsEditMode
 import com.android.systemui.qs.panels.shared.model.SizedTile
 import com.android.systemui.qs.panels.shared.model.SizedTileImpl
 import com.android.systemui.qs.panels.ui.compose.selection.PlacementEvent
@@ -42,7 +43,10 @@ class EditTileListState(
     val columns: Int,
     val largeTilesSpan: Int,
     val fullWidthSpecs: Set<TileSpec> = emptySet(),
+    private val edit: QsEditMode? = null,
 ) : DragAndDropState {
+    private val elementSpecs: Set<TileSpec> = edit?.elementSpecs ?: emptySet()
+
     override var draggedCell by mutableStateOf<SizedTile<EditTileViewModel>?>(null)
         private set
 
@@ -139,10 +143,10 @@ class EditTileListState(
     }
 
     fun smallWidth(tileSpec: TileSpec): Int =
-        if (tileSpec in PANEL_ELEMENT_SPECS) largeTilesSpan else 1
+        if (tileSpec in elementSpecs) largeTilesSpan else 1
 
     fun largeWidth(tileSpec: TileSpec): Int =
-        if (tileSpec in PANEL_ELEMENT_SPECS) columns else largeTilesSpan
+        if (tileSpec in elementSpecs) columns else largeTilesSpan
 
     override fun isMoving(tileSpec: TileSpec): Boolean {
         return draggedCell?.let { it.tile.tileSpec == tileSpec } ?: false
@@ -242,7 +246,7 @@ class EditTileListState(
             map {
                 SizedTileImpl(
                     it,
-                    if (it.tileSpec in PANEL_ELEMENT_SPECS) {
+                    if (it.tileSpec in elementSpecs) {
                         if (it.tileSpec in fullWidthSpecs) columns else largeTilesSpan
                     } else if (largeTiles.contains(it.tileSpec)) {
                         largeTilesSpan
@@ -255,113 +259,8 @@ class EditTileListState(
         return sized.toRows()
     }
 
-    private fun List<SizedTile<EditTileViewModel>>.toRows(startingRow: Int = 0): List<GridCell> {
-        val out = mutableListOf<GridCell>()
-        val hoisted = BooleanArray(size)
-        val plain = mutableListOf<SizedTile<EditTileViewModel>>()
-        var row = startingRow
-
-        fun flushPlain() {
-            if (plain.isEmpty()) return
-            val cells = plain.toGridCells(columns, row)
-            out.addAll(cells)
-            row = (cells.maxOfOrNull { it.row } ?: (row - 1)) + 1
-            plain.clear()
-        }
-
-        fun spacers(count: Int, atRow: Int) = List(count) { SpacerGridCell(atRow) }
-
-        var index = 0
-        while (index < size) {
-            if (hoisted[index]) {
-                index++
-                continue
-            }
-            val sized = this[index]
-            if (sized.tile.tileSpec !in PANEL_ELEMENT_SPECS) {
-                plain.add(sized)
-                index++
-                continue
-            }
-            flushPlain()
-            if (sized.width >= columns) {
-                out.add(TileGridCell(sized, row, 0))
-                row++
-                index++
-                continue
-            }
-
-            val partner =
-                getOrNull(index + 1)?.takeIf {
-                    it.tile.tileSpec in PANEL_ELEMENT_SPECS && it.width < columns
-                }
-            if (partner != null) {
-                out.add(TileGridCell(sized, row, 0, rows = 2))
-                out.add(TileGridCell(partner, row, sized.width, rows = 2))
-                out.addAll(spacers(columns, row + 1))
-                row += 2
-                index += 2
-                continue
-            }
-
-            val gap = columns - sized.width
-            val fillerRows = List(2) { mutableListOf<SizedTile<EditTileViewModel>>() }
-            var scan = index + 1
-            var fillerRow = 0
-            var used = 0
-            while (scan < size && fillerRow < 2) {
-                val candidate = this[scan]
-                if (candidate.tile.tileSpec in PANEL_ELEMENT_SPECS) break
-                val width = candidate.width.coerceAtMost(gap)
-                if (used + width > gap) {
-                    fillerRow++
-                    used = 0
-                    continue
-                }
-                fillerRows[fillerRow].add(SizedTileImpl(candidate.tile, width))
-                hoisted[scan] = true
-                used += width
-                scan++
-                if (used >= gap) {
-                    fillerRow++
-                    used = 0
-                }
-            }
-
-            fun fillerCells(
-                fillers: List<SizedTile<EditTileViewModel>>,
-                atRow: Int,
-                startColumn: Int,
-                before: Boolean,
-            ): List<GridCell> {
-                var column = startColumn
-                val cells = mutableListOf<GridCell>()
-                fillers.forEach {
-                    cells.add(TileGridCell(it, atRow, column, hoistedBefore = before))
-                    column += it.width
-                }
-                repeat(gap - fillers.sumOf { it.width }) { cells.add(SpacerGridCell(atRow)) }
-                return cells
-            }
-
-            val alignEnd = sized.tile.tileSpec == SLIDERS_SPEC
-            if (alignEnd) {
-                out.addAll(fillerCells(fillerRows[0], row, 0, before = true))
-                out.add(TileGridCell(sized, row, gap, rows = 2))
-                out.addAll(fillerCells(fillerRows[1], row + 1, 0, before = false))
-                out.addAll(spacers(sized.width, row + 1))
-            } else {
-                out.add(TileGridCell(sized, row, 0, rows = 2))
-                out.addAll(fillerCells(fillerRows[0], row, sized.width, before = false))
-                out.addAll(spacers(sized.width, row + 1))
-                out.addAll(fillerCells(fillerRows[1], row + 1, sized.width, before = false))
-            }
-            row += 2
-            index++
-        }
-        flushPlain()
-        return out
-    }
+    private fun List<SizedTile<EditTileViewModel>>.toRows(startingRow: Int = 0): List<GridCell> =
+        edit?.rows(this, columns, startingRow) ?: toGridCells(columns, startingRow)
 
     /** Regenerate the list of [GridCell] with their new potential rows */
     private fun regenerateGrid() {

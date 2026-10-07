@@ -33,8 +33,6 @@ import androidx.compose.ui.util.fastMap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.animation.scene.ContentScope
 import com.android.systemui.dagger.SysUISingleton
-import com.android.systemui.qs.shared.style.isStockQsStyle
-import com.android.systemui.qs.shared.style.liquidGlassOn
 import com.android.systemui.grid.ui.compose.VerticalSpannedGrid
 import com.android.systemui.haptics.msdl.qs.TileHapticsViewModel
 import com.android.systemui.lifecycle.rememberViewModel
@@ -42,16 +40,7 @@ import com.android.systemui.qs.panels.shared.model.SizedTileImpl
 import com.android.systemui.qs.panels.ui.compose.EditTileListState
 import android.provider.Settings
 import com.android.systemui.qs.panels.ui.compose.LocalIsPaginatedGrid
-import com.android.systemui.qs.composefragment.DEFAULT_SLIDERS_SPAN
-import com.android.systemui.qs.composefragment.SETTING_QS_FOLDER_SPAN
-import com.android.systemui.qs.composefragment.SETTING_QS_MEDIA_SPAN
-import com.android.systemui.qs.composefragment.SETTING_QS_SLIDERS_SPAN
-import com.android.systemui.qs.composefragment.secureIntSetting
-import com.android.systemui.qs.panels.ui.compose.FOLDER_SPEC
-import com.android.systemui.qs.panels.ui.compose.MEDIA_SPEC
-import com.android.systemui.qs.panels.ui.compose.SLIDERS_SPEC
-import com.android.systemui.qs.panels.ui.compose.PANEL_ELEMENT_SPECS
-import com.android.systemui.qs.panels.ui.compose.panelSpanSetting
+import com.android.systemui.penguin.LocalQsPanels
 import com.android.systemui.qs.panels.ui.compose.PaginatableGridLayout
 import com.android.systemui.qs.panels.ui.compose.TileListener
 import com.android.systemui.qs.panels.ui.compose.bounceableInfo
@@ -116,7 +105,8 @@ constructor(
         val largeTiles by viewModel.iconTilesViewModel.largeTilesState
         // Tiles or largeTiles may be updated while this is composed, so listen to any changes
         val roundGrid =
-            liquidGlassOn && !isStockQsStyle && !forceLargeTiles &&
+            LocalQsPanels.current?.panels?.tileStyle()?.roundIconTiles == true &&
+                !forceLargeTiles &&
                 (columnsOverride == null || columnsOverride == 1)
         val sizedTiles =
             remember(tiles, largeTiles, largeTilesSpan, forceLargeTiles, columns, roundGrid) {
@@ -260,14 +250,10 @@ constructor(
         val largeTilesSpan = columnsViewModel.largeSpan
         val largeTiles by viewModel.iconTilesViewModel.largeTilesState
 
-        val editLargeTiles = remember(largeTiles) { largeTiles + PANEL_ELEMENT_SPECS }
-        val fullWidthSpecs = buildSet {
-            if (secureIntSetting(SETTING_QS_FOLDER_SPAN, 1) >= 2) add(FOLDER_SPEC)
-            if (secureIntSetting(SETTING_QS_MEDIA_SPAN, 1) >= 2) add(MEDIA_SPEC)
-            if (secureIntSetting(SETTING_QS_SLIDERS_SPAN, DEFAULT_SLIDERS_SPAN) >= 2) {
-                add(SLIDERS_SPEC)
-            }
-        }
+        val edit = LocalQsPanels.current?.panels?.editMode
+        val editLargeTiles =
+            remember(largeTiles, edit) { largeTiles + (edit?.elementSpecs ?: emptySet()) }
+        val fullWidthSpecs = edit?.fullWidthSpecs() ?: emptySet()
         val currentTiles by rememberUpdatedState(tiles.filter { it.isCurrent })
         val listState =
             remember(columns, largeTilesSpan, fullWidthSpecs) {
@@ -277,6 +263,7 @@ constructor(
                     columns = columns,
                     largeTilesSpan = largeTilesSpan,
                     fullWidthSpecs = fullWidthSpecs,
+                    edit = edit,
                 )
             }
         LaunchedEffect(currentTiles, editLargeTiles) {
@@ -311,14 +298,7 @@ constructor(
                     dialogDelegate.showDialog()
                 }
                 is EditAction.ResizeTile -> {
-                    val spanSetting = action.tileSpec.panelSpanSetting()
-                    if (spanSetting != null) {
-                        Settings.Secure.putInt(
-                            editContext.contentResolver,
-                            spanSetting,
-                            if (action.toIcon) 1 else 2,
-                        )
-                    } else {
+                    if (edit?.resize(editContext, action.tileSpec, action.toIcon) != true) {
                         iconTilesViewModel.resize(action.tileSpec, action.toIcon)
                     }
                 }

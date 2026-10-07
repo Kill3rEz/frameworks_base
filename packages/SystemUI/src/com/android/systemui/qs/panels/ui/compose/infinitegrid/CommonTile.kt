@@ -20,12 +20,10 @@ import android.content.Context
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.AnimatedVectorDrawable
 import android.graphics.drawable.Drawable
-import android.os.SystemClock
 import android.text.TextUtils
 import androidx.annotation.VisibleForTesting
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
@@ -112,7 +110,7 @@ import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.TileLabelBlurWidth
 import com.android.systemui.qs.panels.ui.compose.infinitegrid.CommonTileDefaults.longPressLabelSettings
 import com.android.systemui.qs.panels.ui.viewmodel.AccessibilityUiState
-import com.android.systemui.qs.shared.style.isStockQsStyle
+import com.android.systemui.penguin.LocalQsPanels
 import com.android.systemui.qs.ui.compose.borderOnFocus
 import com.android.systemui.res.R
 import kotlin.math.abs
@@ -149,7 +147,7 @@ fun LargeTileContent(
         // Icon
         val longPressLabel = longPressLabelSettings().takeIf { onLongClick != null }
         val focusBorderColor = MaterialTheme.colorScheme.secondary
-        val stockStyle = isStockQsStyle
+        val stockStyle = LocalQsPanels.current?.panels?.tileStyle()?.iconHalo != true
         val animatedIconBackgroundColor by
             animateColorAsState(
                 colors.iconBackground,
@@ -413,11 +411,8 @@ fun Modifier.tileTestTag(iconOnly: Boolean): Modifier {
 fun Modifier.largeTilePadding(isDualTarget: Boolean = false): Modifier {
     return padding(
         start =
-            if (isStockQsStyle) {
-                CommonTileDefaults.StartPadding
-            } else {
-                CommonTileDefaults.PenguinStartPadding
-            },
+            LocalQsPanels.current?.panels?.tileStyle()?.startPadding()
+                ?: CommonTileDefaults.StartPadding,
         end = if (isDualTarget) CommonTileDefaults.DualTargetEndPadding else TileEndPadding,
     )
 }
@@ -515,11 +510,6 @@ object CommonTileDefaults {
         @ReadOnlyComposable
         get() = dimensionResource(id = R.dimen.common_tile_default_start_padding)
 
-    val PenguinStartPadding: Dp
-        @Composable
-        @ReadOnlyComposable
-        get() = dimensionResource(id = R.dimen.custom_qs_tile_start_padding)
-
     val TileHeight: Dp
         @Composable
         @ReadOnlyComposable
@@ -607,9 +597,5 @@ private fun NonClippedImage(
 }
 
 @Composable
-internal fun tileColorSpec(): AnimationSpec<Color> {
-    val shownAt = remember { SystemClock.uptimeMillis() }
-    return if (SystemClock.uptimeMillis() - shownAt < TILE_SETTLE_MILLIS) snap() else spring()
-}
-
-private const val TILE_SETTLE_MILLIS = 500L
+internal fun tileColorSpec(): AnimationSpec<Color> =
+    LocalQsPanels.current?.panels?.tileStyle()?.colorSpec() ?: spring()

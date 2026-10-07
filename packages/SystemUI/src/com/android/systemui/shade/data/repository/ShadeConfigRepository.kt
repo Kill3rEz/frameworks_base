@@ -30,7 +30,6 @@ import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shared.settings.data.repository.SecureSettingsRepository
 import com.android.systemui.shared.settings.data.repository.SystemSettingsRepository
 import com.android.systemui.util.kotlin.emitOnStart
-import com.android.systemui.qs.shared.style.QsPanelStyle
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -105,7 +104,7 @@ constructor(
                                 defaultValue = defaultValue,
                             ),
                             secureSettingsRepository.boolSetting(
-                                QsPanelStyle.ONE_UI_SETTING_NAME,
+                                ONE_UI_QS_SETTING,
                                 defaultValue = false,
                             ),
                         ) { chosen, oneUi ->
@@ -176,3 +175,5 @@ constructor(
         }
     }
 }
+
+private const val ONE_UI_QS_SETTING = "qs_oneui_experimental"

@@ -99,21 +99,11 @@ import com.android.systemui.qs.panels.ui.viewmodel.AccessibilityUiState
 import com.android.systemui.qs.panels.ui.viewmodel.DetailsViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.IconProvider
 import com.android.systemui.qs.panels.ui.viewmodel.TileUiState
+import com.android.systemui.penguin.LocalQsPanels
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toIconProvider
 import com.android.systemui.qs.panels.ui.viewmodel.toUiState
 import com.android.systemui.qs.pipeline.shared.TileSpec
-import com.android.systemui.qs.shared.style.glassBlurRegion
-import com.android.systemui.qs.shared.style.isStockQsStyle
-import com.android.systemui.qs.shared.style.LiquidGlassBlue
-import com.android.systemui.qs.shared.style.LiquidGlassControl
-import com.android.systemui.qs.shared.style.LiquidGlassGlyphs
-import com.android.systemui.qs.shared.style.LiquidGlassSurface
-import com.android.systemui.qs.shared.style.LiquidGlassTune
-import com.android.systemui.qs.shared.style.liquidGlassEnabled
-import com.android.systemui.qs.shared.style.liquidGlassOn
-import com.android.systemui.qs.shared.style.liquidGlassPress
-import com.android.systemui.qs.shared.style.liquidGlassRim
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.qs.ui.composable.QuickSettingsShade
 import com.android.systemui.qs.ui.compose.borderOnFocus
@@ -181,14 +171,17 @@ fun ContentScope.Tile(
                 tile.state.collect { value = it.toIconProvider() }
             }
 
-        val colors = TileDefaults.getColorForState(uiState, iconOnly)
+        val tileStyle = LocalQsPanels.current?.panels?.tileStyle()
+        val stockColors = TileDefaults.getColorForState(uiState, iconOnly)
+        val colors = tileStyle?.colors(uiState, iconOnly, stockColors) ?: stockColors
         val hapticsViewModel: TileHapticsViewModel =
             rememberViewModel(traceName = "TileHapticsViewModel") {
                 tileHapticsViewModelFactory.create(tile)
             }
 
         // TODO(b/361789146): Draw the shapes instead of clipping
-        val tileShape by TileDefaults.animateTileShapeAsState(uiState)
+        val tileRadius = TileDefaults.tileRadius(uiState).let { tileStyle?.cornerRadius(uiState, it) ?: it }
+        val tileShape by TileDefaults.animateShapeAsState(tileRadius, "QSTileCornerRadius")
         val animatedColor by
             animateColorAsState(
                 colors.background,
@@ -204,7 +197,7 @@ fun ContentScope.Tile(
             val marginBottom =
                 with(LocalDensity.current) { QuickSettingsShade.Dimensions.VerticalPadding.toPx() }
 
-            val animatedCornerRadius by animateDpAsState(TileDefaults.tileRadius(uiState))
+            val animatedCornerRadius by animateDpAsState(tileRadius)
 
             val inactiveCornerRadius = InactiveIconCornerRadius
             surfaceRevealModifier =
@@ -230,7 +223,7 @@ fun ContentScope.Tile(
         val expandable =
             if (dynamicTargetResolutionEnabled()) tile.expandable
             else remember { Expandable(mutableSetOf()) }
-        val glassRound = liquidGlassOn && !isStockQsStyle
+        val round = tileStyle?.roundIconTiles == true
         val effectiveSquishiness: () -> Float =
             if (isHeaderTile) ({ 1f }) else squishiness
         Tooltip(
@@ -253,7 +246,7 @@ fun ContentScope.Tile(
                         )
                         .sysuiResTag("tile_expandable")
                         .then(
-                            if (iconOnly && glassRound) Modifier.size(TileHeight)
+                            if (iconOnly && round) Modifier.size(TileHeight)
                             else Modifier.fillMaxWidth()
                         )
                         .bounceable(
@@ -332,8 +325,8 @@ fun ContentScope.Tile(
                     modifier = contentRevealModifier,
                 ) {
                     val iconProvider: Context.() -> Icon =
-                        if (glassRound) {
-                            { LiquidGlassGlyphs.swap(tile.spec.spec, getTileIcon(icon = icon)) }
+                        if (round && tileStyle != null) {
+                            { tileStyle.icon(tile.spec.spec, getTileIcon(icon = icon)) }
                         } else {
                             { getTileIcon(icon = icon) }
                         }
@@ -342,8 +335,8 @@ fun ContentScope.Tile(
                             iconProvider = iconProvider,
                             color = colors.icon,
                             size =
-                                if (glassRound) {
-                                    { TileHeight * LiquidGlassTune.f("icon_scale", 0.5f) }
+                                if (round && tileStyle != null) {
+                                    { tileStyle.roundIconSize(TileHeight) }
                                 } else {
                                     { CommonTileDefaults.SmallTileIconSize }
                                 },
@@ -397,20 +390,20 @@ private fun TileExpandable(
     modifier: Modifier = Modifier,
     content: @Composable (Expandable) -> Unit,
 ) {
-    val glass = liquidGlassEnabled()
+    val tileStyle = LocalQsPanels.current?.panels?.tileStyle()
     Expandable(
         expandable = expandable,
         controller = rememberExpandableController(color = color, shape = shape),
         modifier =
             modifier
-                .liquidGlassPress(glass)
+                .then(tileStyle?.run { Modifier.containerBehaviour() } ?: Modifier)
                 .clip(shape)
                 .motionTestValues { squishiness() exportAs TileMotionTestKeys.Squishness }
                 .verticalSquish(squishiness),
         useModifierBasedImplementation = true,
     ) {
-        if (glass) {
-            Box(Modifier.glassBlurRegion(shape).liquidGlassRim(shape)) {
+        if (tileStyle != null) {
+            tileStyle.Container(shape) {
                 content(hapticsViewModel?.createStateAwareExpandable(it) ?: it)
             }
         } else {
@@ -430,7 +423,7 @@ fun TileContainer(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val round = iconOnly && liquidGlassOn && !isStockQsStyle
+    val round = iconOnly && LocalQsPanels.current?.panels?.tileStyle()?.roundIconTiles == true
     Box(
         modifier =
             modifier
@@ -569,34 +562,13 @@ object TileMotionTestKeys {
 }
 
 private object TileDefaults {
-    private const val GlassSurfaceAlpha = 0.45f
-    private const val GlassIconSurfaceAlpha = GlassSurfaceAlpha
-    private const val ActiveTileAlpha = 1f
-
-    private val surfaceAlpha: Float
-        @Composable @ReadOnlyComposable get() = if (isStockQsStyle) 1f else GlassSurfaceAlpha
-
-    private val iconSurfaceAlpha: Float
-        @Composable @ReadOnlyComposable get() =
-            if (isStockQsStyle) 1f else GlassIconSurfaceAlpha
-
-    private val activeAlpha: Float
-        @Composable @ReadOnlyComposable get() = if (isStockQsStyle) 1f else ActiveTileAlpha
-
-    @Composable
-    @ReadOnlyComposable
-    private fun tileSurface(): Color =
-        if (liquidGlassOn && !isStockQsStyle) LiquidGlassSurface
-        else LocalAndroidColorScheme.current.surfaceEffect1.copy(alpha = surfaceAlpha)
-
     /** An active tile uses the active color as background */
     @Composable
     @ReadOnlyComposable
     fun activeTileColors(): TileColors =
-        if (liquidGlassOn && !isStockQsStyle) glassActiveTileColors()
-        else TileColors(
-            background = MaterialTheme.colorScheme.primary.copy(alpha = activeAlpha),
-            iconBackground = MaterialTheme.colorScheme.primary.copy(alpha = activeAlpha),
+        TileColors(
+            background = MaterialTheme.colorScheme.primary,
+            iconBackground = MaterialTheme.colorScheme.primary,
             label = MaterialTheme.colorScheme.onPrimary,
             secondaryLabel = MaterialTheme.colorScheme.onPrimary,
             icon = MaterialTheme.colorScheme.onPrimary,
@@ -606,63 +578,40 @@ private object TileDefaults {
     @Composable
     @ReadOnlyComposable
     fun activeDualTargetTileColors(): TileColors =
-        if (liquidGlassOn && !isStockQsStyle) glassActiveTileColors()
-        else TileColors(
-            background =
-                tileSurface(),
+        TileColors(
+            background = LocalAndroidColorScheme.current.surfaceEffect1,
             iconBackground = MaterialTheme.colorScheme.primary,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
             icon = MaterialTheme.colorScheme.onPrimary,
-            circleAroundIcon = MaterialTheme.colorScheme.primary,
         )
 
     @Composable
     @ReadOnlyComposable
     fun inactiveDualTargetTileColors(): TileColors =
         TileColors(
-            background =
-                tileSurface(),
-            iconBackground = Color.Transparent,
+            background = LocalAndroidColorScheme.current.surfaceEffect1,
+            iconBackground = LocalAndroidColorScheme.current.surfaceEffect2,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
             icon = MaterialTheme.colorScheme.onSurface,
-            circleAroundIcon =
-                if (liquidGlassOn && !isStockQsStyle) LiquidGlassControl
-                else LocalAndroidColorScheme.current.surfaceEffect2.copy(alpha = iconSurfaceAlpha),
-        )
-
-    @Composable
-    @ReadOnlyComposable
-    private fun glassActiveTileColors(): TileColors =
-        TileColors(
-            background = tileSurface(),
-            iconBackground = LiquidGlassBlue,
-            label = Color.White,
-            secondaryLabel = Color.White.copy(alpha = 0.6f),
-            icon = Color.White,
-            circleAroundIcon = LiquidGlassBlue,
         )
 
     @Composable
     @ReadOnlyComposable
     fun inactiveTileColors(): TileColors =
         TileColors(
-            background =
-                tileSurface(),
+            background = LocalAndroidColorScheme.current.surfaceEffect1,
             iconBackground = Color.Transparent,
             label = MaterialTheme.colorScheme.onSurface,
             secondaryLabel = MaterialTheme.colorScheme.onSurface,
-            icon = if (liquidGlassOn && !isStockQsStyle) Color.White else MaterialTheme.colorScheme.onSurface,
-            circleAroundIcon =
-                if (liquidGlassOn && !isStockQsStyle) LiquidGlassControl else Color.Transparent,
+            icon = MaterialTheme.colorScheme.onSurface,
         )
 
     @Composable
     @ReadOnlyComposable
     fun unavailableTileColors(): TileColors {
-        val surfaceColor =
-            tileSurface()
+        val surfaceColor = MaterialTheme.colorScheme.surface.copy(alpha = .18f)
         val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .38f)
         return TileColors(
             background = surfaceColor,
@@ -678,15 +627,7 @@ private object TileDefaults {
     fun getColorForState(uiState: TileUiState, iconOnly: Boolean): TileColors {
         return when (uiState.visualState) {
             STATE_ACTIVE -> {
-                if (iconOnly && liquidGlassOn && !isStockQsStyle) {
-                    TileColors(
-                        background = Color.White,
-                        iconBackground = Color.White,
-                        label = Color.White,
-                        secondaryLabel = Color.White,
-                        icon = Color(0xFF1C1C1E),
-                    )
-                } else if (uiState.handlesToggleClick && !iconOnly) {
+                if (uiState.handlesToggleClick && !iconOnly) {
                     activeDualTargetTileColors()
                 } else {
                     activeTileColors()
@@ -716,14 +657,11 @@ private object TileDefaults {
 
     @Composable
     fun tileRadius(uiState: TileUiState): Dp {
-        if (isStockQsStyle) {
-            return when (uiState.visualState) {
-                STATE_ACTIVE -> ActiveTileCornerRadius
-                STATE_INACTIVE -> InactiveTileCornerRadius
-                else -> InactiveTileCornerRadius
-            }
+        return when (uiState.visualState) {
+            STATE_ACTIVE -> ActiveTileCornerRadius
+            STATE_INACTIVE -> InactiveTileCornerRadius
+            else -> InactiveTileCornerRadius
         }
-        return InactiveTileCornerRadius
     }
 
     @Composable

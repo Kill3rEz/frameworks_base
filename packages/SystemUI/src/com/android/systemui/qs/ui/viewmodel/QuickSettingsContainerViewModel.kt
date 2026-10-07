@@ -31,13 +31,13 @@ import com.android.systemui.qs.panels.ui.viewmodel.EditModeViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toolbar.EditModeButtonViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.MediaInRowInLandscapeViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.TileGridViewModel
-import com.android.systemui.qs.shared.style.QsPanelStyle
-import com.android.systemui.qs.shared.style.QsPanelStyleRepository
+import com.android.systemui.penguin.QsPanels
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.shade.ui.viewmodel.ShadeHeaderViewModel
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
+import java.util.Optional
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -57,10 +57,10 @@ constructor(
     val mediaViewModelFactory: MediaViewModel.Factory,
     mediaInRowInLandscapeViewModelFactory: MediaInRowInLandscapeViewModel.Factory,
     @ShadeDisplayAware shadeDisplayTypeRepository: DisplayTypeRepository,
-    qsPanelStyleRepository: QsPanelStyleRepository,
+    qsPanels: Optional<QsPanels>,
 ) : HydratedActivatable() {
 
-    val panelStyle: QsPanelStyle by qsPanelStyleRepository.style.hydratedStateOf()
+    val penguin: QsPanels? = qsPanels.orElse(null)
 
     val isBrightnessSliderVisible by
         shadeDisplayTypeRepository.displayType

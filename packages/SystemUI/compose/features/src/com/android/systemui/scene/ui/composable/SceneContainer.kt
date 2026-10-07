@@ -53,16 +53,12 @@ import com.android.compose.animation.scene.UserActionResult
 import com.android.compose.animation.scene.content.state.TransitionState
 import com.android.compose.animation.scene.observableTransitionState
 import com.android.compose.animation.scene.rememberMutableSceneTransitionLayoutState
-import com.android.compose.gesture.effect.rememberControlCentreOverscrollEffectFactory
 import com.android.compose.gesture.effect.rememberOffsetOverscrollEffectFactory
 import com.android.compose.snapshot.ObserveReads
 import com.android.systemui.Flags.blackScreenOnSceneContainerStartFix
 import com.android.systemui.keyguard.ui.composable.modifier.burnInAware
 import com.android.systemui.lifecycle.rememberActivated
 import com.android.systemui.lifecycle.rememberViewModel
-import com.android.systemui.qs.composefragment.effectiveQsPanelStyle
-import com.android.systemui.qs.composefragment.secureIntSetting
-import com.android.systemui.qs.shared.style.QsPanelStyle
 import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import com.android.systemui.ribbon.ui.composable.BottomRightCornerRibbon
 import com.android.systemui.scene.shared.model.Overlays
@@ -164,16 +160,16 @@ private fun InternalSceneContainer(
         }
 
     val resources = LocalResources.current
-    val defaultQsStyle = effectiveQsPanelStyle() == QsPanelStyle.Default
     val liquidGlass = liquidGlassEnabled()
+    val shadeMotionKey = transitionsBuilder.shadeMotion?.key()
     val sceneTransitions =
         remember(
+            shadeMotionKey,
             hapticFeedback,
             shadeExpansionMotion,
             animateQsTilesViewModel,
             resources,
             viewModel.toBouncerTransitionViewModel,
-            defaultQsStyle,
             liquidGlass,
         ) {
             transitionsBuilder.build(
@@ -182,7 +178,6 @@ private fun InternalSceneContainer(
                 animateQsTilesViewModel,
                 viewModel.toBouncerTransitionViewModel,
                 resources,
-                defaultQsStyle,
                 liquidGlass,
             )
         }
@@ -294,8 +289,8 @@ private fun InternalSceneContainer(
     // Overlays use the offset overscroll effect when shown on large screens, otherwise they
     // stretch. All scenes use the OffsetOverscrollEffect.
     val offsetOverscrollEffectFactory = rememberOffsetOverscrollEffectFactory()
-    val controlCentreEffectFactory = rememberControlCentreOverscrollEffectFactory()
     val stretchOverscrollEffectFactory = checkNotNull(LocalOverscrollFactory.current)
+    val quickSettingsShadeOverscroll = transitionsBuilder.shadeMotion?.quickSettingsShadeOverscroll()
     val overlayEffectFactory =
         if (isFullWidthShade) {
             stretchOverscrollEffectFactory
@@ -350,11 +345,9 @@ private fun InternalSceneContainer(
                     key = overlayKey,
                     userActions = userActionsByContentKey.getOrDefault(overlayKey, emptyMap()),
                     effectFactory =
-                        if (overlayKey == Overlays.QuickSettingsShade) {
-                            controlCentreEffectFactory
-                        } else {
-                            overlayEffectFactory
-                        },
+                        quickSettingsShadeOverscroll?.takeIf {
+                            overlayKey == Overlays.QuickSettingsShade
+                        } ?: overlayEffectFactory,
                     alwaysCompose = overlay.alwaysCompose,
                     // The bouncer overlay is special and not rendered here, so avoid adding
                     // the fullscreen clickable which modals typically introduce. This avoids

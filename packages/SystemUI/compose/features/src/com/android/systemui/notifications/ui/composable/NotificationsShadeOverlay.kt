@@ -16,6 +16,14 @@
 
 package com.android.systemui.notifications.ui.composable
 
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -56,7 +64,6 @@ import com.android.systemui.notifications.intelligence.rules.ui.viewmodel.Notifi
 import com.android.systemui.notifications.ui.viewmodel.NotificationsShadeOverlayActionsViewModel
 import com.android.systemui.notifications.ui.viewmodel.NotificationsShadeOverlayContentViewModel
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementKeys
-import com.android.systemui.qs.composefragment.secureIntSetting
 import com.android.systemui.res.R
 import com.android.systemui.scene.session.ui.composable.SaveableSession
 import com.android.systemui.scene.shared.model.Overlays
@@ -238,4 +245,21 @@ object NotificationsShade {
         val Panel = ElementKey("NotificationsShadeOverlayPanel")
         val StatusBar = ElementKey("NotificationsShadeOverlayStatusBar")
     }
+}
+
+@Composable
+private fun secureIntSetting(key: String, default: Int): Int {
+    val resolver = LocalContext.current.contentResolver
+    var value by remember(key) { mutableStateOf(Settings.Secure.getInt(resolver, key, default)) }
+    DisposableEffect(resolver, key) {
+        val observer =
+            object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    value = Settings.Secure.getInt(resolver, key, default)
+                }
+            }
+        resolver.registerContentObserver(Settings.Secure.getUriFor(key), false, observer)
+        onDispose { resolver.unregisterContentObserver(observer) }
+    }
+    return value
 }

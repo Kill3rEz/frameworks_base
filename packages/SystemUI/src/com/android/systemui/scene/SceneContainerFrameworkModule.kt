@@ -42,6 +42,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.multibindings.ClassKey
 import dagger.multibindings.IntoMap
+import com.android.systemui.penguin.ShadeMotion
+import java.util.Optional
 
 /** Scene framework Dagger module suitable for AOSP. */
 @Module(
@@ -110,6 +112,7 @@ interface SceneContainerFrameworkModule {
         fun containerConfig(
             context: Context,
             lockPatternUtils: LockPatternUtils,
+            shadeMotion: Optional<ShadeMotion>,
         ): SceneContainerConfig {
             // Include the shade and quick settings scenes if:
             // 1. Dual Shade is disabled, or
@@ -163,7 +166,7 @@ interface SceneContainerFrameworkModule {
                             putAll(arrayOf(Scenes.Shade to 4, Scenes.QuickSettings to 5))
                         }
                     },
-                transitionsBuilder = SceneContainerTransitions(),
+                transitionsBuilder = SceneContainerTransitions(shadeMotion.orElse(null)),
             )
         }
     }

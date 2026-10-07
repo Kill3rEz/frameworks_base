@@ -35,14 +35,11 @@ import com.android.systemui.qs.footer.ui.viewmodel.FooterActionsViewModel
 import com.android.systemui.qs.panels.domain.interactor.TileSquishinessInteractor
 import com.android.systemui.qs.panels.ui.viewmodel.MediaInRowInLandscapeViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.QuickQuickSettingsViewModel
-import com.android.systemui.qs.shared.style.QsPanelStyle
-import com.android.systemui.qs.shared.style.QsPanelStyleRepository
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
 import com.android.systemui.scene.domain.interactor.SceneInteractor
 import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.scene.shared.model.SceneFamilies
 import com.android.systemui.media.remedia.domain.interactor.MediaInteractor
-import com.android.systemui.qs.composefragment.ConnectivityFolderExpansion
 import com.android.systemui.scene.shared.model.Scenes
 import com.android.systemui.shade.domain.interactor.ShadeModeInteractor
 import com.android.systemui.shade.domain.interactor.ShadeStatusBarComponentsInteractor
@@ -85,7 +82,6 @@ constructor(
     windowRootViewBlurInteractor: WindowRootViewBlurInteractor,
     mediaInRowInLandscapeViewModelFactory: MediaInRowInLandscapeViewModel.Factory,
     shadeStatusBarComponentsInteractor: ShadeStatusBarComponentsInteractor,
-    qsPanelStyleRepository: QsPanelStyleRepository,
 ) : HydratedActivatable() {
 
     /**
@@ -101,8 +97,6 @@ constructor(
             .hydratedStateOf()
 
     val shadeMode: ShadeMode by shadeModeInteractor.shadeMode.hydratedStateOf()
-
-    val panelStyle: QsPanelStyle by qsPanelStyleRepository.style.hydratedStateOf()
 
     val isDeviceEntered: Boolean by deviceEntryInteractor.isDeviceEntered.hydratedStateOf()
 
@@ -122,9 +116,8 @@ constructor(
     val hasMediaCards: Boolean
         get() = mediaInteractor.hasAnyMedia
 
-    fun onConnectivityFolderExpandRequested() {
-        ConnectivityFolderExpansion.expanded = true
-        sceneInteractor.changeScene(Scenes.QuickSettings, "Connectivity folder expanded from QQS.")
+    fun expandQuickSettings(loggingReason: String) {
+        sceneInteractor.changeScene(Scenes.QuickSettings, loggingReason)
     }
 
     val isQsEnabled: Boolean by
