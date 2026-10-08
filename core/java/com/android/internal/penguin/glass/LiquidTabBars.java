@@ -5,7 +5,9 @@
 
 package com.android.internal.penguin.glass;
 
+import android.app.BroadcastOptions;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Process;
 import android.os.SystemClock;
 import android.provider.Settings;
@@ -43,6 +45,11 @@ public final class LiquidTabBars {
     };
     private static final long SCAN_INTERVAL_MS = 500;
 
+    private static final String LABORATORY = "com.penguin.laboratory";
+    private static final String ACTION_SEEN = LABORATORY + ".action.TAB_BAR_SEEN";
+    private static boolean sReported;
+
+    private final Context mContext;
     private final boolean mFloat;
     private final float mDensity;
     private final List<LiquidTabBar> mBars = new ArrayList<>();
@@ -51,6 +58,7 @@ public final class LiquidTabBars {
     private boolean mScanPending;
 
     private LiquidTabBars(Context context, boolean floatOverContent) {
+        mContext = context.getApplicationContext() != null ? context.getApplicationContext() : context;
         mFloat = floatOverContent;
         mDensity = context.getResources().getDisplayMetrics().density;
     }
@@ -104,6 +112,7 @@ public final class LiquidTabBars {
         try {
             mBars.add(new LiquidTabBar(found));
             if (mFloat) floatOverContent(found);
+            reportSeen();
         } catch (RuntimeException e) {
             Log.w(TAG, "Could not restyle " + found.getClass().getName(), e);
         }
@@ -128,6 +137,19 @@ public final class LiquidTabBars {
     }
 
     private final int[] mLocation = new int[2];
+
+    private void reportSeen() {
+        if (sReported) return;
+        sReported = true;
+        try {
+            BroadcastOptions options = BroadcastOptions.makeBasic();
+            options.setShareIdentityEnabled(true);
+            mContext.sendBroadcast(new Intent(ACTION_SEEN).setPackage(LABORATORY), null,
+                    options.toBundle());
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Could not report the tab bar", e);
+        }
+    }
 
     private ViewGroup find(ViewGroup group, int rootWidth, int rootHeight) {
         for (int i = 0; i < group.getChildCount(); i++) {
