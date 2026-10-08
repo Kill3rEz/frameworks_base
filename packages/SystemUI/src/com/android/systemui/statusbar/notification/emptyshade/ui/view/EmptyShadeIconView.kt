@@ -25,6 +25,7 @@ import android.widget.TextView
 import com.android.systemui.animation.LaunchableView
 import com.android.systemui.animation.LaunchableViewDelegate
 import com.android.systemui.common.shared.model.Icon
+import com.android.systemui.qs.shared.style.LiquidGlass
 import com.android.systemui.res.R
 import com.android.systemui.statusbar.notification.emptyshade.ui.shared.flag.ShowIconInEmptyShade
 import com.android.systemui.statusbar.notification.row.StackScrollerDecorView
@@ -75,6 +76,13 @@ class EmptyShadeIconView @JvmOverloads constructor(context: Context, attrs: Attr
     }
 
     fun setIcon(icon: Icon) {
+        val caughtUp = icon is Icon.Resource && icon.resId == R.drawable.ic_trophy
+        if (caughtUp && LiquidGlass.isEnabled(context)) {
+            textView.setText(R.string.liquid_glass_no_older_notifications)
+            iconView.visibility = GONE
+            return
+        }
+        iconView.visibility = VISIBLE
         val drawable =
             when (icon) {
                 is Icon.Loaded -> icon.drawable.mutate()

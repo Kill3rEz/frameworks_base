@@ -261,4 +261,7 @@
     <string name="penguin_edit_subtitle">Tap to resize, long press to move</string>
     <string name="penguin_edit_more">Add tiles</string>
 
+    <!-- Empty notification shade under Liquid Glass -->
+    <string name="liquid_glass_no_older_notifications">No Older Notifications</string>
+
 </resources>
