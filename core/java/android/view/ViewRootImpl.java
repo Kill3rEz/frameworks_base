@@ -1653,12 +1653,19 @@ public final class ViewRootImpl implements ViewParent,
     /**
      * We have one child
      */
+    private com.android.internal.penguin.glass.LiquidTabBars mLiquidTabBars;
+
     public void setView(View view, WindowManager.LayoutParams attrs, View panelParentView,
             int userId) {
         checkThreadCompat();
         synchronized (this) {
             if (mView == null) {
                 mView = view;
+                if (attrs.type >= WindowManager.LayoutParams.FIRST_APPLICATION_WINDOW
+                        && attrs.type <= WindowManager.LayoutParams.LAST_APPLICATION_WINDOW) {
+                    mLiquidTabBars =
+                            com.android.internal.penguin.glass.LiquidTabBars.create(mContext);
+                }
 
                 mViewLayoutDirectionInitial = mView.getRawLayoutDirection();
                 mFallbackEventHandler.setView(view);
@@ -4644,6 +4651,9 @@ public final class ViewRootImpl implements ViewParent,
                 || mAttachInfo.mRecomputeGlobalAttributes;
         if (didLayout) {
             performLayout(lp, mWidth, mHeight);
+            if (mLiquidTabBars != null) {
+                mLiquidTabBars.onLayout(host);
+            }
 
             // By this point all views have been sized and positioned
             // We can compute the transparent area
