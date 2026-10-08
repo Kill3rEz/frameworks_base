@@ -34,7 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asAndroidPath
+import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -122,24 +123,83 @@ object LiquidGlass {
         density: Float,
         strength: Float,
     ) {
-        if (glowDensity != density) {
-            glowDensity = density
+        val w = kotlin.math.ceil(bounds.width()).toInt()
+        val h = kotlin.math.ceil(bounds.height()).toInt()
+        if (w <= 0 || h <= 0) return
+        drawGlow(canvas, shapeHash(path, bounds), { path }, bounds, density, strength)
+    }
+
+    @JvmStatic
+    fun drawGlow(
+        canvas: Canvas,
+        shape: Int,
+        path: () -> android.graphics.Path,
+        bounds: RectF,
+        density: Float,
+        strength: Float,
+    ) {
+        val w = kotlin.math.ceil(bounds.width()).toInt()
+        val h = kotlin.math.ceil(bounds.height()).toInt()
+        if (w <= 0 || h <= 0) return
+        val key = GlowKey(w, h, shape, strength, density, LiquidGlassTune.tag)
+        val glow =
+            glowCache.get(key)
+                ?: renderGlow(path(), bounds, w, h, density, strength).also { glowCache.put(key, it) }
+        canvas.drawBitmap(glow, bounds.left, bounds.top, null)
+    }
+
+    private data class GlowKey(
+        val width: Int,
+        val height: Int,
+        val shape: Int,
+        val strength: Float,
+        val density: Float,
+        val tune: String,
+    )
+
+    private val glowCache =
+        object : android.util.LruCache<GlowKey, android.graphics.Bitmap>(24 * 1024 * 1024) {
+            override fun sizeOf(key: GlowKey, value: android.graphics.Bitmap) = value.allocationByteCount
         }
+
+    @JvmStatic
+    fun shapeHashOf(path: android.graphics.Path, bounds: RectF): Int = shapeHash(path, bounds)
+
+    private fun shapeHash(path: android.graphics.Path, bounds: RectF): Int {
+        val points = path.approximate(0.5f)
+        var hash = 1
+        for (i in points.indices step 3) {
+            hash = 31 * hash + (points[i + 1] - bounds.left).toBits()
+            hash = 31 * hash + (points[i + 2] - bounds.top).toBits()
+        }
+        return hash
+    }
+
+    private fun renderGlow(
+        path: android.graphics.Path,
+        bounds: RectF,
+        width: Int,
+        height: Int,
+        density: Float,
+        strength: Float,
+    ): android.graphics.Bitmap {
+        val bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
         val glowRadius = LiquidGlassTune.f("glow_radius", 6.0f)
-        if (glowRadius != glowRadiusDp) {
+        if (glowRadius != glowRadiusDp || glowDensity != density) {
             glowRadiusDp = glowRadius
+            glowDensity = density
             glowPaint.maskFilter =
                 if (glowRadius > 0f) BlurMaskFilter(glowRadius * density, BlurMaskFilter.Blur.INNER)
                 else null
         }
         fun white(alpha: Float) = android.graphics.Color.argb(alpha * strength, 1f, 1f, 1f)
-        val (x0, x1) = lightX(bounds.left, bounds.right)
+        val (x0, x1) = lightX(0f, width.toFloat())
         glowPaint.shader =
             LinearGradient(
                 x0,
-                bounds.top,
+                0f,
                 x1,
-                bounds.bottom,
+                height.toFloat(),
                 intArrayOf(
                     white(LiquidGlassTune.f("glow_tl", 0.1f)),
                     white(LiquidGlassTune.f("glow_tl_mid", 0.0f)),
@@ -150,8 +210,121 @@ object LiquidGlass {
                 floatArrayOf(0f, 0.3f, 0.5f, 0.7f, 1f),
                 Shader.TileMode.CLAMP,
             )
+        val canvas = Canvas(bitmap)
+        canvas.translate(-bounds.left, -bounds.top)
         canvas.drawPath(path, glowPaint)
+        return bitmap
     }
+
+    private fun drawRoundRectGlow(
+        canvas: Canvas,
+        rect: RectF,
+        radii: FloatArray,
+        density: Float,
+        strength: Float,
+    ) {
+        val glowRadius = LiquidGlassTune.f("glow_radius", 6.0f) * density
+        val reach = kotlin.math.ceil(3f * (glowRadius * 0.57735f + 0.5f)).toInt() + 1
+        val tl = radii[0].toInt()
+        val tr = radii[2].toInt()
+        val br = radii[4].toInt()
+        val bl = radii[6].toInt()
+        val key = RoundGlowKey(tl, tr, br, bl, glowRadius, LiquidGlassTune.tag)
+        val mask = roundGlowCache.get(key) ?: renderRoundGlowMask(key, reach).also { roundGlowCache.put(key, it) }
+        val left = maxOf(tl, bl) + reach
+        val top = maxOf(tl, tr) + reach
+        val right = maxOf(tr, br) + reach
+        val bottom = maxOf(bl, br) + reach
+        val w = rect.width()
+        val h = rect.height()
+        if (w <= 0f || h <= 0f) return
+        val l = if (w < left + right) w * left / (left + right) else left.toFloat()
+        val r = if (w < left + right) w - l else right.toFloat()
+        val t = if (h < top + bottom) h * top / (top + bottom) else top.toFloat()
+        val b = if (h < top + bottom) h - t else bottom.toFloat()
+        fun white(alpha: Float) = android.graphics.Color.argb(alpha * strength, 1f, 1f, 1f)
+        val (x0, x1) = lightX(rect.left, rect.right)
+        roundGlowPaint.shader =
+            LinearGradient(
+                x0,
+                rect.top,
+                x1,
+                rect.bottom,
+                intArrayOf(
+                    white(LiquidGlassTune.f("glow_tl", 0.1f)),
+                    white(LiquidGlassTune.f("glow_tl_mid", 0.0f)),
+                    white(LiquidGlassTune.f("glow_mid", 0.0f)),
+                    white(LiquidGlassTune.f("glow_br_mid", 0.0f)),
+                    white(LiquidGlassTune.f("glow_br", 0.06f)),
+                ),
+                floatArrayOf(0f, 0.3f, 0.5f, 0.7f, 1f),
+                Shader.TileMode.CLAMP,
+            )
+        val mw = mask.width
+        val mh = mask.height
+        val xs = floatArrayOf(0f, l, w - r, w)
+        val ys = floatArrayOf(0f, t, h - b, h)
+        val sxs = intArrayOf(0, kotlin.math.ceil(l).toInt(), mw - kotlin.math.ceil(r).toInt(), mw)
+        val sys = intArrayOf(0, kotlin.math.ceil(t).toInt(), mh - kotlin.math.ceil(b).toInt(), mh)
+        sxs[1] = minOf(sxs[1], left)
+        sxs[2] = maxOf(sxs[2], mw - right)
+        sys[1] = minOf(sys[1], top)
+        sys[2] = maxOf(sys[2], mh - bottom)
+        for (row in 0..2) {
+            if (ys[row + 1] <= ys[row]) continue
+            for (col in 0..2) {
+                if (xs[col + 1] <= xs[col]) continue
+                glowSrc.set(sxs[col], sys[row], sxs[col + 1], sys[row + 1])
+                if (glowSrc.isEmpty) continue
+                glowDst.set(
+                    rect.left + xs[col],
+                    rect.top + ys[row],
+                    rect.left + xs[col + 1],
+                    rect.top + ys[row + 1],
+                )
+                canvas.drawBitmap(mask, glowSrc, glowDst, roundGlowPaint)
+            }
+        }
+    }
+
+    private data class RoundGlowKey(
+        val tl: Int,
+        val tr: Int,
+        val br: Int,
+        val bl: Int,
+        val glowRadius: Float,
+        val tune: String,
+    )
+
+    private fun renderRoundGlowMask(key: RoundGlowKey, reach: Int): android.graphics.Bitmap {
+        val middle = 4
+        val width = maxOf(key.tl, key.bl) + maxOf(key.tr, key.br) + 2 * reach + middle
+        val height = maxOf(key.tl, key.tr) + maxOf(key.bl, key.br) + 2 * reach + middle
+        val bitmap =
+            android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ALPHA_8)
+        val path = android.graphics.Path()
+        path.addRoundRect(
+            RectF(0f, 0f, width.toFloat(), height.toFloat()),
+            floatArrayOf(
+                key.tl.toFloat(), key.tl.toFloat(), key.tr.toFloat(), key.tr.toFloat(),
+                key.br.toFloat(), key.br.toFloat(), key.bl.toFloat(), key.bl.toFloat(),
+            ),
+            android.graphics.Path.Direction.CW,
+        )
+        val paint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                if (key.glowRadius > 0f) {
+                    maskFilter = BlurMaskFilter(key.glowRadius, BlurMaskFilter.Blur.INNER)
+                }
+            }
+        Canvas(bitmap).drawPath(path, paint)
+        return bitmap
+    }
+
+    private val roundGlowCache = android.util.LruCache<RoundGlowKey, android.graphics.Bitmap>(64)
+    private val roundGlowPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+    private val glowSrc = android.graphics.Rect()
+    private val glowDst = RectF()
 
     private fun lightX(left: Float, right: Float): Pair<Float, Float> =
         if (LiquidGlassTune.f("light_dir", 1.0f) >= 0.5f) ((left + right) / 2).let { it to it }
@@ -188,7 +361,7 @@ object LiquidGlass {
         if (rect.isEmpty) return
         rimPath.reset()
         rimPath.addRoundRect(rect, radii, android.graphics.Path.Direction.CW)
-        drawGlow(canvas, rimPath, rect, density, LiquidGlassTune.f("view_glow", 0.5f))
+        drawRoundRectGlow(canvas, rect, radii, density, LiquidGlassTune.f("view_glow", 0.5f))
         val dark = LiquidGlassTune.f("edge_dark", 0.35f)
         val hair = if (dark > 0f) LiquidGlassTune.f("edge_dark_width", 0.8f) * density else 0f
         if (dark > 0f) {
@@ -227,6 +400,7 @@ object LiquidGlassTune {
                 val gen = SystemProperties.get("debug.lg.gen")
                 if (gen != lastGen) {
                     lastGen = gen
+                    values.clear()
                     generation.value++
                 }
                 handler.postDelayed(this, 500)
@@ -238,9 +412,15 @@ object LiquidGlassTune {
         handler.post(poll)
     }
 
+    val tag: String
+        get() = lastGen
+
+    private val values = java.util.concurrent.ConcurrentHashMap<String, Float>()
+
     @JvmStatic
     fun f(name: String, default: Float): Float =
-        SystemProperties.get("debug.lg.$name").toFloatOrNull() ?: default
+        values.getOrPut(name) { SystemProperties.get("debug.lg.$name").toFloatOrNull() ?: Float.NaN }
+            .let { if (it.isNaN()) default else it }
 
     @JvmStatic
     fun color(name: String, default: Int): Int =
@@ -283,52 +463,51 @@ fun liquidGlassEnabled(): Boolean {
 }
 
 fun Modifier.liquidGlassRim(shape: Shape, strength: Float = 1f): Modifier =
-    drawWithContent {
-        drawContent()
+    drawWithCache {
         LiquidGlassTune.generation.value
-        val edge = shape.toPath(size, this)
-        drawIntoCanvas {
-            LiquidGlass.drawGlow(
-                it.nativeCanvas,
-                edge.asAndroidPath(),
-                RectF(0f, 0f, size.width, size.height),
-                density,
-                strength,
-            )
-        }
-        drawPath(
-            edge,
+        val bounds = RectF(0f, 0f, size.width, size.height)
+        val edge = shape.toPath(size, this).asAndroidPath()
+        val glowShape = LiquidGlass.shapeHashOf(edge, bounds)
+        val sheen =
             Brush.verticalGradient(
                 0f to Color.White.copy(alpha = LiquidGlassTune.f("sheen", 0.0f) * strength),
                 LiquidGlassTune.f("sheen_end", 0.45f) to Color.Transparent,
                 endY = size.height,
-            ),
-        )
+            )
+        val sheenOn = LiquidGlassTune.f("sheen", 0.0f) > 0f
+        val edgePath = edge.asComposePath()
         val dark = LiquidGlassTune.f("edge_dark", 0.35f)
-        if (dark > 0f) {
-            val hair = LiquidGlassTune.f("edge_dark_width", 0.8f).dp.toPx()
-            val outer = shape.toPath(Size(size.width - hair, size.height - hair), this)
-            outer.translate(Offset(hair / 2f, hair / 2f))
-            drawPath(outer, Color.Black.copy(alpha = dark * strength), style = Stroke(hair))
-        }
+        val hair = LiquidGlassTune.f("edge_dark_width", 0.8f).dp.toPx()
+        val outer =
+            if (dark > 0f) {
+                shape.toPath(Size(size.width - hair, size.height - hair), this).apply {
+                    translate(Offset(hair / 2f, hair / 2f))
+                }
+            } else null
         val width = LiquidGlass.rimWidthDp.dp.toPx()
-        val inset = if (dark > 0f) LiquidGlassTune.f("edge_dark_width", 0.8f).dp.toPx() else 0f
-        val rim = shape.toPath(Size(size.width - width - inset * 2, size.height - width - inset * 2), this)
-        rim.translate(Offset(width / 2f + inset, width / 2f + inset))
-        drawIntoCanvas {
-            val paint = rimStroke
-            paint.strokeWidth = width
-            paint.shader = LiquidGlass.rimShader(0f, 0f, size.width, size.height, strength)
-            it.nativeCanvas.drawPath(rim.asAndroidPath(), paint)
+        val inset = if (dark > 0f) hair else 0f
+        val rim =
+            shape.toPath(Size(size.width - width - inset * 2, size.height - width - inset * 2), this)
+                .apply { translate(Offset(width / 2f + inset, width / 2f + inset)) }
+                .asAndroidPath()
+        val rimPaint =
+            android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                style = android.graphics.Paint.Style.STROKE
+                strokeWidth = width
+                shader = LiquidGlass.rimShader(0f, 0f, size.width, size.height, strength)
+            }
+        onDrawWithContent {
+            drawContent()
+            drawIntoCanvas {
+                LiquidGlass.drawGlow(it.nativeCanvas, glowShape, { edge }, bounds, density, strength)
+            }
+            if (sheenOn) drawPath(edgePath, sheen)
+            if (outer != null) drawPath(outer, Color.Black.copy(alpha = dark * strength), style = Stroke(hair))
+            drawIntoCanvas { it.nativeCanvas.drawPath(rim, rimPaint) }
         }
     }
 
-private val rimStroke =
-    android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        style = android.graphics.Paint.Style.STROKE
-    }
-
-private fun Shape.toPath(size: Size, scope: androidx.compose.ui.graphics.drawscope.DrawScope): Path =
+private fun Shape.toPath(size: Size, scope: androidx.compose.ui.draw.CacheDrawScope): Path =
     when (val outline = createOutline(size, scope.layoutDirection, scope)) {
         is Outline.Generic -> outline.path
         is Outline.Rounded -> Path().apply { addRoundRect(outline.roundRect) }
