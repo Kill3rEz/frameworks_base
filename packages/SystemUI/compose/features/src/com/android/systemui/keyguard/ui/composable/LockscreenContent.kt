@@ -68,6 +68,8 @@ import com.android.systemui.lifecycle.rememberViewModel
 import com.android.systemui.penguin.LockscreenPlayer
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementContext
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementKeys
+import com.android.systemui.qs.shared.style.LockscreenClockPress
+import com.android.systemui.qs.shared.style.glassPressTracker
 import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import com.android.systemui.scene.shared.model.Overlays
 import com.android.systemui.scene.shared.model.Scenes
@@ -212,7 +214,13 @@ class LockscreenContent(
             covered = covered,
             unlocking = { if (glass) unlocking() else 0f },
         )
-        Box(Modifier.fillMaxSize().thenIf(glass) { Modifier.glassUnlockSheet(unlocking, screenCorner) }) {
+        Box(
+            Modifier.fillMaxSize()
+                .thenIf(glass) {
+                    Modifier.glassUnlockSheet(unlocking, screenCorner)
+                        .glassPressTracker(LockscreenClockPress)
+                }
+        ) {
             LockscreenBehindScrim(
                 lockscreenBehindScrimViewModel,
                 Modifier.element(LockscreenElementKeys.BehindScrim),

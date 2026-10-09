@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.compose.animation.scene.ElementContentScope
+import com.android.compose.modifiers.thenIf
 import com.android.systemui.customization.clocks.R as clocksR
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardClockViewModel
@@ -45,6 +46,9 @@ import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenEl
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenElementProvider
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenScope
 import com.android.systemui.plugins.keyguard.ui.composable.elements.LockscreenScope.Companion.LockscreenElement
+import com.android.systemui.qs.shared.style.LockscreenClockPress
+import com.android.systemui.qs.shared.style.glassPressTarget
+import com.android.systemui.qs.shared.style.liquidGlassEnabled
 import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeDisplayAware
 import javax.inject.Inject
@@ -68,6 +72,7 @@ constructor(
 
         @Composable
         override fun LockscreenScope<ElementContentScope>.LockscreenElement() {
+            val glass = liquidGlassEnabled()
             val shouldDateWeatherBeBelowSmallClock: Boolean by
                 keyguardClockViewModel.shouldDateWeatherBeBelowSmallClock
                     .collectAsStateWithLifecycle()
@@ -87,7 +92,8 @@ constructor(
                     with(LocalDensity.current) {
                         LockscreenElement(
                             Clock.Small,
-                            Modifier.padding(horizontal = clockXPadding)
+                            Modifier.thenIf(glass) { Modifier.glassPressTarget(LockscreenClockPress) }
+                                .padding(horizontal = clockXPadding)
                                 .widthIn(min = clockBounds.width.toDp())
                                 .heightIn(
                                     min = clockBounds.height.toDp(),
@@ -123,6 +129,7 @@ constructor(
 
         @Composable
         override fun LockscreenScope<ElementContentScope>.LockscreenElement() {
+            val glass = liquidGlassEnabled()
             val shouldDateWeatherBeBelowLargeClock: Boolean by
                 keyguardClockViewModel.shouldDateWeatherBeBelowLargeClock
                     .collectAsStateWithLifecycle()
@@ -169,7 +176,8 @@ constructor(
                     with(LocalDensity.current) {
                         LockscreenElement(
                             Clock.Large,
-                            Modifier.widthIn(min = clockBounds.width.toDp())
+                            Modifier.thenIf(glass) { Modifier.glassPressTarget(LockscreenClockPress) }
+                                .widthIn(min = clockBounds.width.toDp())
                                 .heightIn(min = clockBounds.height.toDp()),
                         )
                     }

@@ -29,8 +29,10 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
@@ -50,6 +52,9 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
@@ -518,47 +523,71 @@ fun Modifier.liquidGlassPress(enabled: Boolean = true): Modifier =
     if (!enabled) this
     else
         composed {
-            val lift = remember { Animatable(0f) }
-            val lean = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
-            this.pointerInput(Unit) {
-                    coroutineScope {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val down =
-                                    awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull {
-                                        it.pressed && !it.previousPressed
-                                    } ?: continue
-                                launch { lift.animateTo(1f, PressSpring) }
-                                while (true) {
-                                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                                    val change =
-                                        event.changes.firstOrNull { it.id == down.id } ?: break
-                                    if (!change.pressed) break
-                                    val d = change.position - down.position
-                                    val reach = 10.dp.toPx()
-                                    val dist = hypot(d.x, d.y)
-                                    val pull =
-                                        if (dist == 0f) 0f
-                                        else reach * (1f - 1f / (1f + dist / (reach * 3f))) / dist
-                                    launch { lean.snapTo(Offset(d.x * pull, d.y * pull)) }
-                                }
-                                launch { lift.animateTo(0f, releaseSpring()) }
-                                launch { lean.animateTo(Offset.Zero, releaseSpring()) }
-                            }
-                        }
-                    }
-                }
-                .graphicsLayer {
-                    val l = lift.value
-                    val off = lean.value
-                    val stretchX = abs(off.x) / 10.dp.toPx() * 0.035f
-                    val stretchY = abs(off.y) / 10.dp.toPx() * 0.035f
-                    scaleX = 1f + 0.06f * l + stretchX - stretchY * 0.5f
-                    scaleY = 1f + 0.06f * l + stretchY - stretchX * 0.5f
-                    translationX = off.x
-                    translationY = off.y
-                }
+            val press = remember { GlassPress() }
+            this.pointerInput(Unit) { trackGlassPress(press) { true } }.glassPressEffect(press)
         }
+
+class GlassPress {
+    internal val lift = Animatable(0f)
+    internal val lean = Animatable(Offset.Zero, Offset.VectorConverter)
+    internal var bounds = androidx.compose.ui.geometry.Rect.Zero
+}
+
+val LockscreenClockPress = GlassPress()
+
+fun Modifier.glassPressTracker(press: GlassPress): Modifier = composed {
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    this.onGloballyPositioned { origin = it.positionInWindow() }
+        .pointerInput(press) { trackGlassPress(press) { press.bounds.contains(it + origin) } }
+}
+
+fun Modifier.glassPressTarget(press: GlassPress): Modifier =
+    onGloballyPositioned { press.bounds = it.boundsInWindow() }.glassPressEffect(press)
+
+private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.trackGlassPress(
+    press: GlassPress,
+    accept: (Offset) -> Boolean,
+) {
+    val lift = press.lift
+    val lean = press.lean
+    coroutineScope {
+        awaitPointerEventScope {
+            while (true) {
+                val down =
+                    awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull {
+                        it.pressed && !it.previousPressed
+                    } ?: continue
+                if (!accept(down.position)) continue
+                launch { lift.animateTo(1f, PressSpring) }
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    if (!change.pressed) break
+                    val d = change.position - down.position
+                    val reach = 10.dp.toPx()
+                    val dist = hypot(d.x, d.y)
+                    val pull =
+                        if (dist == 0f) 0f
+                        else reach * (1f - 1f / (1f + dist / (reach * 3f))) / dist
+                    launch { lean.snapTo(Offset(d.x * pull, d.y * pull)) }
+                }
+                launch { lift.animateTo(0f, releaseSpring()) }
+                launch { lean.animateTo(Offset.Zero, releaseSpring()) }
+            }
+        }
+    }
+}
+
+private fun Modifier.glassPressEffect(press: GlassPress): Modifier = graphicsLayer {
+    val l = press.lift.value
+    val off = press.lean.value
+    val stretchX = abs(off.x) / 10.dp.toPx() * 0.035f
+    val stretchY = abs(off.y) / 10.dp.toPx() * 0.035f
+    scaleX = 1f + 0.06f * l + stretchX - stretchY * 0.5f
+    scaleY = 1f + 0.06f * l + stretchY - stretchX * 0.5f
+    translationX = off.x
+    translationY = off.y
+}
 
 private val PressSpring = spring<Float>(dampingRatio = 0.62f, stiffness = 520f)
 private fun <T> releaseSpring() = spring<T>(dampingRatio = 0.38f, stiffness = Spring.StiffnessMediumLow)
