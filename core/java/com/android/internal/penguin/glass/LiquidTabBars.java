@@ -44,6 +44,7 @@ public final class LiquidTabBars {
             "RecyclerView", "ListView", "ScrollView", "GridView",
     };
     private static final long SCAN_INTERVAL_MS = 500;
+    private static final long EAGER_MS = 3000;
 
     private static final String LABORATORY = "com.penguin.laboratory";
     private static final String ACTION_SEEN = LABORATORY + ".action.TAB_BAR_SEEN";
@@ -64,7 +65,10 @@ public final class LiquidTabBars {
         mContext = context.getApplicationContext() != null ? context.getApplicationContext() : context;
         mFloat = floatOverContent;
         mDensity = context.getResources().getDisplayMetrics().density;
+        mCreated = SystemClock.uptimeMillis();
     }
+
+    private final long mCreated;
 
     public static LiquidTabBars create(Context context) {
         if (Process.myUid() < Process.FIRST_APPLICATION_UID) return null;
@@ -106,7 +110,8 @@ public final class LiquidTabBars {
         }
         if (attached || !(root instanceof ViewGroup)) return;
         long now = SystemClock.uptimeMillis();
-        long wait = SCAN_INTERVAL_MS - (now - mLastScan);
+        boolean eager = now - mCreated < EAGER_MS;
+        long wait = eager ? 0 : SCAN_INTERVAL_MS - (now - mLastScan);
         if (wait > 0) {
             if (!mScanPending) {
                 mScanPending = true;
@@ -120,7 +125,7 @@ public final class LiquidTabBars {
         mLastScan = now;
         ViewGroup found = find((ViewGroup) root, root.getWidth(), root.getHeight());
         if (found == null) {
-            if (now >= mNextComposeScan) {
+            if (eager || now >= mNextComposeScan) {
                 findCompose((ViewGroup) root, root.getHeight());
                 if (mComposeBar == null) {
                     mComposeMisses = Math.min(mComposeMisses + 1, 4);
@@ -147,7 +152,8 @@ public final class LiquidTabBars {
         }
     }
 
-    public void onTouch(MotionEvent ev) {
+    public boolean onTouch(MotionEvent ev) {
+        if (mComposeBar != null && mComposeBar.onTouch(ev)) return true;
         for (int i = 0; i < mBars.size(); i++) {
             LiquidTabBar bar = mBars.get(i);
             View view = bar.mBar;
@@ -163,6 +169,7 @@ public final class LiquidTabBars {
             bar.onObserveTouch(local);
             local.recycle();
         }
+        return false;
     }
 
     private final int[] mLocation = new int[2];
@@ -175,7 +182,7 @@ public final class LiquidTabBars {
             if (mLocation[1] + child.getHeight() < rootHeight - 4) continue;
             if (child.getAccessibilityNodeProvider() != null) {
                 try {
-                    mComposeBar = ComposeTabBar.find(child);
+                    mComposeBar = ComposeTabBar.find(child, mFloat);
                 } catch (RuntimeException e) {
                     Log.w(TAG, "Could not look for a Compose tab bar", e);
                 }

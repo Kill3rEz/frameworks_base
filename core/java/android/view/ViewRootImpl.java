@@ -8818,8 +8818,9 @@ public final class ViewRootImpl implements ViewParent,
 
             mAttachInfo.mUnbufferedDispatchRequested = false;
             mAttachInfo.mHandlingPointerEvent = true;
-            if (mLiquidTabBars != null && event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN)) {
-                mLiquidTabBars.onTouch(event);
+            if (mLiquidTabBars != null && event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN)
+                    && mLiquidTabBars.onTouch(event)) {
+                event.setAction(MotionEvent.ACTION_CANCEL);
             }
             handled = mView.dispatchPointerEvent(event);
             final int action = event.getActionMasked();
