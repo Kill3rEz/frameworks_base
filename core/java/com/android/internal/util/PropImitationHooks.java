@@ -208,7 +208,7 @@ public class PropImitationHooks {
 
     private static final Boolean sDisableKeyAttestationBlock = SystemProperties.getBoolean(
             "persist.sys.pihooks.disable.gms_key_attestation_block", false);
-    private static volatile boolean sTeeSimulatorEnabled = false;
+    private static volatile boolean sTeeSimulatorEnabled = true;
     private static final String DATA_FILE = "gms_certified_props.json";
 
     private static final String PACKAGE_ARCORE = "com.google.ar.core";
@@ -330,9 +330,9 @@ public class PropImitationHooks {
 
         try {
             sTeeSimulatorEnabled = !Process.isIsolated() && Settings.Secure.getInt(context.getContentResolver(),
-                    "tee_simulator_enabled", 0) == 1;
+                    "tee_simulator_enabled", 1) == 1;
         } catch (Exception e) {
-            sTeeSimulatorEnabled = false;
+            sTeeSimulatorEnabled = true;
         }
 
         try {
