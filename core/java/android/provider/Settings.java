@@ -5613,6 +5613,11 @@ public final class Settings {
         public static final int SCREEN_BRIGHTNESS_MODE_AUTOMATIC = 1;
 
         /**
+         * @hide
+         */
+        public static final String DC_DIMMING_STATE = "dc_dimming_state";
+
+        /**
          * Control whether to enable adaptive sleep mode.
          * @deprecated Use {@link android.provider.Settings.Secure#ADAPTIVE_SLEEP} instead.
          * @hide
