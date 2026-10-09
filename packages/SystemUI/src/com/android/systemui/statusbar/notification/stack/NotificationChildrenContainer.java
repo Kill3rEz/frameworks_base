@@ -43,7 +43,6 @@ import androidx.compose.ui.platform.ComposeView;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.widget.NotificationExpandButton;
 import com.android.systemui.Flags;
-import com.android.systemui.qs.shared.style.LiquidGlass;
 import com.android.systemui.res.R;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
 import com.android.systemui.statusbar.CrossFadeHelper;
@@ -1408,11 +1407,6 @@ public class NotificationChildrenContainer extends ViewGroup
      * @param expanded whether the group is expanded.
      */
     public void updateHeaderForExpansion(boolean expanded) {
-        if (expanded && LiquidGlass.isEnabled(getContext())) {
-            if (mGroupHeader != null) mGroupHeader.setHeaderBackgroundDrawable(null);
-            if (mBundleHeaderViewModel != null) mBundleHeaderViewModel.setBackgroundDrawable(null);
-            return;
-        }
         if (mGroupHeader != null) {
             if (expanded) {
                 ColorDrawable cd = new ColorDrawable();

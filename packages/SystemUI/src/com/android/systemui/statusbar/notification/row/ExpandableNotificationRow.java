@@ -949,9 +949,7 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
         int intrinsicBefore = getIntrinsicHeight();
         mIsHeadsUp = isHeadsUp;
         mPrivateLayout.setHeadsUp(isHeadsUp);
-        if (mBackgroundNormal != null) {
-            mBackgroundNormal.setHeadsUpGlass(isHeadsUp);
-        }
+        updateHeadsUpGlass();
         if (mIsSummaryWithChildren) {
             // The overflow might change since we allow more lines as HUN.
             mChildrenContainer.updateGroupOverflow();
@@ -1300,6 +1298,7 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
         int intrinsicHeight = getIntrinsicHeight();
         boolean wasAboveShelf = isAboveShelf();
         mPinnedStatus = pinnedStatus;
+        updateHeadsUpGlass();
         if (intrinsicHeight != getIntrinsicHeight()) {
             notifyHeightChanged(/* needsAnimation= */ false, "ENR.setPinnedStatus");
         }
@@ -1330,6 +1329,12 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
     @Override
     public boolean isPinned() {
         return mPinnedStatus.isPinned();
+    }
+
+    private void updateHeadsUpGlass() {
+        if (mBackgroundNormal != null) {
+            mBackgroundNormal.setHeadsUpGlass(mIsHeadsUp && isPinned());
+        }
     }
 
     @Override
@@ -4020,8 +4025,8 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
             mShowNoBackground = true;
             mChildrenContainer.updateHeaderForExpansion(mShowNoBackground);
         } else if (mIsSummaryWithChildren) {
-            final boolean ownCards = LiquidGlass.isEnabled(mContext);
-            mShowNoBackground = (!mShowGroupBackgroundWhenExpanded || ownCards) && isGroupExpanded()
+            mShowNoBackground = !LiquidGlass.isEnabled(mContext)
+                    && !mShowGroupBackgroundWhenExpanded && isGroupExpanded()
                     && !isGroupExpansionChanging() && !isUserSwipingToExpandRow();
             mChildrenContainer.updateHeaderForExpansion(mShowNoBackground);
             List<ExpandableNotificationRow> children = mChildrenContainer.getAttachedChildren();
