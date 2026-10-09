@@ -58,6 +58,7 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import com.android.internal.graphics.drawable.BackgroundBlurDrawable
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.res.R
@@ -601,6 +602,8 @@ fun Modifier.glassRim(shape: Shape, strength: Float = 1f): Modifier =
 
 val LocalGlassBlurAllowed = compositionLocalOf<() -> Boolean> { { true } }
 
+val LocalGlassBlurAlpha = compositionLocalOf<() -> Float> { { 1f } }
+
 @Composable
 fun Modifier.glassBlurRegion(shape: Shape): Modifier {
     val view = LocalView.current
@@ -611,30 +614,48 @@ fun Modifier.glassBlurRegion(shape: Shape): Modifier {
     SideEffect { if (radius <= 0) drawable[0]?.setVisible(false, false) }
     DisposableEffect(view) { onDispose { drawable[0]?.setVisible(false, false) } }
     if (radius <= 0) return this
-    return drawBehind {
-        if (!allowed()) {
-            drawable[0]?.setVisible(false, false)
-            return@drawBehind
+    val visible = remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    val fade = LocalGlassBlurAlpha.current
+    return onGloballyPositioned { coordinates ->
+            val bounds = coordinates.boundsInWindow()
+            val topLeft = coordinates.windowToLocal(bounds.topLeft)
+            val bottomRight = coordinates.windowToLocal(bounds.bottomRight)
+            visible.value =
+                androidx.compose.ui.geometry.Rect(topLeft, bottomRight)
+                    .intersect(androidx.compose.ui.geometry.Rect(Offset.Zero, coordinates.size.toSize()))
         }
-        val root = view.viewRootImpl ?: return@drawBehind
-        val blur =
-            drawable[0]
-                ?: root.createBackgroundBlurDrawable().also {
-                    it.setXfermode(null)
-                    drawable[0] = it
-                }
-        val corner =
-            when (val outline = shape.createOutline(size, layoutDirection, this)) {
-                is Outline.Rounded -> outline.roundRect.topLeftCornerRadius.x
-                else -> 0f
+        .drawBehind {
+            val shown = visible.value ?: androidx.compose.ui.geometry.Rect(Offset.Zero, size)
+            val alpha = fade().coerceIn(0f, 1f)
+            if (!allowed() || alpha < 0.01f || shown.width < 1f || shown.height < 1f) {
+                drawable[0]?.setVisible(false, false)
+                return@drawBehind
             }
-        blur.setVisible(true, false)
-        blur.setColor(0)
-        blur.setBlurRadius(radius)
-        blur.setCornerRadius(corner)
-        blur.setBounds(0, 0, size.width.toInt(), size.height.toInt())
-        drawIntoCanvas { blur.draw(it.nativeCanvas) }
-    }
+            val root = view.viewRootImpl ?: return@drawBehind
+            val blur =
+                drawable[0]
+                    ?: root.createBackgroundBlurDrawable().also {
+                        it.setXfermode(null)
+                        drawable[0] = it
+                    }
+            val corner =
+                when (val outline = shape.createOutline(size, layoutDirection, this)) {
+                    is Outline.Rounded -> outline.roundRect.topLeftCornerRadius.x
+                    else -> 0f
+                }
+            blur.setVisible(true, false)
+            blur.setColor(0)
+            blur.setBlurRadius(radius)
+            blur.setCornerRadius(corner)
+            blur.setAlpha((alpha * 255).toInt())
+            blur.setBounds(
+                shown.left.toInt(),
+                shown.top.toInt(),
+                shown.right.toInt(),
+                shown.bottom.toInt(),
+            )
+            drawIntoCanvas { blur.draw(it.nativeCanvas) }
+        }
 }
 
 object LiquidGlassGlyphs {
