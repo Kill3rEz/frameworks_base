@@ -161,6 +161,15 @@ constructor(
                             )
                         )
                     }
+                    .let { alpha ->
+                        if (SceneContainerFlag.isEnabled) {
+                            combine(alpha, sceneInteractor.get().currentScene) { a, scene ->
+                                if (scene == Scenes.Gone) 0f else a
+                            }
+                        } else {
+                            alpha
+                        }
+                    }
             } else {
                 flowOf(0f)
             }
