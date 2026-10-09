@@ -554,6 +554,10 @@ public class NotificationStackScrollLayout
     private float mBlurRadius = 0f;
     private float mBlurFade = 1f;
     private NotificationGlassPress mGlassPress;
+    private long mLastInsertTime;
+    private boolean mTouchDuringInsert;
+    private float mInsertTouchX;
+    private float mInsertTouchY;
     @Nullable private RenderEffect mBlurEffect = null;
 
     /**
@@ -3595,6 +3599,9 @@ public class NotificationStackScrollLayout
     }
 
     public void generateAddAnimation(ExpandableView child, boolean fromMoreCard) {
+        if (mIsExpanded && !isFullyHidden()) {
+            mLastInsertTime = SystemClock.uptimeMillis();
+        }
         if (mIsExpanded && mAnimationsEnabled && !mChangePositionInProgress && !isFullyHidden()) {
             // Generate Animations
             mChildrenToAddAnimated.add(child);
@@ -4078,6 +4085,13 @@ public class NotificationStackScrollLayout
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (isTapDuringInsert(ev)) {
+            MotionEvent cancel = MotionEvent.obtain(ev);
+            cancel.setAction(MotionEvent.ACTION_CANCEL);
+            boolean handled = dispatchTouchEvent(cancel);
+            cancel.recycle();
+            return handled;
+        }
         if (LiquidGlass.isEnabled(mContext)) {
             if (mGlassPress == null) mGlassPress = new NotificationGlassPress(this);
             mGlassPress.onTouch(this, ev);
@@ -6712,6 +6726,26 @@ public class NotificationStackScrollLayout
             updateBlurEffect();
             invalidate();
         }
+    }
+
+    private boolean isTapDuringInsert(MotionEvent ev) {
+        switch (ev.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN -> {
+                mTouchDuringInsert = SystemClock.uptimeMillis() - mLastInsertTime
+                        < StackStateAnimator.ANIMATION_DURATION_APPEAR_DISAPPEAR + 100;
+                mInsertTouchX = ev.getX();
+                mInsertTouchY = ev.getY();
+            }
+            case MotionEvent.ACTION_UP -> {
+                boolean tap = mTouchDuringInsert && Math.hypot(ev.getX() - mInsertTouchX,
+                        ev.getY() - mInsertTouchY) < mTouchSlop;
+                mTouchDuringInsert = false;
+                return tap;
+            }
+            case MotionEvent.ACTION_CANCEL -> mTouchDuringInsert = false;
+            default -> { }
+        }
+        return false;
     }
 
     private void updateBlurEffect() {
