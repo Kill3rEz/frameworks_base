@@ -249,6 +249,9 @@ public class ChargingControlController extends LineageHealthFeature {
             mIsPowerConnected =
                     battPlugged != 0 || (battStatus != BatteryManager.BATTERY_STATUS_DISCHARGING &&
                             battStatus != BatteryManager.BATTERY_STATUS_UNKNOWN);
+            if (!mIsPowerConnected) {
+                mIsControlCancelledOnce = false;
+            }
         }
 
         int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
