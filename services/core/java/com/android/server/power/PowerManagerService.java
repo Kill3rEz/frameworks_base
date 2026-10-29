@@ -1881,7 +1881,7 @@ public final class PowerManagerService extends SystemService
             boolean doubleTapEnabled = Settings.System.getIntForUser(resolver,
                     Settings.System.GESTURE_DOUBLE_TAP, mContext.getResources()
                     .getInteger(com.android.internal.R.integer.config_doubleTapDefault),
-                    UserHandle.USER_CURRENT) > 0;
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
             if (doubleTapEnabled != mDoubleTapEnabled) {
                 mDoubleTapEnabled = doubleTapEnabled;
                 mNativeWrapper.nativeSetParanoidFeature(POWER_FEATURE_DOUBLE_TAP,
@@ -1893,7 +1893,7 @@ public final class PowerManagerService extends SystemService
             boolean singleTapEnabled = Settings.System.getIntForUser(resolver,
                     Settings.System.GESTURE_SINGLE_TAP, mContext.getResources()
                     .getInteger(com.android.internal.R.integer.config_singleTapDefault),
-                    UserHandle.USER_CURRENT) > 0;
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
             if (singleTapEnabled != mSingleTapEnabled) {
                 mSingleTapEnabled = singleTapEnabled;
                 mNativeWrapper.nativeSetParanoidFeature(POWER_FEATURE_SINGLE_TAP,
@@ -1905,7 +1905,7 @@ public final class PowerManagerService extends SystemService
             boolean drawVEnabled = Settings.System.getIntForUser(resolver,
                     Settings.System.GESTURE_DRAW_V, mContext.getResources()
                     .getInteger(com.android.internal.R.integer.config_drawVDefault),
-                    UserHandle.USER_CURRENT) > 0;
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
             if (drawVEnabled != mDrawVEnabled) {
                 mDrawVEnabled = drawVEnabled;
                 mNativeWrapper.nativeSetParanoidFeature(POWER_FEATURE_DRAW_V,
@@ -1929,7 +1929,7 @@ public final class PowerManagerService extends SystemService
             boolean drawOEnabled = Settings.System.getIntForUser(resolver,
                     Settings.System.GESTURE_DRAW_O, mContext.getResources()
                     .getInteger(com.android.internal.R.integer.config_drawODefault),
-                    UserHandle.USER_CURRENT) > 0;
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
             if (drawOEnabled != mDrawOEnabled) {
                 mDrawOEnabled = drawOEnabled;
                 mNativeWrapper.nativeSetParanoidFeature(POWER_FEATURE_DRAW_O,
@@ -1941,7 +1941,7 @@ public final class PowerManagerService extends SystemService
             boolean drawMEnabled = Settings.System.getIntForUser(resolver,
                     Settings.System.GESTURE_DRAW_M, mContext.getResources()
                     .getInteger(com.android.internal.R.integer.config_drawMDefault),
-                    UserHandle.USER_CURRENT) > 0;
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
             if (drawMEnabled != mDrawMEnabled) {
                 mDrawMEnabled = drawMEnabled;
                 mNativeWrapper.nativeSetParanoidFeature(POWER_FEATURE_DRAW_M,
@@ -1953,7 +1953,7 @@ public final class PowerManagerService extends SystemService
             boolean drawWEnabled = Settings.System.getIntForUser(resolver,
                     Settings.System.GESTURE_DRAW_W, mContext.getResources()
                     .getInteger(com.android.internal.R.integer.config_drawWDefault),
-                    UserHandle.USER_CURRENT) > 0;
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
             if (drawWEnabled != mDrawWEnabled) {
                 mDrawWEnabled = drawWEnabled;
                 mNativeWrapper.nativeSetParanoidFeature(POWER_FEATURE_DRAW_W,
@@ -1965,7 +1965,7 @@ public final class PowerManagerService extends SystemService
             boolean drawSEnabled = Settings.System.getIntForUser(resolver,
                     Settings.System.GESTURE_DRAW_S, mContext.getResources()
                     .getInteger(com.android.internal.R.integer.config_drawSDefault),
-                    UserHandle.USER_CURRENT) > 0;
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
             if (drawSEnabled != mDrawSEnabled) {
                 mDrawSEnabled = drawSEnabled;
                 mNativeWrapper.nativeSetParanoidFeature(POWER_FEATURE_DRAW_S,
@@ -1977,7 +1977,7 @@ public final class PowerManagerService extends SystemService
             boolean drawArrowLeftEnabled = Settings.System.getIntForUser(resolver,
                     Settings.System.GESTURE_DRAW_ARROW_LEFT, mContext.getResources()
                     .getInteger(com.android.internal.R.integer.config_drawArrowLeftDefault),
-                    UserHandle.USER_CURRENT) > 0;
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
             if (drawArrowLeftEnabled != mDrawArrowLeftEnabled) {
                 mDrawArrowLeftEnabled = drawArrowLeftEnabled;
                 mNativeWrapper.nativeSetParanoidFeature(POWER_FEATURE_DRAW_ARROW_LEFT,
@@ -1989,7 +1989,7 @@ public final class PowerManagerService extends SystemService
             boolean drawArrowRightEnabled = Settings.System.getIntForUser(resolver,
                     Settings.System.GESTURE_DRAW_ARROW_RIGHT, mContext.getResources()
                     .getInteger(com.android.internal.R.integer.config_drawArrowRightDefault),
-                    UserHandle.USER_CURRENT) > 0;
+                    UserHandle.USER_CURRENT) > 0 && mGesturesEnabled;
             if (drawArrowRightEnabled != mDrawArrowRightEnabled) {
                 mDrawArrowRightEnabled = drawArrowRightEnabled;
                 mNativeWrapper.nativeSetParanoidFeature(POWER_FEATURE_DRAW_ARROW_RIGHT,
