@@ -45,6 +45,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,11 @@ public class PropImitationHooks {
     private static native void setFieldNative(Class<?> targetClass,
             Field field, String type, Object value);
 
+    private static native boolean nativeSpoofProperties(String[] keys, String[] values,
+            boolean debug);
+
     private static volatile boolean sSpoofPropsForProcess = false;
+    private static volatile boolean sNativePropsSpoofed = false;
     private static final Map<String, String> sSystemProps = new ConcurrentHashMap<>();
 
     public static void setSpoofPropsForProcess(boolean enabled) {
@@ -436,6 +441,9 @@ public class PropImitationHooks {
             dlog("Spoofing build for GMS / Finsky");
             sSpoofPropsForProcess = true;
             setCertifiedProps();
+            if (sIsGms) {
+                spoofNativeProps();
+            }
         } else {
             dlog("Skip spoofing build for GMS / Finsky, because GmsAddAccountActivityOnTop");
             sSpoofPropsForProcess = false;
@@ -459,6 +467,89 @@ public class PropImitationHooks {
             setPropValue(fieldAndProp[0], fieldAndProp[1]);
             mapSystemProp(fieldAndProp[0], fieldAndProp[1]);
         }
+    }
+
+    private static void spoofNativeProps() {
+        if (sNativePropsSpoofed) return;
+
+        final Map<String, String> extraProps = new HashMap<>();
+        extraProps.put("init.svc.adbd", "stopped");
+        extraProps.put("sys.usb.state", "mtp");
+        extraProps.put("ro.board.first_api_level", "32");
+        extraProps.put("ro.product.first_api_level", resolveDeviceInitialSdk(
+                sSystemProps.get("DEVICE"), sSystemProps.get("VERSION.DEVICE_INITIAL_SDK_INT")));
+        extraProps.forEach((k, v) -> {
+            if (TextUtils.isEmpty(sSystemProps.get(k))) {
+                sSystemProps.put(k, v);
+            }
+        });
+
+        final Map<String, String> props = new HashMap<>();
+        sSystemProps.forEach((k, v) -> {
+            if (!TextUtils.isEmpty(v) && (k.startsWith("ro.") || k.startsWith("*")
+                    || extraProps.containsKey(k))) {
+                props.put(k, v);
+            }
+        });
+
+        final String[] keys = props.keySet().toArray(new String[0]);
+        final String[] values = new String[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            values[i] = props.get(keys[i]);
+        }
+
+        try {
+            if (nativeSpoofProperties(keys, values, DEBUG)) {
+                sNativePropsSpoofed = true;
+                dlog("Property area virtualization active (" + keys.length + " rules)");
+            } else {
+                Log.w(TAG, "Property area virtualization failed");
+            }
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to virtualize the property area", t);
+        }
+    }
+
+    private static String resolveDeviceInitialSdk(String device, String configuredSdk) {
+        if (device != null) {
+            switch (device) {
+                case "oriole":
+                case "raven":
+                    return "31";
+                case "bluejay":
+                    return "32";
+                case "panther":
+                case "cheetah":
+                case "lynx":
+                case "felix":
+                case "tangorpro":
+                    return "33";
+                case "shiba":
+                case "husky":
+                case "akita":
+                case "tokay":
+                case "caiman":
+                case "komodo":
+                case "comet":
+                    return "34";
+                case "tegu":
+                case "stallion":
+                    return "35";
+                case "frankel":
+                case "blazer":
+                case "mustang":
+                case "rango":
+                    return "36";
+                case "cubs":
+                case "grizzly":
+                case "kodiak":
+                case "yogi":
+                    return "37";
+                default:
+                    break;
+            }
+        }
+        return !TextUtils.isEmpty(configuredSdk) ? configuredSdk : "32";
     }
 
     private static String readFromFile(File file) {
