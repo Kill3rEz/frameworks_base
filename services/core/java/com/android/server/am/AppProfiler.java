@@ -2253,7 +2253,9 @@ public class AppProfiler {
                     try {
                         synchronized (this) {
                             final long now = SystemClock.uptimeMillis();
-                            long nextCpuDelay = (mLastCpuTime.get() + MONITOR_CPU_MAX_TIME) - now;
+                            long nextCpuDelay = MONITOR_CPU_USAGE
+                                    ? (mLastCpuTime.get() + MONITOR_CPU_MAX_TIME) - now
+                                    : Long.MAX_VALUE;
                             long nextWriteDelay = (mLastWriteTime + BATTERY_STATS_TIME) - now;
                             //Slog.i(TAG, "Cpu delay=" + nextCpuDelay
                             //        + ", write delay=" + nextWriteDelay);
